@@ -2,6 +2,8 @@ import {
   CONFLICT_STATUSES,
   DOCUMENT_TYPES,
   EQUIPMENT_CLASSES,
+  FIELD_NAME_PATTERN,
+  TEXT_LIMITS,
   REVIEW_ACTIONS,
   REVIEW_STATUSES,
   VERIFICATION_REASONS,
@@ -32,6 +34,14 @@ function sqlList(values: readonly string[]): SQL {
 
 function oneOf(column: AnyPgColumn, values: readonly string[]): SQL {
   return sql`${column} in (${sqlList(values)})`;
+}
+
+function lengthBetween(column: AnyPgColumn, min: number, max: number): SQL {
+  return sql`char_length(${column}) between ${sql.raw(String(min))} and ${sql.raw(String(max))}`;
+}
+
+function isFieldName(column: AnyPgColumn): SQL {
+  return sql`${column} ~ ${sql.raw(`'${FIELD_NAME_PATTERN}'`)} and ${lengthBetween(column, 1, TEXT_LIMITS.fieldName)}`;
 }
 
 const bytea = customType<{ data: Buffer; driverData: Buffer }>({
@@ -128,7 +138,7 @@ export const equipment = pgTable(
   },
   (t) => [
     unique('equipment_tag_key').on(t.tag),
-    check('equipment_tag_length', sql`char_length(${t.tag}) between 1 and 64`),
+    check('equipment_tag_length', lengthBetween(t.tag, 1, TEXT_LIMITS.tag)),
     check('equipment_class_valid', oneOf(t.equipmentClass, EQUIPMENT_CLASSES)),
   ],
 );
@@ -168,6 +178,10 @@ export const fields = pgTable(
     unique('fields_run_equipment_name_key').on(t.extractionRunId, t.equipmentId, t.name),
     index('fields_equipment_id_idx').on(t.equipmentId),
     check('fields_page_positive', sql`${t.page} >= 1`),
+    check('fields_name_format', isFieldName(t.name)),
+    check('fields_value_length', lengthBetween(t.value, 1, TEXT_LIMITS.value)),
+    check('fields_unit_length', lengthBetween(t.unit, 1, TEXT_LIMITS.unit)),
+    check('fields_quote_length', lengthBetween(t.quote, 1, TEXT_LIMITS.quote)),
     check('fields_version_positive', sql`${t.version} >= 1`),
     check('fields_verification_status_valid', oneOf(t.verificationStatus, VERIFICATION_STATUSES)),
     check('fields_review_status_valid', oneOf(t.reviewStatus, REVIEW_STATUSES)),
@@ -198,6 +212,8 @@ export const conflicts = pgTable(
   (t) => [
     index('conflicts_equipment_id_idx').on(t.equipmentId),
     check('conflicts_status_valid', oneOf(t.status, CONFLICT_STATUSES)),
+    check('conflicts_field_name_format', isFieldName(t.fieldName)),
+    check('conflicts_resolution_not_empty', sql`char_length(${t.resolution}) >= 1`),
     check(
       'conflicts_resolution_matches_status',
       sql`(${t.status} = 'resolved') = (${t.resolution} is not null and ${t.resolvedAt} is not null)`,
@@ -217,6 +233,10 @@ export const registerVersions = pgTable(
   (t) => [
     unique('register_versions_number_key').on(t.number),
     check('register_versions_number_positive', sql`${t.number} >= 1`),
+    check(
+      'register_versions_approved_by_length',
+      lengthBetween(t.approvedBy, 1, TEXT_LIMITS.person),
+    ),
     check(
       'register_versions_published_has_approver',
       sql`${t.publishedAt} is null or ${t.approvedBy} is not null`,
@@ -241,6 +261,7 @@ export const registerItems = pgTable(
   (t) => [
     unique('register_items_version_equipment_key').on(t.registerVersionId, t.equipmentId),
     check('register_items_values_object', sql`jsonb_typeof(${t.values}) = 'object'`),
+    check('register_items_tag_length', lengthBetween(t.tag, 1, TEXT_LIMITS.tag)),
   ],
 );
 
@@ -270,7 +291,8 @@ export const reviewEvents = pgTable(
       'review_events_exactly_one_subject',
       sql`num_nonnulls(${t.fieldId}, ${t.conflictId}, ${t.registerVersionId}) = 1`,
     ),
-    check('review_events_actor_length', sql`char_length(${t.actor}) between 1 and 128`),
+    check('review_events_actor_length', lengthBetween(t.actor, 1, TEXT_LIMITS.person)),
+    check('review_events_reason_not_empty', sql`char_length(${t.reason}) >= 1`),
     check('review_events_action_valid', oneOf(t.action, REVIEW_ACTIONS)),
   ],
 );

@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 import { candidateSchema } from './candidate.js';
-import { equipmentClassSchema, fieldNameSchema } from './equipment.js';
+import { equipmentClassSchema, fieldNameSchema, TEXT_LIMITS } from './equipment.js';
 import {
   conflictStatusSchema,
   documentTypeSchema,
@@ -38,7 +38,7 @@ export type DocumentPage = z.infer<typeof documentPageSchema>;
 
 export const equipmentRecordSchema = z.strictObject({
   id,
-  tag: z.string().min(1).max(64),
+  tag: z.string().min(1).max(TEXT_LIMITS.tag),
   equipmentClass: equipmentClassSchema,
   createdAt: timestamp,
 });
@@ -103,7 +103,7 @@ export type ReviewEventSubject = z.infer<typeof reviewEventSubjectSchema>;
 export const reviewEventRecordSchema = z.strictObject({
   id,
   subject: reviewEventSubjectSchema,
-  actor: z.string().min(1).max(128),
+  actor: z.string().min(1).max(TEXT_LIMITS.person),
   action: reviewActionSchema,
   before: z.json().nullable(),
   after: z.json().nullable(),
@@ -116,7 +116,7 @@ export const registerVersionRecordSchema = z
   .strictObject({
     id,
     number: z.number().int().min(1),
-    approvedBy: z.string().min(1).max(128).nullable(),
+    approvedBy: z.string().min(1).max(TEXT_LIMITS.person).nullable(),
     publishedAt: timestamp.nullable(),
     createdAt: timestamp,
   })

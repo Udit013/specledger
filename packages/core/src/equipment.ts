@@ -30,10 +30,24 @@ export const FIELD_KINDS = ['scalar', 'scalar_or_range'] as const;
 export const fieldKindSchema = z.enum(FIELD_KINDS);
 export type FieldKind = z.infer<typeof fieldKindSchema>;
 
+// Text limits shared with the database, which enforces the same bounds in CHECK constraints so
+// that nothing the domain would reject can be stored.
+export const TEXT_LIMITS = {
+  fieldName: 64,
+  value: 64,
+  unit: 32,
+  quote: 1000,
+  tag: 64,
+  person: 128,
+} as const;
+
+// Kept as a string so the database CHECK uses exactly the same pattern.
+export const FIELD_NAME_PATTERN = '^[a-z][a-z0-9_]*$';
+
 export const fieldNameSchema = z
   .string()
-  .regex(/^[a-z][a-z0-9_]*$/, 'field names are lower snake_case')
-  .max(64);
+  .regex(new RegExp(FIELD_NAME_PATTERN), 'field names are lower snake_case')
+  .max(TEXT_LIMITS.fieldName);
 
 export const fieldDefinitionSchema = z
   .strictObject({

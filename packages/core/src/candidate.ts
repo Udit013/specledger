@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { fieldNameSchema } from './equipment.js';
+import { fieldNameSchema, TEXT_LIMITS } from './equipment.js';
 
 // One value proposed by the extraction model. Model output is untrusted, so the schema is strict
 // (unknown keys are rejected) and bounded. `value` is the text exactly as stated in the document,
@@ -8,9 +8,9 @@ import { fieldNameSchema } from './equipment.js';
 // separators, ranges and ambiguous formats cannot be represented faithfully by a JS number.
 export const candidateSchema = z.strictObject({
   fieldName: fieldNameSchema,
-  value: z.string().trim().min(1).max(64),
-  unit: z.string().trim().min(1).max(32),
-  quote: z.string().min(1).max(1000),
+  value: z.string().trim().min(1).max(TEXT_LIMITS.value),
+  unit: z.string().trim().min(1).max(TEXT_LIMITS.unit),
+  quote: z.string().min(1).max(TEXT_LIMITS.quote),
   page: z.number().int().min(1),
 });
 

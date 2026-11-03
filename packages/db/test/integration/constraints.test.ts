@@ -333,3 +333,80 @@ describe('register versions and items', () => {
     ).toEqual({ code: CHECK, constraint: 'register_items_values_object' });
   });
 });
+
+describe('text limits shared with the domain (TEXT_LIMITS in core)', () => {
+  let conflictId: string;
+  let versionId: string;
+
+  beforeAll(async () => {
+    conflictId = (
+      await testDb.database.conflicts.insert({
+        equipmentId: seeded.equipment.id,
+        fieldName: 'rated_power',
+      })
+    ).id;
+    versionId = (await testDb.database.register.createDraftVersion(200)).id;
+  });
+
+  it.each([
+    ['a field name that is not snake_case', { name: 'Rated Flow' }, 'fields_name_format'],
+    ['a field name over 64 characters', { name: `a${'b'.repeat(64)}` }, 'fields_name_format'],
+    ['an empty value', { value: '' }, 'fields_value_length'],
+    ['a value over 64 characters', { value: '1'.repeat(65) }, 'fields_value_length'],
+    ['a unit over 32 characters', { unit: 'u'.repeat(33) }, 'fields_unit_length'],
+    ['a quote over 1000 characters', { quote: 'q'.repeat(1001) }, 'fields_quote_length'],
+  ])('fields: refuses %s', async (_label, override, constraint) => {
+    expect(await pgFailure(insertField(override))).toEqual({ code: CHECK, constraint });
+  });
+
+  it('conflicts: refuses a malformed field name and an empty resolution', async () => {
+    expect(
+      await pgFailure(
+        testDb.query("insert into conflicts (equipment_id, field_name) values ($1, 'Head!')", [
+          seeded.equipment.id,
+        ]),
+      ),
+    ).toEqual({ code: CHECK, constraint: 'conflicts_field_name_format' });
+    expect(
+      await pgFailure(
+        testDb.query(
+          "update conflicts set status = 'resolved', resolution = '', resolved_at = now() where id = $1",
+          [conflictId],
+        ),
+      ),
+    ).toEqual({ code: CHECK, constraint: 'conflicts_resolution_not_empty' });
+  });
+
+  it('review_events: refuses an empty reason', async () => {
+    expect(
+      await pgFailure(
+        testDb.query(
+          "insert into review_events (field_id, actor, action, reason) values ($1, 'eng', 'edit', '')",
+          [seeded.field.id],
+        ),
+      ),
+    ).toEqual({ code: CHECK, constraint: 'review_events_reason_not_empty' });
+  });
+
+  it('register_versions: refuses an approver name over 128 characters', async () => {
+    expect(
+      await pgFailure(
+        testDb.query('update register_versions set approved_by = $1 where id = $2', [
+          'a'.repeat(129),
+          versionId,
+        ]),
+      ),
+    ).toEqual({ code: CHECK, constraint: 'register_versions_approved_by_length' });
+  });
+
+  it('register_items: refuses a tag over 64 characters', async () => {
+    expect(
+      await pgFailure(
+        testDb.query(
+          "insert into register_items (register_version_id, equipment_id, tag, values) values ($1, $2, $3, '{}')",
+          [versionId, seeded.equipment.id, 'T'.repeat(65)],
+        ),
+      ),
+    ).toEqual({ code: CHECK, constraint: 'register_items_tag_length' });
+  });
+});

@@ -125,20 +125,44 @@ describe('transactions', () => {
 });
 
 describe('rows entering the domain are validated', () => {
-  it('reports a stored row that breaks a domain rule without echoing its content', async () => {
-    const { equipment, run } = await seedField(testDb.database, '9'.repeat(64));
-    // An over-long value is allowed by the column but not by the domain schema.
-    const secretLike = `SECRET-${'x'.repeat(100)}`;
+  it('refuses, in the database, a field the domain would reject, and writes nothing', async () => {
+    const { equipment, run } = await seedField(testDb.database, '8'.repeat(64));
+    await expect(
+      testDb.database.fields.insert({
+        extractionRunId: run.id,
+        equipmentId: equipment.id,
+        name: 'rated_head',
+        value: '1'.repeat(65),
+        unit: 'm',
+        quote: 'Head',
+        page: 1,
+        verificationStatus: 'verified',
+        verificationReasons: [],
+      }),
+    ).rejects.toThrow();
     const { rows } = await testDb.query(
-      `insert into fields (extraction_run_id, equipment_id, name, value, unit, quote, page, verification_status)
-       values ($1, $2, 'rated_head', $3, 'm', 'Head', 1, 'verified') returning id`,
-      [run.id, equipment.id, secretLike],
+      "select count(*)::int as n from fields where extraction_run_id = $1 and name = 'rated_head'",
+      [run.id],
     );
-    const id = String(rows[0]?.id);
+    expect(rows[0]).toEqual({ n: 0 });
+  });
 
-    const read = testDb.database.fields.getById(id);
+  it('reports a stored row that breaks a domain rule without echoing its content', async () => {
+    const { equipment } = await seedField(testDb.database, '9'.repeat(64));
+    const version = await testDb.database.register.createDraftVersion(1);
+    // The column only requires a JSON object; the domain also requires { value, unit } per field.
+    const { rows } = await testDb.query(
+      `insert into register_items (register_version_id, equipment_id, tag, values)
+       values ($1, $2, $3, $4) returning id`,
+      [version.id, equipment.id, equipment.tag, { rated_flow: { value: 'SECRET-500' } }],
+    );
+    expect(rows).toHaveLength(1);
+
+    const read = testDb.database.register.listItems(version.id);
     await expect(read).rejects.toBeInstanceOf(StoredRowInvalidError);
-    await expect(read).rejects.toThrow('stored field row failed validation at: value');
+    await expect(read).rejects.toThrow(
+      'stored register_item row failed validation at: values.rated_flow.unit',
+    );
     await expect(read).rejects.not.toThrow(/SECRET/);
   });
 });

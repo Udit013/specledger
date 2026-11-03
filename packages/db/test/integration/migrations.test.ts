@@ -37,7 +37,7 @@ describe('migrations', () => {
   it('apply cleanly into an empty schema', async () => {
     const { tables, applied } = await snapshot();
     expect(tables.map((row) => row.table_name)).toEqual(EXPECTED_TABLES);
-    expect(applied).toHaveLength(2);
+    expect(applied).toHaveLength(3);
   });
 
   it('install the immutability triggers', async () => {
