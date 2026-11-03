@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "documentId": "m-221-datasheet",
+  "lineageId": "m-221",
+  "equipmentTag": "M-221",
+  "equipmentClass": "electric_motor",
+  "sourceType": "datasheet",
+  "revision": "R2",
+  "pageCount": 2,
+  "textLayer": true,
+  "fields": {
+    "rated_power": {
+      "value": "75.0",
+      "unit": "kW",
+      "page": 1,
+      "quote": "The rated power is 75.0 kW at the guaranteed duty point."
+    },
+    "rated_voltage": {
+      "value": "415",
+      "unit": "V",
+      "page": 1,
+      "quote": "The rated voltage is 415 V at the guaranteed duty point."
+    },
+    "rated_current": {
+      "value": "132.0",
+      "unit": "A",
+      "page": 1,
+      "quote": "Rated current 132.0 A"
+    },
+    "frequency": {
+      "value": "50",
+      "unit": "Hz",
+      "page": 2,
+      "quote": "Frequency 50 Hz"
+    },
+    "rated_speed": {
+      "value": "1479",
+      "unit": "rpm",
+      "page": 2,
+      "quote": "Rated speed 1479 rpm"
+    },
+    "efficiency": {
+      "value": "91.9",
+      "unit": "%",
+      "page": 2,
+      "quote": "Efficiency 91.9 %"
+    }
+  }
+}

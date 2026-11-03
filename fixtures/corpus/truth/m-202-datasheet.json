@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "documentId": "m-202-datasheet",
+  "lineageId": "m-202",
+  "equipmentTag": "M-202",
+  "equipmentClass": "electric_motor",
+  "sourceType": "datasheet",
+  "revision": "Rev A",
+  "pageCount": 1,
+  "textLayer": true,
+  "fields": {
+    "rated_power": {
+      "value": "37.0",
+      "unit": "kW",
+      "page": 1,
+      "quote": "Rated power: 37.0 kW"
+    },
+    "rated_voltage": {
+      "value": "460",
+      "unit": "V",
+      "page": 1,
+      "quote": "Rated voltage: 460 V"
+    },
+    "rated_current": {
+      "value": "57.7",
+      "unit": "A",
+      "page": 1,
+      "quote": "Rated current: 57.7 A"
+    },
+    "frequency": {
+      "value": "60",
+      "unit": "Hz",
+      "page": 1,
+      "quote": "Frequency: 60 Hz"
+    },
+    "rated_speed": {
+      "value": "2900 to 3600",
+      "unit": "rpm",
+      "page": 1,
+      "quote": "Rated speed: 2900 to 3600 rpm"
+    },
+    "efficiency": {
+      "value": "93.5",
+      "unit": "%",
+      "page": 1,
+      "quote": "Efficiency: 93.5 %"
+    }
+  }
+}

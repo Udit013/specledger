@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "documentId": "m-211-datasheet",
+  "lineageId": "m-211",
+  "equipmentTag": "M-211",
+  "equipmentClass": "electric_motor",
+  "sourceType": "datasheet",
+  "revision": "R2",
+  "pageCount": 2,
+  "textLayer": true,
+  "fields": {
+    "rated_power": {
+      "value": "7.5",
+      "unit": "kW",
+      "page": 1,
+      "quote": "The rated power is 7.5 kW at the guaranteed duty point."
+    },
+    "rated_voltage": null,
+    "rated_current": {
+      "value": "7.9",
+      "unit": "A",
+      "page": 1,
+      "quote": "The rated current is 7.9 A at the guaranteed duty point."
+    },
+    "frequency": null,
+    "rated_speed": {
+      "value": "2935",
+      "unit": "rpm",
+      "page": 2,
+      "quote": "Rated speed 2935 rpm"
+    },
+    "efficiency": {
+      "value": "91.8",
+      "unit": "%",
+      "page": 2,
+      "quote": "Efficiency 91.8 %"
+    }
+  }
+}

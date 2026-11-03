@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "documentId": "p-117-datasheet",
+  "lineageId": "p-117",
+  "equipmentTag": "P-117",
+  "equipmentClass": "centrifugal_pump",
+  "sourceType": "datasheet",
+  "revision": null,
+  "pageCount": 1,
+  "textLayer": true,
+  "fields": {
+    "rated_flow": {
+      "value": "2253",
+      "unit": "gpm",
+      "page": 1,
+      "quote": "Rated flow 2253 gpm"
+    },
+    "rated_head": {
+      "value": "229",
+      "unit": "ft",
+      "page": 1,
+      "quote": "Rated head 229 ft"
+    },
+    "rated_speed": {
+      "value": "1480",
+      "unit": "rpm",
+      "page": 1,
+      "quote": "Rated speed 1480 rpm"
+    },
+    "rated_power": {
+      "value": "188.9",
+      "unit": "hp",
+      "page": 1,
+      "quote": "Rated power 188.9 hp"
+    },
+    "efficiency": {
+      "value": "69.2",
+      "unit": "%",
+      "page": 1,
+      "quote": "Efficiency 69.2 %"
+    },
+    "npsh_required": {
+      "value": "15",
+      "unit": "ft",
+      "page": 1,
+      "quote": "NPSH required 15 ft"
+    },
+    "max_working_pressure": {
+      "value": "570",
+      "unit": "psi",
+      "page": 1,
+      "quote": "Max. working pressure 570 psi"
+    },
+    "design_temperature": null
+  }
+}

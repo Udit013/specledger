@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "documentId": "m-215-datasheet",
+  "lineageId": "m-215",
+  "equipmentTag": "M-215",
+  "equipmentClass": "electric_motor",
+  "sourceType": "datasheet",
+  "revision": "Rev 1",
+  "pageCount": 1,
+  "textLayer": true,
+  "fields": {
+    "rated_power": {
+      "value": "132,0",
+      "unit": "kW",
+      "page": 1,
+      "quote": "Rated power: 132,0 kW"
+    },
+    "rated_voltage": {
+      "value": "690",
+      "unit": "V",
+      "page": 1,
+      "quote": "Rated voltage: 690 V"
+    },
+    "rated_current": {
+      "value": "141,5",
+      "unit": "A",
+      "page": 1,
+      "quote": "Rated current: 141,5 A"
+    },
+    "frequency": {
+      "value": "50",
+      "unit": "Hz",
+      "page": 1,
+      "quote": "Frequency: 50 Hz"
+    },
+    "rated_speed": {
+      "value": "2929",
+      "unit": "rpm",
+      "page": 1,
+      "quote": "Rated speed: 2929 rpm"
+    },
+    "efficiency": null
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "documentId": "m-218-datasheet",
+  "lineageId": "m-218",
+  "equipmentTag": "M-218",
+  "equipmentClass": "electric_motor",
+  "sourceType": "datasheet",
+  "revision": "R2",
+  "pageCount": 2,
+  "textLayer": true,
+  "fields": {
+    "rated_power": {
+      "value": "30.0",
+      "unit": "kW",
+      "page": 1,
+      "quote": "Rated power 30.0 kW"
+    },
+    "rated_voltage": {
+      "value": "460",
+      "unit": "V",
+      "page": 1,
+      "quote": "Rated voltage 460 V"
+    },
+    "rated_current": null,
+    "frequency": {
+      "value": "60",
+      "unit": "Hz",
+      "page": 1,
+      "quote": "Frequency 60 Hz"
+    },
+    "rated_speed": {
+      "value": "3557",
+      "unit": "rpm",
+      "page": 2,
+      "quote": "Rated speed 3557 rpm"
+    },
+    "efficiency": {
+      "value": "96.0",
+      "unit": "%",
+      "page": 2,
+      "quote": "Efficiency 96.0 %"
+    }
+  }
+}

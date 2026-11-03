@@ -2,7 +2,7 @@
   "name": "@specledger/eval",
   "version": "0.0.0",
   "private": true,
-  "description": "Golden-set evaluation runner, metrics and regression gate.",
+  "description": "Synthetic corpus and ground truth, golden-set evaluation runner, metrics and regression gate.",
   "license": "MIT",
   "type": "module",
   "exports": {
@@ -15,6 +15,14 @@
     "build": "tsc --project tsconfig.build.json",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
-    "test": "vitest run --dir src"
+    "test": "vitest run --dir src",
+    "fixtures:generate": "node dist/corpus/cli.js generate ../../fixtures/corpus",
+    "fixtures:validate": "node dist/corpus/cli.js validate ../../fixtures/corpus"
+  },
+  "dependencies": {
+    "@specledger/core": "workspace:*",
+    "pdf-lib": "1.17.1",
+    "pdfjs-dist": "6.5.438",
+    "zod": "4.6.7"
   }
 }

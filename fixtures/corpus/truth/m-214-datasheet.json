@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "documentId": "m-214-datasheet",
+  "lineageId": "m-214",
+  "equipmentTag": "M-214",
+  "equipmentClass": "electric_motor",
+  "sourceType": "datasheet",
+  "revision": "Rev B",
+  "pageCount": 1,
+  "textLayer": true,
+  "fields": {
+    "rated_power": {
+      "value": "110.0",
+      "unit": "kW",
+      "page": 1,
+      "quote": "Rated power: 110.0 kW (147.5 hp)"
+    },
+    "rated_voltage": {
+      "value": "415",
+      "unit": "V",
+      "page": 1,
+      "quote": "Rated voltage: 415 V"
+    },
+    "rated_current": {
+      "value": "190.5",
+      "unit": "A",
+      "page": 1,
+      "quote": "Rated current: 190.5 A"
+    },
+    "frequency": {
+      "value": "50",
+      "unit": "Hz",
+      "page": 1,
+      "quote": "Frequency: 50 Hz"
+    },
+    "rated_speed": null,
+    "efficiency": {
+      "value": "93.4",
+      "unit": "%",
+      "page": 1,
+      "quote": "Efficiency: 93.4 %"
+    }
+  }
+}

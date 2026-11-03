@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "documentId": "m-216-datasheet",
+  "lineageId": "m-216",
+  "equipmentTag": "M-216",
+  "equipmentClass": "electric_motor",
+  "sourceType": "datasheet",
+  "revision": "Rev B",
+  "pageCount": 2,
+  "textLayer": true,
+  "fields": {
+    "rated_power": {
+      "value": "7.5",
+      "unit": "kW",
+      "page": 1,
+      "quote": "Rated power: 7.5 kW (10.06 hp)"
+    },
+    "rated_voltage": {
+      "value": "400",
+      "unit": "V",
+      "page": 1,
+      "quote": "Rated voltage: 400 V"
+    },
+    "rated_current": {
+      "value": "13.5",
+      "unit": "A",
+      "page": 1,
+      "quote": "Rated current: 13.5 A"
+    },
+    "frequency": {
+      "value": "50",
+      "unit": "Hz",
+      "page": 2,
+      "quote": "Frequency: 50 Hz"
+    },
+    "rated_speed": {
+      "value": "1466",
+      "unit": "rpm",
+      "page": 2,
+      "quote": "Rated speed: 1466 rpm"
+    },
+    "efficiency": {
+      "value": "93.5",
+      "unit": "%",
+      "page": 2,
+      "quote": "Efficiency: 93.5 %"
+    }
+  }
+}

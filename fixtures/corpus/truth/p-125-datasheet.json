@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "documentId": "p-125-datasheet",
+  "lineageId": "p-125",
+  "equipmentTag": "P-125",
+  "equipmentClass": "centrifugal_pump",
+  "sourceType": "datasheet",
+  "revision": "R2",
+  "pageCount": 1,
+  "textLayer": true,
+  "fields": {
+    "rated_flow": {
+      "value": "57,4",
+      "unit": "m3/h",
+      "page": 1,
+      "quote": "Rated flow: 57,4 m3/h"
+    },
+    "rated_head": {
+      "value": "56,0",
+      "unit": "m",
+      "page": 1,
+      "quote": "Rated head: 56,0 m"
+    },
+    "rated_speed": null,
+    "rated_power": {
+      "value": "13,3",
+      "unit": "kW",
+      "page": 1,
+      "quote": "Rated power: 13,3 kW"
+    },
+    "efficiency": {
+      "value": "65,7",
+      "unit": "%",
+      "page": 1,
+      "quote": "Efficiency: 65,7 %"
+    },
+    "npsh_required": {
+      "value": "6,1",
+      "unit": "m",
+      "page": 1,
+      "quote": "NPSH required: 6,1 m"
+    },
+    "max_working_pressure": {
+      "value": "25,0",
+      "unit": "bar",
+      "page": 1,
+      "quote": "Max. working pressure: 25,0 bar"
+    },
+    "design_temperature": {
+      "value": "80",
+      "unit": "°C",
+      "page": 1,
+      "quote": "Design temperature: 80 °C"
+    }
+  }
+}

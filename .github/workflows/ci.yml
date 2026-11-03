@@ -18,7 +18,7 @@ env:
 
 jobs:
   checks:
-    name: typecheck, lint, boundaries, unit tests, build, migration drift
+    name: typecheck, lint, boundaries, unit tests, build, drift, corpus
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -34,6 +34,7 @@ jobs:
       - run: pnpm format:check
       - run: pnpm verify
       - run: pnpm db:check-drift
+      - run: pnpm fixtures:validate
 
   integration:
     name: integration tests (Postgres)

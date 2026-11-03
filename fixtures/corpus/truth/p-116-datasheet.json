@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "documentId": "p-116-datasheet",
+  "lineageId": "p-116",
+  "equipmentTag": "P-116",
+  "equipmentClass": "centrifugal_pump",
+  "sourceType": "datasheet",
+  "revision": "R2",
+  "pageCount": 1,
+  "textLayer": true,
+  "fields": {
+    "rated_flow": {
+      "value": "1343",
+      "unit": "gpm",
+      "page": 1,
+      "quote": "Rated flow: 1343 gpm"
+    },
+    "rated_head": {
+      "value": "100",
+      "unit": "ft",
+      "page": 1,
+      "quote": "Rated head: 100 ft"
+    },
+    "rated_speed": {
+      "value": "1450",
+      "unit": "rpm",
+      "page": 1,
+      "quote": "Rated speed: 1450 rpm"
+    },
+    "rated_power": {
+      "value": "57.1",
+      "unit": "hp",
+      "page": 1,
+      "quote": "Rated power: 57.1 hp"
+    },
+    "efficiency": {
+      "value": "59.7",
+      "unit": "%",
+      "page": 1,
+      "quote": "Efficiency: 59.7 %"
+    },
+    "npsh_required": {
+      "value": "20",
+      "unit": "ft",
+      "page": 1,
+      "quote": "NPSH required: 20 ft"
+    },
+    "max_working_pressure": null,
+    "design_temperature": {
+      "value": "104",
+      "unit": "°F",
+      "page": 1,
+      "quote": "Design temperature: 104 °F"
+    }
+  }
+}

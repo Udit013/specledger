@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "documentId": "p-127-datasheet",
+  "lineageId": "p-127",
+  "equipmentTag": "P-127",
+  "equipmentClass": "centrifugal_pump",
+  "sourceType": "datasheet",
+  "revision": "R2",
+  "pageCount": 1,
+  "textLayer": true,
+  "fields": {
+    "rated_flow": {
+      "value": "1581",
+      "unit": "gpm",
+      "page": 1,
+      "quote": "Rated flow: 1581 gpm"
+    },
+    "rated_head": {
+      "value": "247",
+      "unit": "ft",
+      "page": 1,
+      "quote": "Rated head: 247 ft"
+    },
+    "rated_speed": {
+      "value": "2900",
+      "unit": "rpm",
+      "page": 1,
+      "quote": "Rated speed: 2900 rpm"
+    },
+    "rated_power": {
+      "value": "142.6",
+      "unit": "hp",
+      "page": 1,
+      "quote": "Rated power: 142.6 hp"
+    },
+    "efficiency": {
+      "value": "69.2",
+      "unit": "%",
+      "page": 1,
+      "quote": "Efficiency: 69.2 %"
+    },
+    "npsh_required": {
+      "value": "11",
+      "unit": "ft",
+      "page": 1,
+      "quote": "NPSH required: 11 ft"
+    },
+    "max_working_pressure": {
+      "value": "405",
+      "unit": "psi",
+      "page": 1,
+      "quote": "Max. working pressure: 405 psi"
+    },
+    "design_temperature": {
+      "value": "203",
+      "unit": "°F",
+      "page": 1,
+      "quote": "Design temperature: 203 °F"
+    }
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "documentId": "m-212-datasheet",
+  "lineageId": "m-212",
+  "equipmentTag": "M-212",
+  "equipmentClass": "electric_motor",
+  "sourceType": "datasheet",
+  "revision": "Rev A",
+  "pageCount": 1,
+  "textLayer": true,
+  "fields": {
+    "rated_power": null,
+    "rated_voltage": {
+      "value": "415",
+      "unit": "V",
+      "page": 1,
+      "quote": "Rated voltage: 415 V"
+    },
+    "rated_current": null,
+    "frequency": {
+      "value": "50",
+      "unit": "Hz",
+      "page": 1,
+      "quote": "Frequency: 50 Hz"
+    },
+    "rated_speed": {
+      "value": "2966",
+      "unit": "rpm",
+      "page": 1,
+      "quote": "Rated speed: 2966 rpm"
+    },
+    "efficiency": {
+      "value": "90.5",
+      "unit": "%",
+      "page": 1,
+      "quote": "Efficiency: 90.5 %"
+    }
+  }
+}

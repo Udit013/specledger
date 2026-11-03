@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "documentId": "p-121-datasheet",
+  "lineageId": "p-121",
+  "equipmentTag": "P-121",
+  "equipmentClass": "centrifugal_pump",
+  "sourceType": "datasheet",
+  "revision": null,
+  "pageCount": 1,
+  "textLayer": true,
+  "fields": {
+    "rated_flow": {
+      "value": "330.1",
+      "unit": "m³/h",
+      "page": 1,
+      "quote": "Rated flow: 330.1 m³/h"
+    },
+    "rated_head": {
+      "value": "41.0",
+      "unit": "m",
+      "page": 1,
+      "quote": "Rated head: 41.0 m"
+    },
+    "rated_speed": {
+      "value": "1450",
+      "unit": "rpm",
+      "page": 1,
+      "quote": "Rated speed: 1450 rpm"
+    },
+    "rated_power": {
+      "value": "58.5",
+      "unit": "kW",
+      "page": 1,
+      "quote": "Rated power: 58.5 kW"
+    },
+    "efficiency": null,
+    "npsh_required": {
+      "value": "2.4",
+      "unit": "m",
+      "page": 1,
+      "quote": "NPSH required: 2.4 m"
+    },
+    "max_working_pressure": {
+      "value": "1015",
+      "unit": "kPa",
+      "page": 1,
+      "quote": "Max. working pressure: 1015 kPa"
+    },
+    "design_temperature": {
+      "value": "120",
+      "unit": "°C",
+      "page": 1,
+      "quote": "Design temperature: 120 °C"
+    }
+  }
+}

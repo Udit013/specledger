@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "documentId": "p-110-datasheet",
+  "lineageId": "p-110",
+  "equipmentTag": "P-110",
+  "equipmentClass": "centrifugal_pump",
+  "sourceType": "datasheet",
+  "revision": "R2",
+  "pageCount": 1,
+  "textLayer": true,
+  "fields": {
+    "rated_flow": null,
+    "rated_head": {
+      "value": "45,7",
+      "unit": "m",
+      "page": 1,
+      "quote": "Rated head: 45,7 m"
+    },
+    "rated_speed": {
+      "value": "1750",
+      "unit": "rpm",
+      "page": 1,
+      "quote": "Rated speed: 1750 rpm"
+    },
+    "rated_power": {
+      "value": "122,0",
+      "unit": "kW",
+      "page": 1,
+      "quote": "Rated power: 122,0 kW"
+    },
+    "efficiency": {
+      "value": "58,4",
+      "unit": "%",
+      "page": 1,
+      "quote": "Efficiency: 58,4 %"
+    },
+    "npsh_required": {
+      "value": "4,8",
+      "unit": "m",
+      "page": 1,
+      "quote": "NPSH required: 4,8 m"
+    },
+    "max_working_pressure": {
+      "value": "20,4",
+      "unit": "bar",
+      "page": 1,
+      "quote": "Max. working pressure: 20,4 bar"
+    },
+    "design_temperature": {
+      "value": "80",
+      "unit": "°C",
+      "page": 1,
+      "quote": "Design temperature: 80 °C"
+    }
+  }
+}

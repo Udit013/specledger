@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "documentId": "p-124-datasheet",
+  "lineageId": "p-124",
+  "equipmentTag": "P-124",
+  "equipmentClass": "centrifugal_pump",
+  "sourceType": "datasheet",
+  "revision": "R2",
+  "pageCount": 1,
+  "textLayer": true,
+  "fields": {
+    "rated_flow": {
+      "value": "1183",
+      "unit": "gpm",
+      "page": 1,
+      "quote": "The rated flow is 1183 gpm at the guaranteed duty point."
+    },
+    "rated_head": {
+      "value": "59",
+      "unit": "ft",
+      "page": 1,
+      "quote": "The rated head is 59 ft at the guaranteed duty point."
+    },
+    "rated_speed": {
+      "value": "1750",
+      "unit": "rpm",
+      "page": 1,
+      "quote": "Rated speed 1750 rpm"
+    },
+    "rated_power": {
+      "value": "22.3",
+      "unit": "hp",
+      "page": 1,
+      "quote": "Rated power 22.3 hp"
+    },
+    "efficiency": {
+      "value": "79.6",
+      "unit": "%",
+      "page": 1,
+      "quote": "Efficiency 79.6 %"
+    },
+    "npsh_required": null,
+    "max_working_pressure": {
+      "value": "417",
+      "unit": "psi",
+      "page": 1,
+      "quote": "Max. working pressure 417 psi"
+    },
+    "design_temperature": {
+      "value": "140",
+      "unit": "°F",
+      "page": 1,
+      "quote": "Design temperature 140 °F"
+    }
+  }
+}

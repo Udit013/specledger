@@ -8,7 +8,7 @@ it and an approver publishes an immutable register version.
 
 ## Status
 
-Phases 0 and 1 of the plan are in place:
+Phases 0 to 2 of the plan are in place:
 
 - Foundation and quality gates: the monorepo, strict TypeScript, lint and dependency-boundary
   rules, CI, a local Postgres container, validated configuration, a redacting logger and Git
@@ -17,6 +17,11 @@ Phases 0 and 1 of the plan are in place:
   (centrifugal pump, electric motor), the Postgres schema with its constraints, database triggers
   that keep the review log append-only and published register versions immutable, typed
   repositories, and integration tests against a real Postgres.
+
+- Fixtures and ground truth: a seeded generator for a synthetic corpus of pump and motor
+  datasheets with designed difficult cases, Zod-validated ground truth, a reproducible dev/holdout
+  split, and a validator that checks every ground-truth quote against the generated PDFs. See
+  [docs/evaluation.md](docs/evaluation.md).
 
 There is no extraction, verification, reconciliation, job queue, API route or user interface yet.
 
@@ -67,6 +72,13 @@ pnpm --filter @specledger/db db:generate <snake_case_name>
 pnpm db:check-drift
 ```
 
+The synthetic evaluation corpus is generated and checked with:
+
+```sh
+pnpm fixtures:generate
+pnpm fixtures:validate
+```
+
 Other scripts: `pnpm test`, `pnpm format`, `pnpm format:check`, `pnpm boundaries`.
 
 ## Repository layout
@@ -100,6 +112,9 @@ Known gaps at this stage:
   against a database superuser, who can disable triggers.
 - The migration drift check compares the schema with drizzle-kit's snapshots. It does not detect
   a hand edit to an already-committed migration file.
+- The evaluation corpus is synthetic. It is suitable for regression testing, not as evidence of
+  accuracy on real vendor datasheets.
+- `pdf-lib`, used only to generate the synthetic corpus, has had no release since 2021.
 - Development dependencies carry two moderate advisories, both in tooling only: `minimatch`
   (through ESLint) and `esbuild` (through drizzle-kit's TypeScript loader; the advisory concerns
   esbuild's development server, which is never started). Neither can be overridden without

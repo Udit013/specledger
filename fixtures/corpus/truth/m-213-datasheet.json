@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "documentId": "m-213-datasheet",
+  "lineageId": "m-213",
+  "equipmentTag": "M-213",
+  "equipmentClass": "electric_motor",
+  "sourceType": "datasheet",
+  "revision": null,
+  "pageCount": 1,
+  "textLayer": true,
+  "fields": {
+    "rated_power": {
+      "value": "37.0",
+      "unit": "kW",
+      "page": 1,
+      "quote": "Rated power: 37.0 kW"
+    },
+    "rated_voltage": {
+      "value": "400",
+      "unit": "V",
+      "page": 1,
+      "quote": "Rated voltage: 400 V"
+    },
+    "rated_current": {
+      "value": "67.3",
+      "unit": "A",
+      "page": 1,
+      "quote": "Rated current: 67.3 A"
+    },
+    "frequency": null,
+    "rated_speed": {
+      "value": "2914",
+      "unit": "rpm",
+      "page": 1,
+      "quote": "Rated speed: 2914 rpm"
+    },
+    "efficiency": {
+      "value": "92.2",
+      "unit": "%",
+      "page": 1,
+      "quote": "Efficiency: 92.2 %"
+    }
+  }
+}

@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "documentId": "p-105-datasheet",
+  "lineageId": "p-105",
+  "equipmentTag": "P-105",
+  "equipmentClass": "centrifugal_pump",
+  "sourceType": "datasheet",
+  "revision": "Rev 2",
+  "pageCount": 2,
+  "textLayer": true,
+  "fields": {
+    "rated_flow": {
+      "value": "360,0",
+      "unit": "m³/h",
+      "page": 1,
+      "quote": "The rated flow is 360,0 m³/h at the guaranteed duty point."
+    },
+    "rated_head": {
+      "value": "27,2",
+      "unit": "m",
+      "page": 1,
+      "quote": "The rated head is 27,2 m at the guaranteed duty point."
+    },
+    "rated_speed": {
+      "value": "1480",
+      "unit": "rpm",
+      "page": 1,
+      "quote": "Rated speed 1480 rpm"
+    },
+    "rated_power": {
+      "value": "35,9",
+      "unit": "kW",
+      "page": 1,
+      "quote": "Rated power 35,9 kW"
+    },
+    "efficiency": {
+      "value": "74,3",
+      "unit": "%",
+      "page": 2,
+      "quote": "Efficiency 74,3 %"
+    },
+    "npsh_required": {
+      "value": "2,6",
+      "unit": "m",
+      "page": 2,
+      "quote": "NPSH required 2,6 m"
+    },
+    "max_working_pressure": {
+      "value": "31,4",
+      "unit": "bar",
+      "page": 2,
+      "quote": "Max. working pressure 31,4 bar"
+    },
+    "design_temperature": {
+      "value": "40",
+      "unit": "°C",
+      "page": 2,
+      "quote": "Design temperature 40 °C"
+    }
+  }
+}

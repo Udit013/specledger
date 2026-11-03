@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "documentId": "m-220-datasheet",
+  "lineageId": "m-220",
+  "equipmentTag": "M-220",
+  "equipmentClass": "electric_motor",
+  "sourceType": "datasheet",
+  "revision": "Rev A",
+  "pageCount": 1,
+  "textLayer": true,
+  "fields": {
+    "rated_power": {
+      "value": "7.5",
+      "unit": "kW",
+      "page": 1,
+      "quote": "Rated power 7.5 kW"
+    },
+    "rated_voltage": {
+      "value": "415",
+      "unit": "V",
+      "page": 1,
+      "quote": "Rated voltage 415 V"
+    },
+    "rated_current": {
+      "value": "13.3",
+      "unit": "A",
+      "page": 1,
+      "quote": "Rated current 13.3 A"
+    },
+    "frequency": {
+      "value": "50",
+      "unit": "Hz",
+      "page": 1,
+      "quote": "Frequency 50 Hz"
+    },
+    "rated_speed": {
+      "value": "2930",
+      "unit": "rpm",
+      "page": 1,
+      "quote": "Rated speed 2930 rpm"
+    },
+    "efficiency": {
+      "value": "91.0",
+      "unit": "%",
+      "page": 1,
+      "quote": "Efficiency 91.0 %"
+    }
+  }
+}

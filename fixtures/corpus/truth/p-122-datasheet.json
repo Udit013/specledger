@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "documentId": "p-122-datasheet",
+  "lineageId": "p-122",
+  "equipmentTag": "P-122",
+  "equipmentClass": "centrifugal_pump",
+  "sourceType": "datasheet",
+  "revision": "Rev 1",
+  "pageCount": 1,
+  "textLayer": true,
+  "fields": {
+    "rated_flow": {
+      "value": "1009",
+      "unit": "gpm",
+      "page": 1,
+      "quote": "Rated flow 1009 gpm (229.2 m3/h)"
+    },
+    "rated_head": null,
+    "rated_speed": {
+      "value": "1450",
+      "unit": "rpm",
+      "page": 1,
+      "quote": "Rated speed 1450 rpm"
+    },
+    "rated_power": {
+      "value": "33.2",
+      "unit": "hp",
+      "page": 1,
+      "quote": "Rated power 33.2 hp (24.76 kW)"
+    },
+    "efficiency": {
+      "value": "65.9",
+      "unit": "%",
+      "page": 1,
+      "quote": "Efficiency 65.9 %"
+    },
+    "npsh_required": {
+      "value": "9",
+      "unit": "ft",
+      "page": 1,
+      "quote": "NPSH required 9 ft (2.743 m)"
+    },
+    "max_working_pressure": {
+      "value": "148",
+      "unit": "psi",
+      "page": 1,
+      "quote": "Max. working pressure 148 psi (10.20 bar)"
+    },
+    "design_temperature": {
+      "value": "176",
+      "unit": "°F",
+      "page": 1,
+      "quote": "Design temperature 176 °F (80.00 °C)"
+    }
+  }
+}

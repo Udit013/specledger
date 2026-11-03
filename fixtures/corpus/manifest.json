@@ -1,0 +1,713 @@
+{
+  "schemaVersion": 1,
+  "generator": {
+    "seed": "specledger-corpus-v1",
+    "version": 1
+  },
+  "split": {
+    "key": "lineageId",
+    "holdoutFraction": 0.3
+  },
+  "corpusSha256": "14256ef6aeaf6e01d7f0c619ec07152b21b79bc772c995fc3af284091831462e",
+  "documents": [
+    {
+      "id": "m-201-datasheet-rev-a",
+      "lineageId": "m-201",
+      "equipmentClass": "electric_motor",
+      "split": "dev",
+      "cases": [
+        "layout_table",
+        "revision"
+      ],
+      "description": "First revision of the M-201 motor datasheet.",
+      "pdf": "pdf/m-201-datasheet-rev-a.pdf",
+      "pdfSha256": "cf9c256e6fcd5ed7543643e3f3bfdb1f06024e6e4039dce1b26682e0d1397a57",
+      "truth": "truth/m-201-datasheet-rev-a.json",
+      "truthSha256": "5090111056e5c8cd58b2d7f2dfe3c4d25024616c9c48e933cbccaa11a8c91afc"
+    },
+    {
+      "id": "m-201-datasheet-rev-b",
+      "lineageId": "m-201",
+      "equipmentClass": "electric_motor",
+      "split": "dev",
+      "cases": [
+        "layout_table",
+        "revision"
+      ],
+      "description": "Rev B of M-201: rated current and efficiency differ from Rev A.",
+      "pdf": "pdf/m-201-datasheet-rev-b.pdf",
+      "pdfSha256": "ea07722ce78cde2b6329d463d06d78cdb14c9c0ea763ee9190d3abdee784fb89",
+      "truth": "truth/m-201-datasheet-rev-b.json",
+      "truthSha256": "1335d3db3f49d7ec250a46fb404bfc6b064a984771101c8808da47fe3284fbcd"
+    },
+    {
+      "id": "m-202-datasheet",
+      "lineageId": "m-202",
+      "equipmentClass": "electric_motor",
+      "split": "holdout",
+      "cases": [
+        "layout_key_value",
+        "range"
+      ],
+      "description": "Variable-speed motor whose rated speed is a range written \"2900 to 3600\".",
+      "pdf": "pdf/m-202-datasheet.pdf",
+      "pdfSha256": "281d57ed7965e0d8bb6c388d1cfed05bd2ce539f6f1cce8835465ada64004c89",
+      "truth": "truth/m-202-datasheet.json",
+      "truthSha256": "81f4c6717776a8bb9424e2ae079a9d81b24adeb24101492e21757cea7de4515f"
+    },
+    {
+      "id": "m-203-datasheet",
+      "lineageId": "m-203",
+      "equipmentClass": "electric_motor",
+      "split": "dev",
+      "cases": [
+        "layout_key_value",
+        "range"
+      ],
+      "description": "Variable-speed motor whose rated speed is a range written \"2900 to 3600\".",
+      "pdf": "pdf/m-203-datasheet.pdf",
+      "pdfSha256": "6cd2d805661519840c18ce3e7ff67fccda2371bd514b20d41cca729a8cc48ed9",
+      "truth": "truth/m-203-datasheet.json",
+      "truthSha256": "f819b999f2de28c5330fd28cb55eebcfcb0093b3515c37a8f7e3af6c08442c18"
+    },
+    {
+      "id": "m-210-datasheet",
+      "lineageId": "m-210",
+      "equipmentClass": "electric_motor",
+      "split": "dev",
+      "cases": [
+        "absent_fields",
+        "baseline",
+        "decimal_comma",
+        "layout_mixed",
+        "multi_page"
+      ],
+      "description": "Seeded datasheet varying layout, units and decimal mark.",
+      "pdf": "pdf/m-210-datasheet.pdf",
+      "pdfSha256": "cc02096a20a7c4b121bf59a439ed6a7de2df8539866ddf0273a0dcd7e9d3074e",
+      "truth": "truth/m-210-datasheet.json",
+      "truthSha256": "add9d4059d8a8f405a215f42c75840793f36cd85eec09a3ef6efc0119b344c53"
+    },
+    {
+      "id": "m-211-datasheet",
+      "lineageId": "m-211",
+      "equipmentClass": "electric_motor",
+      "split": "holdout",
+      "cases": [
+        "absent_fields",
+        "baseline",
+        "layout_mixed",
+        "multi_page"
+      ],
+      "description": "Seeded datasheet varying layout, units and decimal mark.",
+      "pdf": "pdf/m-211-datasheet.pdf",
+      "pdfSha256": "75db0a152e400c2ea780db7734094e72418ce82a404459c26f3b37b41cd10f4c",
+      "truth": "truth/m-211-datasheet.json",
+      "truthSha256": "6a3e8d6b5d4de8a0c2883dc4ab7b0edba504e5e7f699291cb8d0206bce77b8ba"
+    },
+    {
+      "id": "m-212-datasheet",
+      "lineageId": "m-212",
+      "equipmentClass": "electric_motor",
+      "split": "dev",
+      "cases": [
+        "absent_fields",
+        "baseline",
+        "dual_units",
+        "layout_key_value"
+      ],
+      "description": "Seeded datasheet varying layout, units and decimal mark.",
+      "pdf": "pdf/m-212-datasheet.pdf",
+      "pdfSha256": "9cdfc2e473fda5a871fd2f78b9b329aecb5d20d76ebb8bea0c48f566cc985492",
+      "truth": "truth/m-212-datasheet.json",
+      "truthSha256": "eec194fa2da3ad650c83058e635640e2eb17ff4d0149e87d2334e65426ffcc58"
+    },
+    {
+      "id": "m-213-datasheet",
+      "lineageId": "m-213",
+      "equipmentClass": "electric_motor",
+      "split": "holdout",
+      "cases": [
+        "absent_fields",
+        "baseline",
+        "layout_key_value"
+      ],
+      "description": "Seeded datasheet varying layout, units and decimal mark.",
+      "pdf": "pdf/m-213-datasheet.pdf",
+      "pdfSha256": "57d14c00e6adb6590147df65bfc0d2a9186906c3d22273579ada339838f765b9",
+      "truth": "truth/m-213-datasheet.json",
+      "truthSha256": "d6e049ca878e596cafe7be2730543e02dcb4540f287855eff458a221a034e521"
+    },
+    {
+      "id": "m-214-datasheet",
+      "lineageId": "m-214",
+      "equipmentClass": "electric_motor",
+      "split": "holdout",
+      "cases": [
+        "absent_fields",
+        "baseline",
+        "dual_units",
+        "layout_key_value"
+      ],
+      "description": "Seeded datasheet varying layout, units and decimal mark.",
+      "pdf": "pdf/m-214-datasheet.pdf",
+      "pdfSha256": "03a4e443856a731e5c09ff4552efeb1a6b9fdc2a67d492f3a560d9540434fa0c",
+      "truth": "truth/m-214-datasheet.json",
+      "truthSha256": "1e2e092cac3440ad9cedb919dc76d2a8f607d2ed8e7c9af4448be9a616e6a97f"
+    },
+    {
+      "id": "m-215-datasheet",
+      "lineageId": "m-215",
+      "equipmentClass": "electric_motor",
+      "split": "dev",
+      "cases": [
+        "absent_fields",
+        "baseline",
+        "decimal_comma",
+        "layout_key_value"
+      ],
+      "description": "Seeded datasheet varying layout, units and decimal mark.",
+      "pdf": "pdf/m-215-datasheet.pdf",
+      "pdfSha256": "bdb0074726669a567864c01461a36d4fab7bb3e275df5af85ba961be389adced",
+      "truth": "truth/m-215-datasheet.json",
+      "truthSha256": "95f8310dcc10f089f11f5e2a2304467cf67f800b352bcbe4edfd927efcd89e6c"
+    },
+    {
+      "id": "m-216-datasheet",
+      "lineageId": "m-216",
+      "equipmentClass": "electric_motor",
+      "split": "dev",
+      "cases": [
+        "baseline",
+        "dual_units",
+        "layout_key_value",
+        "multi_page"
+      ],
+      "description": "Seeded datasheet varying layout, units and decimal mark.",
+      "pdf": "pdf/m-216-datasheet.pdf",
+      "pdfSha256": "1d7c3daa0aa472b2d3de98f8a0adaa6e931b4e9ace13da639c5d80e7e26a1db0",
+      "truth": "truth/m-216-datasheet.json",
+      "truthSha256": "8f61301331481247897bd31149bf6d02481485bf27a3fce41f0ec1be6d89c680"
+    },
+    {
+      "id": "m-217-datasheet",
+      "lineageId": "m-217",
+      "equipmentClass": "electric_motor",
+      "split": "dev",
+      "cases": [
+        "baseline",
+        "layout_table"
+      ],
+      "description": "Seeded datasheet varying layout, units and decimal mark.",
+      "pdf": "pdf/m-217-datasheet.pdf",
+      "pdfSha256": "8f65b336eedaaf201a3fad005dd969224db3d375577d2f99b83241af4e34a0d7",
+      "truth": "truth/m-217-datasheet.json",
+      "truthSha256": "7a0a593d4a976600a965bd8b8322fe1dca23bcf83e24117eb64c94d7bf947ab2"
+    },
+    {
+      "id": "m-218-datasheet",
+      "lineageId": "m-218",
+      "equipmentClass": "electric_motor",
+      "split": "holdout",
+      "cases": [
+        "absent_fields",
+        "baseline",
+        "layout_table",
+        "multi_page"
+      ],
+      "description": "Seeded datasheet varying layout, units and decimal mark.",
+      "pdf": "pdf/m-218-datasheet.pdf",
+      "pdfSha256": "a87f2ed77b464dfebbe5614060f3a112b4e48b871990115311771f00661eb3e3",
+      "truth": "truth/m-218-datasheet.json",
+      "truthSha256": "8fd5660401243d920c12c508bf5d851e98e251db0d739e5e905f69827893e838"
+    },
+    {
+      "id": "m-219-datasheet",
+      "lineageId": "m-219",
+      "equipmentClass": "electric_motor",
+      "split": "dev",
+      "cases": [
+        "baseline",
+        "layout_key_value"
+      ],
+      "description": "Seeded datasheet varying layout, units and decimal mark.",
+      "pdf": "pdf/m-219-datasheet.pdf",
+      "pdfSha256": "5cf20a8cc5af8843f5fcd6cbafda136cc87583a85acf0cbaef0dc12cef736ae8",
+      "truth": "truth/m-219-datasheet.json",
+      "truthSha256": "98f824db792d4d2eafae55f4b1d59dd2792cdd1532b25306edec73878f73928c"
+    },
+    {
+      "id": "m-220-datasheet",
+      "lineageId": "m-220",
+      "equipmentClass": "electric_motor",
+      "split": "holdout",
+      "cases": [
+        "baseline",
+        "layout_table"
+      ],
+      "description": "Seeded datasheet varying layout, units and decimal mark.",
+      "pdf": "pdf/m-220-datasheet.pdf",
+      "pdfSha256": "2e073fa236c030fe4a470c215bef5ead38db67e2d3515d9ac3ed37f08e404935",
+      "truth": "truth/m-220-datasheet.json",
+      "truthSha256": "e4edf532114c8c6db05629ab9725cc20abae83ad454fcfd65803d0bf68960136"
+    },
+    {
+      "id": "m-221-datasheet",
+      "lineageId": "m-221",
+      "equipmentClass": "electric_motor",
+      "split": "holdout",
+      "cases": [
+        "baseline",
+        "layout_mixed",
+        "multi_page"
+      ],
+      "description": "Seeded datasheet varying layout, units and decimal mark.",
+      "pdf": "pdf/m-221-datasheet.pdf",
+      "pdfSha256": "ba8d840b2dcdafa1aa7fcc5d19a5f652f5cb92fdd47eee4889ce1a90bc9b52ee",
+      "truth": "truth/m-221-datasheet.json",
+      "truthSha256": "2a4c6bc67e46b34cf1d03358d821fb0731ac4fcf010e8860375978d92b6213c0"
+    },
+    {
+      "id": "p-101-brochure",
+      "lineageId": "p-101",
+      "equipmentClass": "centrifugal_pump",
+      "split": "holdout",
+      "cases": [
+        "absent_fields",
+        "brochure_rated_vs_max"
+      ],
+      "description": "Marketing brochure for P-101 stating maximum values next to rated ones; its rated head disagrees with the datasheet.",
+      "pdf": "pdf/p-101-brochure.pdf",
+      "pdfSha256": "c66a36709ffc8a5d81239c1cb1093e870a89bc6969321726f83fbb0ea39468a0",
+      "truth": "truth/p-101-brochure.json",
+      "truthSha256": "e0d4e5a5cf3d1c3aef75a0930f55ffd9e220b90a39e28604326a7ad5a5ac9d9e"
+    },
+    {
+      "id": "p-101-datasheet-rev-a",
+      "lineageId": "p-101",
+      "equipmentClass": "centrifugal_pump",
+      "split": "holdout",
+      "cases": [
+        "dual_units",
+        "layout_key_value",
+        "revision"
+      ],
+      "description": "First revision of the P-101 datasheet; values in metric with US equivalents.",
+      "pdf": "pdf/p-101-datasheet-rev-a.pdf",
+      "pdfSha256": "131b4d80aaebe1e5eb729ea31a32dc224e7f5524ec9117baf597262ee5961a44",
+      "truth": "truth/p-101-datasheet-rev-a.json",
+      "truthSha256": "1be6a21b50a208cfa0079bf883ca785a63a9e19b783b2bdf8e7fcd39784094d6"
+    },
+    {
+      "id": "p-101-datasheet-rev-b",
+      "lineageId": "p-101",
+      "equipmentClass": "centrifugal_pump",
+      "split": "holdout",
+      "cases": [
+        "dual_units",
+        "layout_key_value",
+        "revision"
+      ],
+      "description": "Rev B of P-101: rated head, power and efficiency differ from Rev A.",
+      "pdf": "pdf/p-101-datasheet-rev-b.pdf",
+      "pdfSha256": "e7408addb1cd51bbe6a2111f202fac80515b3c7bc918de9f3d6d5a4210f820db",
+      "truth": "truth/p-101-datasheet-rev-b.json",
+      "truthSha256": "b28e88a15b0d97ec2319d71963706604673c08dc171ab5789639b971d0ab91cf"
+    },
+    {
+      "id": "p-102-datasheet",
+      "lineageId": "p-102",
+      "equipmentClass": "centrifugal_pump",
+      "split": "holdout",
+      "cases": [
+        "layout_table",
+        "range"
+      ],
+      "description": "Pump on a variable-speed drive; rated speed is a range written \"1450-1780\".",
+      "pdf": "pdf/p-102-datasheet.pdf",
+      "pdfSha256": "2f40a2d11238aab50f27d29ab489b5d1592d8082664def9ef16e554fcb483255",
+      "truth": "truth/p-102-datasheet.json",
+      "truthSha256": "73b7fa8d623b54f10beafe49f8d8ce96b10298431dac60d2542c5239061e46e3"
+    },
+    {
+      "id": "p-103-datasheet",
+      "lineageId": "p-103",
+      "equipmentClass": "centrifugal_pump",
+      "split": "holdout",
+      "cases": [
+        "injection",
+        "layout_key_value"
+      ],
+      "description": "Datasheet with an embedded instruction aimed at the extraction model.",
+      "pdf": "pdf/p-103-datasheet.pdf",
+      "pdfSha256": "d979f0f43327d7c41e71385991498915229f77fc63837fce22dafa3f6443c1ff",
+      "truth": "truth/p-103-datasheet.json",
+      "truthSha256": "3d8b0b1d78e96f43c5b473e15d7d307fe63b81a546efa95a6547dec538a2edb0"
+    },
+    {
+      "id": "p-104-datasheet-scan",
+      "lineageId": "p-104",
+      "equipmentClass": "centrifugal_pump",
+      "split": "dev",
+      "cases": [
+        "no_text_layer"
+      ],
+      "description": "Scanned-style page: a single image and no text layer, so nothing is extractable.",
+      "pdf": "pdf/p-104-datasheet-scan.pdf",
+      "pdfSha256": "f45c25d32b985f2b436e3fd706272c951ad61e45fa92fdef52ef91b423030a3c",
+      "truth": "truth/p-104-datasheet-scan.json",
+      "truthSha256": "77deccb0e6d8adcc768c0b491ed5c37bee200740454d1583f2f5eae3a8ef1c56"
+    },
+    {
+      "id": "p-105-datasheet",
+      "lineageId": "p-105",
+      "equipmentClass": "centrifugal_pump",
+      "split": "dev",
+      "cases": [
+        "decimal_comma",
+        "layout_mixed",
+        "multi_page"
+      ],
+      "description": "Two-page datasheet with prose and tables, written with decimal commas.",
+      "pdf": "pdf/p-105-datasheet.pdf",
+      "pdfSha256": "761fa0e12d9696d618731b229ac02a316a48bf088b0be6077ad6c42550619a34",
+      "truth": "truth/p-105-datasheet.json",
+      "truthSha256": "00b7a0182b9876494ea400f0c7eff11dea8b1a2f1e858b366b88cfa343e2f2b8"
+    },
+    {
+      "id": "p-106-brochure",
+      "lineageId": "p-106",
+      "equipmentClass": "centrifugal_pump",
+      "split": "dev",
+      "cases": [
+        "absent_fields",
+        "brochure_rated_vs_max"
+      ],
+      "description": "Marketing brochure for P-106 stating maximum values next to rated ones; its rated head disagrees with the datasheet.",
+      "pdf": "pdf/p-106-brochure.pdf",
+      "pdfSha256": "15950303a9e77b3784c1455e8d96f87d0f687d09178ed70e91ae1a94eb680e50",
+      "truth": "truth/p-106-brochure.json",
+      "truthSha256": "939dc70e4e72f14fc309fe233ff914caa5f46f0b26f284a8b9272b77e8fbcd2e"
+    },
+    {
+      "id": "p-106-datasheet",
+      "lineageId": "p-106",
+      "equipmentClass": "centrifugal_pump",
+      "split": "dev",
+      "cases": [
+        "layout_table"
+      ],
+      "description": "Datasheet for P-106, the reference for its brochure.",
+      "pdf": "pdf/p-106-datasheet.pdf",
+      "pdfSha256": "2e4cf7a3bcb42965326964f453df131545d49f0d58597a85f5850f073e1c6618",
+      "truth": "truth/p-106-datasheet.json",
+      "truthSha256": "f5c06cf059b4eb6309daee14910774c08b0cf7d848c391c7b2e49d85895b4acd"
+    },
+    {
+      "id": "p-108-datasheet",
+      "lineageId": "p-108",
+      "equipmentClass": "centrifugal_pump",
+      "split": "dev",
+      "cases": [
+        "injection",
+        "layout_key_value"
+      ],
+      "description": "Datasheet with an embedded instruction aimed at the extraction model.",
+      "pdf": "pdf/p-108-datasheet.pdf",
+      "pdfSha256": "0d9b0227ab40ba645d581fcc44a6925efd075db24a4edde2cf83e071285094b8",
+      "truth": "truth/p-108-datasheet.json",
+      "truthSha256": "2051cc40719b50412a19346fa85ce22bd4ce175f4d2e8d69715eddf1528f88ee"
+    },
+    {
+      "id": "p-110-datasheet",
+      "lineageId": "p-110",
+      "equipmentClass": "centrifugal_pump",
+      "split": "dev",
+      "cases": [
+        "absent_fields",
+        "baseline",
+        "decimal_comma",
+        "layout_key_value"
+      ],
+      "description": "Seeded datasheet varying layout, units and decimal mark.",
+      "pdf": "pdf/p-110-datasheet.pdf",
+      "pdfSha256": "345ff0b7df733a22a6127ed6e392e1e26a3274b5015457d254de3b5a858a5500",
+      "truth": "truth/p-110-datasheet.json",
+      "truthSha256": "3c00f63db539513abf697246dfe93de63b32e1c8050564fffae4ed7e5b4fb3aa"
+    },
+    {
+      "id": "p-111-datasheet",
+      "lineageId": "p-111",
+      "equipmentClass": "centrifugal_pump",
+      "split": "dev",
+      "cases": [
+        "absent_fields",
+        "baseline",
+        "layout_key_value",
+        "multi_page"
+      ],
+      "description": "Seeded datasheet varying layout, units and decimal mark.",
+      "pdf": "pdf/p-111-datasheet.pdf",
+      "pdfSha256": "58575251d2fb96c9bc496547c1383061961e318ba6e0ea3a906ecf314a4830a4",
+      "truth": "truth/p-111-datasheet.json",
+      "truthSha256": "603d61faf2165894de6fc2bcc0a76a88d88479941297065ef566b57cefca656a"
+    },
+    {
+      "id": "p-112-datasheet",
+      "lineageId": "p-112",
+      "equipmentClass": "centrifugal_pump",
+      "split": "holdout",
+      "cases": [
+        "absent_fields",
+        "baseline",
+        "layout_key_value"
+      ],
+      "description": "Seeded datasheet varying layout, units and decimal mark.",
+      "pdf": "pdf/p-112-datasheet.pdf",
+      "pdfSha256": "ae5e1497afae013c8a5a5b5fffab7a2606b4e1359775b63c849be94ac1931eb5",
+      "truth": "truth/p-112-datasheet.json",
+      "truthSha256": "cca1b50abaaf1026493560437e63162e7f491257720e9e249aa279e9de557a15"
+    },
+    {
+      "id": "p-113-datasheet",
+      "lineageId": "p-113",
+      "equipmentClass": "centrifugal_pump",
+      "split": "dev",
+      "cases": [
+        "absent_fields",
+        "baseline",
+        "layout_key_value"
+      ],
+      "description": "Seeded datasheet varying layout, units and decimal mark.",
+      "pdf": "pdf/p-113-datasheet.pdf",
+      "pdfSha256": "ea26b43180a0a6a9db807d830fd5fb72ad3b88a124650bd534ff735ddd182917",
+      "truth": "truth/p-113-datasheet.json",
+      "truthSha256": "f46dc878e4dc4c030f64a214c28746814318a71f18d0f4d6ff17cf43bc8dbaea"
+    },
+    {
+      "id": "p-114-datasheet",
+      "lineageId": "p-114",
+      "equipmentClass": "centrifugal_pump",
+      "split": "holdout",
+      "cases": [
+        "absent_fields",
+        "baseline",
+        "layout_key_value"
+      ],
+      "description": "Seeded datasheet varying layout, units and decimal mark.",
+      "pdf": "pdf/p-114-datasheet.pdf",
+      "pdfSha256": "5c40a1aff91201d6d237f5b0fe7bcb2cedba5e3bb0407efca08fc574215ea2f6",
+      "truth": "truth/p-114-datasheet.json",
+      "truthSha256": "e9bafe5015702845a27bbd04b5932034afa3fb7206eec915087cb207eb411d46"
+    },
+    {
+      "id": "p-115-datasheet",
+      "lineageId": "p-115",
+      "equipmentClass": "centrifugal_pump",
+      "split": "dev",
+      "cases": [
+        "absent_fields",
+        "baseline",
+        "layout_table",
+        "multi_page"
+      ],
+      "description": "Seeded datasheet varying layout, units and decimal mark.",
+      "pdf": "pdf/p-115-datasheet.pdf",
+      "pdfSha256": "2caf0c59145262a7acb49c5e77778370861a02bb307fefd0f0789e9875b72a78",
+      "truth": "truth/p-115-datasheet.json",
+      "truthSha256": "08e5b22c2dadfceeac7ed4abc0f5d9388b6e61bb4c4a1efe85b8e34eb9109473"
+    },
+    {
+      "id": "p-116-datasheet",
+      "lineageId": "p-116",
+      "equipmentClass": "centrifugal_pump",
+      "split": "holdout",
+      "cases": [
+        "absent_fields",
+        "baseline",
+        "layout_key_value"
+      ],
+      "description": "Seeded datasheet varying layout, units and decimal mark.",
+      "pdf": "pdf/p-116-datasheet.pdf",
+      "pdfSha256": "ac3286e436f2022272b274112d0c89499f1584a454e4ee04bab764151ece7e69",
+      "truth": "truth/p-116-datasheet.json",
+      "truthSha256": "20967bc0211607a04057d23a96d399ffd15175e492186025442c4ccd7c746f90"
+    },
+    {
+      "id": "p-117-datasheet",
+      "lineageId": "p-117",
+      "equipmentClass": "centrifugal_pump",
+      "split": "dev",
+      "cases": [
+        "absent_fields",
+        "baseline",
+        "layout_table"
+      ],
+      "description": "Seeded datasheet varying layout, units and decimal mark.",
+      "pdf": "pdf/p-117-datasheet.pdf",
+      "pdfSha256": "ab52147629e4c1c34b9c1a41e76ebe8d9026f44589cdcaaa7e258884ff8e185b",
+      "truth": "truth/p-117-datasheet.json",
+      "truthSha256": "193b1135c8c6e2d0c6653b669ad0488b7d07a8faf1cace8bb4e9ac9d2c303bb6"
+    },
+    {
+      "id": "p-118-datasheet",
+      "lineageId": "p-118",
+      "equipmentClass": "centrifugal_pump",
+      "split": "dev",
+      "cases": [
+        "baseline",
+        "layout_mixed"
+      ],
+      "description": "Seeded datasheet varying layout, units and decimal mark.",
+      "pdf": "pdf/p-118-datasheet.pdf",
+      "pdfSha256": "04cce4890ddafd571f90a32fb2c985020416a7700720a3ab48646e7401fab88f",
+      "truth": "truth/p-118-datasheet.json",
+      "truthSha256": "adc83bed8e1d1045d4b0bce13e0d17f3cb41e5b6d7e380f37bb70b8bfd3aa009"
+    },
+    {
+      "id": "p-119-datasheet",
+      "lineageId": "p-119",
+      "equipmentClass": "centrifugal_pump",
+      "split": "dev",
+      "cases": [
+        "baseline",
+        "decimal_comma",
+        "dual_units",
+        "layout_table",
+        "multi_page"
+      ],
+      "description": "Seeded datasheet varying layout, units and decimal mark.",
+      "pdf": "pdf/p-119-datasheet.pdf",
+      "pdfSha256": "48a36f34d4b08aeb733c3be9d16fef42f004a603967355faea847bb3d361fdad",
+      "truth": "truth/p-119-datasheet.json",
+      "truthSha256": "0f179c5f6ed44fc07e12154fb6ba1e983906f9cc550e0d61f9a1de675fcf56f1"
+    },
+    {
+      "id": "p-120-datasheet",
+      "lineageId": "p-120",
+      "equipmentClass": "centrifugal_pump",
+      "split": "dev",
+      "cases": [
+        "baseline",
+        "layout_mixed"
+      ],
+      "description": "Seeded datasheet varying layout, units and decimal mark.",
+      "pdf": "pdf/p-120-datasheet.pdf",
+      "pdfSha256": "0f04262a4ba218647d602c754d6b2ac3aa4381f4a07e01159526a1361460b19b",
+      "truth": "truth/p-120-datasheet.json",
+      "truthSha256": "1340d2e8a00772f14ddb84062252d7d2e2f84327179acc936380a8f94993419a"
+    },
+    {
+      "id": "p-121-datasheet",
+      "lineageId": "p-121",
+      "equipmentClass": "centrifugal_pump",
+      "split": "holdout",
+      "cases": [
+        "absent_fields",
+        "baseline",
+        "layout_key_value"
+      ],
+      "description": "Seeded datasheet varying layout, units and decimal mark.",
+      "pdf": "pdf/p-121-datasheet.pdf",
+      "pdfSha256": "912d83db99616e53c4ba5dd63c4b49e0d13f11a2b6647b7bcb5d3fec830b75ff",
+      "truth": "truth/p-121-datasheet.json",
+      "truthSha256": "e06f22862ea38fca551e0c1c325b54f350978f51623593649edd3f485f8d56e6"
+    },
+    {
+      "id": "p-122-datasheet",
+      "lineageId": "p-122",
+      "equipmentClass": "centrifugal_pump",
+      "split": "holdout",
+      "cases": [
+        "absent_fields",
+        "baseline",
+        "dual_units",
+        "layout_table"
+      ],
+      "description": "Seeded datasheet varying layout, units and decimal mark.",
+      "pdf": "pdf/p-122-datasheet.pdf",
+      "pdfSha256": "09a37f452b96114d2fc3f4b2d724cd24e2140363a7566e30fc0f15f172e6582a",
+      "truth": "truth/p-122-datasheet.json",
+      "truthSha256": "29d38bbf2a83e773a01b8612ec905bb06ea85a287a11c008b0a709b96724169a"
+    },
+    {
+      "id": "p-123-datasheet",
+      "lineageId": "p-123",
+      "equipmentClass": "centrifugal_pump",
+      "split": "dev",
+      "cases": [
+        "absent_fields",
+        "baseline",
+        "layout_table"
+      ],
+      "description": "Seeded datasheet varying layout, units and decimal mark.",
+      "pdf": "pdf/p-123-datasheet.pdf",
+      "pdfSha256": "8b7666ba389fcc2b2d0c971e18d0ebdc1c30b6e19b501a1a75ebc4e05661fc22",
+      "truth": "truth/p-123-datasheet.json",
+      "truthSha256": "3768214700716cb60f76c122e94eebee87dad4c43fe979a8b8082ecbb17398c8"
+    },
+    {
+      "id": "p-124-datasheet",
+      "lineageId": "p-124",
+      "equipmentClass": "centrifugal_pump",
+      "split": "holdout",
+      "cases": [
+        "absent_fields",
+        "baseline",
+        "layout_mixed"
+      ],
+      "description": "Seeded datasheet varying layout, units and decimal mark.",
+      "pdf": "pdf/p-124-datasheet.pdf",
+      "pdfSha256": "76d1055beacacc2801e1a05fa3dfdcf4bac941c5696523494cb09c0a34521e50",
+      "truth": "truth/p-124-datasheet.json",
+      "truthSha256": "8b9c4f2bf5bf905ee6531082f8c6f34a89cf2075fbdf06304a9c12bb44ed8275"
+    },
+    {
+      "id": "p-125-datasheet",
+      "lineageId": "p-125",
+      "equipmentClass": "centrifugal_pump",
+      "split": "dev",
+      "cases": [
+        "absent_fields",
+        "baseline",
+        "decimal_comma",
+        "layout_key_value"
+      ],
+      "description": "Seeded datasheet varying layout, units and decimal mark.",
+      "pdf": "pdf/p-125-datasheet.pdf",
+      "pdfSha256": "860aa0f72de09eb516f44d1149fca6daab3d11d96bdd6475dfb22ac405931d77",
+      "truth": "truth/p-125-datasheet.json",
+      "truthSha256": "6319f2b8ef3295998b4185730023501ac209d620de577172b0e0b81471a0e408"
+    },
+    {
+      "id": "p-126-datasheet",
+      "lineageId": "p-126",
+      "equipmentClass": "centrifugal_pump",
+      "split": "dev",
+      "cases": [
+        "baseline",
+        "layout_mixed"
+      ],
+      "description": "Seeded datasheet varying layout, units and decimal mark.",
+      "pdf": "pdf/p-126-datasheet.pdf",
+      "pdfSha256": "d369a326a8abd7a1cf66b9889daf572f2a73af705f37137ca285401f1cb66492",
+      "truth": "truth/p-126-datasheet.json",
+      "truthSha256": "473692995bd6f3afe7cbacb8419a53c5e4abf4c0a3fbf2af6c7a117c93fd70c9"
+    },
+    {
+      "id": "p-127-datasheet",
+      "lineageId": "p-127",
+      "equipmentClass": "centrifugal_pump",
+      "split": "dev",
+      "cases": [
+        "baseline",
+        "layout_key_value"
+      ],
+      "description": "Seeded datasheet varying layout, units and decimal mark.",
+      "pdf": "pdf/p-127-datasheet.pdf",
+      "pdfSha256": "07b4d917bb1790440751cafeb6144f5eb5fab717d24abed94c1e603875f40bf1",
+      "truth": "truth/p-127-datasheet.json",
+      "truthSha256": "fa0bea138f87d12d9128da790d3190e10659c6aec0090f9b0677c39b18024b1e"
+    }
+  ]
+}

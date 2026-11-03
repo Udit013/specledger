@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "documentId": "m-201-datasheet-rev-b",
+  "lineageId": "m-201",
+  "equipmentTag": "M-201",
+  "equipmentClass": "electric_motor",
+  "sourceType": "datasheet",
+  "revision": "Rev B",
+  "pageCount": 1,
+  "textLayer": true,
+  "fields": {
+    "rated_power": {
+      "value": "45.0",
+      "unit": "kW",
+      "page": 1,
+      "quote": "Rated power 45.0 kW"
+    },
+    "rated_voltage": {
+      "value": "400",
+      "unit": "V",
+      "page": 1,
+      "quote": "Rated voltage 400 V"
+    },
+    "rated_current": {
+      "value": "76.3",
+      "unit": "A",
+      "page": 1,
+      "quote": "Rated current 76.3 A"
+    },
+    "frequency": {
+      "value": "50",
+      "unit": "Hz",
+      "page": 1,
+      "quote": "Frequency 50 Hz"
+    },
+    "rated_speed": {
+      "value": "1473",
+      "unit": "rpm",
+      "page": 1,
+      "quote": "Rated speed 1473 rpm"
+    },
+    "efficiency": {
+      "value": "96.9",
+      "unit": "%",
+      "page": 1,
+      "quote": "Efficiency 96.9 %"
+    }
+  }
+}

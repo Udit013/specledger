@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "documentId": "m-203-datasheet",
+  "lineageId": "m-203",
+  "equipmentTag": "M-203",
+  "equipmentClass": "electric_motor",
+  "sourceType": "datasheet",
+  "revision": "Rev A",
+  "pageCount": 1,
+  "textLayer": true,
+  "fields": {
+    "rated_power": {
+      "value": "45.0",
+      "unit": "kW",
+      "page": 1,
+      "quote": "Rated power: 45.0 kW"
+    },
+    "rated_voltage": {
+      "value": "400",
+      "unit": "V",
+      "page": 1,
+      "quote": "Rated voltage: 400 V"
+    },
+    "rated_current": {
+      "value": "78.9",
+      "unit": "A",
+      "page": 1,
+      "quote": "Rated current: 78.9 A"
+    },
+    "frequency": {
+      "value": "50",
+      "unit": "Hz",
+      "page": 1,
+      "quote": "Frequency: 50 Hz"
+    },
+    "rated_speed": {
+      "value": "2900 to 3600",
+      "unit": "rpm",
+      "page": 1,
+      "quote": "Rated speed: 2900 to 3600 rpm"
+    },
+    "efficiency": {
+      "value": "95.7",
+      "unit": "%",
+      "page": 1,
+      "quote": "Efficiency: 95.7 %"
+    }
+  }
+}

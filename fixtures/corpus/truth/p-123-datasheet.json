@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "documentId": "p-123-datasheet",
+  "lineageId": "p-123",
+  "equipmentTag": "P-123",
+  "equipmentClass": "centrifugal_pump",
+  "sourceType": "datasheet",
+  "revision": "Rev 1",
+  "pageCount": 1,
+  "textLayer": true,
+  "fields": {
+    "rated_flow": null,
+    "rated_head": {
+      "value": "256",
+      "unit": "ft",
+      "page": 1,
+      "quote": "Rated head 256 ft"
+    },
+    "rated_speed": {
+      "value": "1450",
+      "unit": "rpm",
+      "page": 1,
+      "quote": "Rated speed 1450 rpm"
+    },
+    "rated_power": {
+      "value": "44.2",
+      "unit": "hp",
+      "page": 1,
+      "quote": "Rated power 44.2 hp"
+    },
+    "efficiency": {
+      "value": "75.1",
+      "unit": "%",
+      "page": 1,
+      "quote": "Efficiency 75.1 %"
+    },
+    "npsh_required": {
+      "value": "15",
+      "unit": "ft",
+      "page": 1,
+      "quote": "NPSH required 15 ft"
+    },
+    "max_working_pressure": {
+      "value": "330",
+      "unit": "psi",
+      "page": 1,
+      "quote": "Max. working pressure 330 psi"
+    },
+    "design_temperature": {
+      "value": "203",
+      "unit": "°F",
+      "page": 1,
+      "quote": "Design temperature 203 °F"
+    }
+  }
+}

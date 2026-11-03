@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "documentId": "m-219-datasheet",
+  "lineageId": "m-219",
+  "equipmentTag": "M-219",
+  "equipmentClass": "electric_motor",
+  "sourceType": "datasheet",
+  "revision": "Rev B",
+  "pageCount": 1,
+  "textLayer": true,
+  "fields": {
+    "rated_power": {
+      "value": "55.0",
+      "unit": "kW",
+      "page": 1,
+      "quote": "Rated power: 55.0 kW"
+    },
+    "rated_voltage": {
+      "value": "460",
+      "unit": "V",
+      "page": 1,
+      "quote": "Rated voltage: 460 V"
+    },
+    "rated_current": {
+      "value": "87.2",
+      "unit": "A",
+      "page": 1,
+      "quote": "Rated current: 87.2 A"
+    },
+    "frequency": {
+      "value": "60",
+      "unit": "Hz",
+      "page": 1,
+      "quote": "Frequency: 60 Hz"
+    },
+    "rated_speed": {
+      "value": "1765",
+      "unit": "rpm",
+      "page": 1,
+      "quote": "Rated speed: 1765 rpm"
+    },
+    "efficiency": {
+      "value": "92.1",
+      "unit": "%",
+      "page": 1,
+      "quote": "Efficiency: 92.1 %"
+    }
+  }
+}

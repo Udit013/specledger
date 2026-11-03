@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "documentId": "p-112-datasheet",
+  "lineageId": "p-112",
+  "equipmentTag": "P-112",
+  "equipmentClass": "centrifugal_pump",
+  "sourceType": "datasheet",
+  "revision": "Rev 1",
+  "pageCount": 1,
+  "textLayer": true,
+  "fields": {
+    "rated_flow": {
+      "value": "260",
+      "unit": "gpm",
+      "page": 1,
+      "quote": "Rated flow: 260 gpm"
+    },
+    "rated_head": {
+      "value": "327",
+      "unit": "ft",
+      "page": 1,
+      "quote": "Rated head: 327 ft"
+    },
+    "rated_speed": null,
+    "rated_power": {
+      "value": "30.1",
+      "unit": "hp",
+      "page": 1,
+      "quote": "Rated power: 30.1 hp"
+    },
+    "efficiency": {
+      "value": "71.4",
+      "unit": "%",
+      "page": 1,
+      "quote": "Efficiency: 71.4 %"
+    },
+    "npsh_required": {
+      "value": "20",
+      "unit": "ft",
+      "page": 1,
+      "quote": "NPSH required: 20 ft"
+    },
+    "max_working_pressure": {
+      "value": "545",
+      "unit": "psi",
+      "page": 1,
+      "quote": "Max. working pressure: 545 psi"
+    },
+    "design_temperature": {
+      "value": "176",
+      "unit": "°F",
+      "page": 1,
+      "quote": "Design temperature: 176 °F"
+    }
+  }
+}

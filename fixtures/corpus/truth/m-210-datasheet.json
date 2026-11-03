@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "documentId": "m-210-datasheet",
+  "lineageId": "m-210",
+  "equipmentTag": "M-210",
+  "equipmentClass": "electric_motor",
+  "sourceType": "datasheet",
+  "revision": "R2",
+  "pageCount": 2,
+  "textLayer": true,
+  "fields": {
+    "rated_power": null,
+    "rated_voltage": {
+      "value": "690",
+      "unit": "V",
+      "page": 1,
+      "quote": "The rated voltage is 690 V at the guaranteed duty point."
+    },
+    "rated_current": {
+      "value": "57,1",
+      "unit": "A",
+      "page": 1,
+      "quote": "The rated current is 57,1 A at the guaranteed duty point."
+    },
+    "frequency": {
+      "value": "50",
+      "unit": "Hz",
+      "page": 1,
+      "quote": "Frequency 50 Hz"
+    },
+    "rated_speed": {
+      "value": "1476",
+      "unit": "rpm",
+      "page": 2,
+      "quote": "Rated speed 1476 rpm"
+    },
+    "efficiency": {
+      "value": "93,7",
+      "unit": "%",
+      "page": 2,
+      "quote": "Efficiency 93,7 %"
+    }
+  }
+}

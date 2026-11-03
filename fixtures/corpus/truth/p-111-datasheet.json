@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "documentId": "p-111-datasheet",
+  "lineageId": "p-111",
+  "equipmentTag": "P-111",
+  "equipmentClass": "centrifugal_pump",
+  "sourceType": "datasheet",
+  "revision": "Rev A",
+  "pageCount": 2,
+  "textLayer": true,
+  "fields": {
+    "rated_flow": {
+      "value": "1352",
+      "unit": "gpm",
+      "page": 1,
+      "quote": "Rated flow: 1352 gpm"
+    },
+    "rated_head": null,
+    "rated_speed": {
+      "value": "1450",
+      "unit": "rpm",
+      "page": 1,
+      "quote": "Rated speed: 1450 rpm"
+    },
+    "rated_power": {
+      "value": "178.9",
+      "unit": "hp",
+      "page": 1,
+      "quote": "Rated power: 178.9 hp"
+    },
+    "efficiency": {
+      "value": "59.7",
+      "unit": "%",
+      "page": 1,
+      "quote": "Efficiency: 59.7 %"
+    },
+    "npsh_required": {
+      "value": "6",
+      "unit": "ft",
+      "page": 2,
+      "quote": "NPSH required: 6 ft"
+    },
+    "max_working_pressure": {
+      "value": "554",
+      "unit": "psi",
+      "page": 2,
+      "quote": "Max. working pressure: 554 psi"
+    },
+    "design_temperature": {
+      "value": "203",
+      "unit": "°F",
+      "page": 2,
+      "quote": "Design temperature: 203 °F"
+    }
+  }
+}

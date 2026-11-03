@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "documentId": "p-103-datasheet",
+  "lineageId": "p-103",
+  "equipmentTag": "P-103",
+  "equipmentClass": "centrifugal_pump",
+  "sourceType": "datasheet",
+  "revision": "Rev A",
+  "pageCount": 1,
+  "textLayer": true,
+  "fields": {
+    "rated_flow": {
+      "value": "1708",
+      "unit": "gpm",
+      "page": 1,
+      "quote": "Rated flow: 1708 gpm"
+    },
+    "rated_head": {
+      "value": "138",
+      "unit": "ft",
+      "page": 1,
+      "quote": "Rated head: 138 ft"
+    },
+    "rated_speed": {
+      "value": "3550",
+      "unit": "rpm",
+      "page": 1,
+      "quote": "Rated speed: 3550 rpm"
+    },
+    "rated_power": {
+      "value": "89.3",
+      "unit": "hp",
+      "page": 1,
+      "quote": "Rated power: 89.3 hp"
+    },
+    "efficiency": {
+      "value": "66.9",
+      "unit": "%",
+      "page": 1,
+      "quote": "Efficiency: 66.9 %"
+    },
+    "npsh_required": {
+      "value": "21",
+      "unit": "ft",
+      "page": 1,
+      "quote": "NPSH required: 21 ft"
+    },
+    "max_working_pressure": {
+      "value": "196",
+      "unit": "psi",
+      "page": 1,
+      "quote": "Max. working pressure: 196 psi"
+    },
+    "design_temperature": {
+      "value": "203",
+      "unit": "°F",
+      "page": 1,
+      "quote": "Design temperature: 203 °F"
+    }
+  }
+}

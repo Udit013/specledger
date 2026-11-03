@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "documentId": "p-104-datasheet-scan",
+  "lineageId": "p-104",
+  "equipmentTag": "P-104",
+  "equipmentClass": "centrifugal_pump",
+  "sourceType": "datasheet",
+  "revision": null,
+  "pageCount": 1,
+  "textLayer": false,
+  "fields": {
+    "rated_flow": null,
+    "rated_head": null,
+    "rated_speed": null,
+    "rated_power": null,
+    "efficiency": null,
+    "npsh_required": null,
+    "max_working_pressure": null,
+    "design_temperature": null
+  }
+}

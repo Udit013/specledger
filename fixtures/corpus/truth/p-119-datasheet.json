@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "documentId": "p-119-datasheet",
+  "lineageId": "p-119",
+  "equipmentTag": "P-119",
+  "equipmentClass": "centrifugal_pump",
+  "sourceType": "datasheet",
+  "revision": "R2",
+  "pageCount": 2,
+  "textLayer": true,
+  "fields": {
+    "rated_flow": {
+      "value": "248,6",
+      "unit": "m³/h",
+      "page": 1,
+      "quote": "Rated flow 248,6 m³/h (1095 gpm)"
+    },
+    "rated_head": {
+      "value": "109,3",
+      "unit": "m",
+      "page": 1,
+      "quote": "Rated head 109,3 m (358,6 ft)"
+    },
+    "rated_speed": {
+      "value": "2950",
+      "unit": "rpm",
+      "page": 1,
+      "quote": "Rated speed 2950 rpm"
+    },
+    "rated_power": {
+      "value": "105,0",
+      "unit": "kW",
+      "page": 1,
+      "quote": "Rated power 105,0 kW (140,8 hp)"
+    },
+    "efficiency": {
+      "value": "70,5",
+      "unit": "%",
+      "page": 2,
+      "quote": "Efficiency 70,5 %"
+    },
+    "npsh_required": {
+      "value": "7,3",
+      "unit": "m",
+      "page": 2,
+      "quote": "NPSH required 7,3 m (23,95 ft)"
+    },
+    "max_working_pressure": {
+      "value": "2245",
+      "unit": "kPa",
+      "page": 2,
+      "quote": "Max. working pressure 2245 kPa"
+    },
+    "design_temperature": {
+      "value": "60",
+      "unit": "°C",
+      "page": 2,
+      "quote": "Design temperature 60 °C (140,0 °F)"
+    }
+  }
+}

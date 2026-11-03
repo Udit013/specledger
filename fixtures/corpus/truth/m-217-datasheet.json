@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "documentId": "m-217-datasheet",
+  "lineageId": "m-217",
+  "equipmentTag": "M-217",
+  "equipmentClass": "electric_motor",
+  "sourceType": "datasheet",
+  "revision": "Rev 1",
+  "pageCount": 1,
+  "textLayer": true,
+  "fields": {
+    "rated_power": {
+      "value": "22.0",
+      "unit": "kW",
+      "page": 1,
+      "quote": "Rated power 22.0 kW"
+    },
+    "rated_voltage": {
+      "value": "400",
+      "unit": "V",
+      "page": 1,
+      "quote": "Rated voltage 400 V"
+    },
+    "rated_current": {
+      "value": "38.3",
+      "unit": "A",
+      "page": 1,
+      "quote": "Rated current 38.3 A"
+    },
+    "frequency": {
+      "value": "50",
+      "unit": "Hz",
+      "page": 1,
+      "quote": "Frequency 50 Hz"
+    },
+    "rated_speed": {
+      "value": "2968",
+      "unit": "rpm",
+      "page": 1,
+      "quote": "Rated speed 2968 rpm"
+    },
+    "efficiency": {
+      "value": "96.4",
+      "unit": "%",
+      "page": 1,
+      "quote": "Efficiency 96.4 %"
+    }
+  }
+}

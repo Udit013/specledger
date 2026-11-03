@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "documentId": "p-102-datasheet",
+  "lineageId": "p-102",
+  "equipmentTag": "P-102",
+  "equipmentClass": "centrifugal_pump",
+  "sourceType": "datasheet",
+  "revision": "Rev C",
+  "pageCount": 1,
+  "textLayer": true,
+  "fields": {
+    "rated_flow": {
+      "value": "164.1",
+      "unit": "m³/h",
+      "page": 1,
+      "quote": "Rated flow 164.1 m³/h"
+    },
+    "rated_head": {
+      "value": "117.9",
+      "unit": "m",
+      "page": 1,
+      "quote": "Rated head 117.9 m"
+    },
+    "rated_speed": {
+      "value": "1450-1780",
+      "unit": "rpm",
+      "page": 1,
+      "quote": "Rated speed 1450-1780 rpm"
+    },
+    "rated_power": {
+      "value": "83.4",
+      "unit": "kW",
+      "page": 1,
+      "quote": "Rated power 83.4 kW"
+    },
+    "efficiency": {
+      "value": "63.2",
+      "unit": "%",
+      "page": 1,
+      "quote": "Efficiency 63.2 %"
+    },
+    "npsh_required": {
+      "value": "3.8",
+      "unit": "m",
+      "page": 1,
+      "quote": "NPSH required 3.8 m"
+    },
+    "max_working_pressure": {
+      "value": "2881",
+      "unit": "kPa",
+      "page": 1,
+      "quote": "Max. working pressure 2881 kPa"
+    },
+    "design_temperature": {
+      "value": "80",
+      "unit": "°C",
+      "page": 1,
+      "quote": "Design temperature 80 °C"
+    }
+  }
+}

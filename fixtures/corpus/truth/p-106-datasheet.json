@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "documentId": "p-106-datasheet",
+  "lineageId": "p-106",
+  "equipmentTag": "P-106",
+  "equipmentClass": "centrifugal_pump",
+  "sourceType": "datasheet",
+  "revision": "Rev A",
+  "pageCount": 1,
+  "textLayer": true,
+  "fields": {
+    "rated_flow": {
+      "value": "1997",
+      "unit": "gpm",
+      "page": 1,
+      "quote": "Rated flow 1997 gpm"
+    },
+    "rated_head": {
+      "value": "260",
+      "unit": "ft",
+      "page": 1,
+      "quote": "Rated head 260 ft"
+    },
+    "rated_speed": {
+      "value": "1450",
+      "unit": "rpm",
+      "page": 1,
+      "quote": "Rated speed 1450 rpm"
+    },
+    "rated_power": {
+      "value": "179.7",
+      "unit": "hp",
+      "page": 1,
+      "quote": "Rated power 179.7 hp"
+    },
+    "efficiency": {
+      "value": "73.1",
+      "unit": "%",
+      "page": 1,
+      "quote": "Efficiency 73.1 %"
+    },
+    "npsh_required": {
+      "value": "14",
+      "unit": "ft",
+      "page": 1,
+      "quote": "NPSH required 14 ft"
+    },
+    "max_working_pressure": {
+      "value": "417",
+      "unit": "psi",
+      "page": 1,
+      "quote": "Max. working pressure 417 psi"
+    },
+    "design_temperature": {
+      "value": "176",
+      "unit": "°F",
+      "page": 1,
+      "quote": "Design temperature 176 °F"
+    }
+  }
+}
