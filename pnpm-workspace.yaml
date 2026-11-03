@@ -4,3 +4,8 @@ packages:
 
 # Refuse to install when the running Node does not satisfy "engines" in package.json.
 engineStrict: true
+
+# esbuild (via drizzle-kit) ships its binary as an optional platform package; its install
+# script only re-verifies it, so it is denied rather than allowed to run.
+allowBuilds:
+  esbuild: false

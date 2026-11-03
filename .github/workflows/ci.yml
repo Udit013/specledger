@@ -18,7 +18,7 @@ env:
 
 jobs:
   checks:
-    name: typecheck, lint, boundaries, unit tests, build
+    name: typecheck, lint, boundaries, unit tests, build, migration drift
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -33,6 +33,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm format:check
       - run: pnpm verify
+      - run: pnpm db:check-drift
 
   integration:
     name: integration tests (Postgres)

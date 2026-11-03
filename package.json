@@ -17,6 +17,7 @@
     "test": "turbo run test",
     "test:integration": "turbo run build && vitest run --config vitest.integration.config.js",
     "boundaries": "depcruise apps packages --config .dependency-cruiser.cjs",
+    "db:check-drift": "turbo run build --filter=@specledger/db... && pnpm --filter @specledger/db db:check-drift",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "db:up": "docker compose up --detach --wait postgres",

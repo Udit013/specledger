@@ -8,12 +8,17 @@ it and an approver publishes an immutable register version.
 
 ## Status
 
-Phase 0 of the plan (foundation and quality gates) is in place: the monorepo skeleton, strict
-TypeScript, lint and dependency-boundary rules, CI, a local Postgres container, validated
-configuration, a redacting logger and Git hygiene checks.
+Phases 0 and 1 of the plan are in place:
 
-No product features exist yet. There is no extraction, verification, database schema, API route or
-user interface.
+- Foundation and quality gates: the monorepo, strict TypeScript, lint and dependency-boundary
+  rules, CI, a local Postgres container, validated configuration, a redacting logger and Git
+  hygiene checks.
+- Domain model and database: core domain types and Zod schemas for two equipment classes
+  (centrifugal pump, electric motor), the Postgres schema with its constraints, database triggers
+  that keep the review log append-only and published register versions immutable, typed
+  repositories, and integration tests against a real Postgres.
+
+There is no extraction, verification, reconciliation, job queue, API route or user interface yet.
 
 ## Quick start
 
@@ -46,8 +51,23 @@ Git hooks (once per clone):
 pnpm hooks:install
 ```
 
-Other scripts: `pnpm test`, `pnpm test:integration` (needs `DATABASE_URL` and a running Postgres),
-`pnpm format`, `pnpm format:check`, `pnpm boundaries`.
+Integration tests need the local database (`pnpm db:up`) and `DATABASE_URL`. Each test file
+creates its own schema, migrates it and drops it afterwards, so files run in parallel:
+
+```sh
+DATABASE_URL=postgres://specledger:specledger_local_only@127.0.0.1:5432/specledger pnpm test:integration
+```
+
+Database migrations are forward-only. After changing `packages/db/src/schema.ts`, generate a
+migration, review the SQL and commit it; CI fails if the schema and the committed migrations drift
+apart:
+
+```sh
+pnpm --filter @specledger/db db:generate <snake_case_name>
+pnpm db:check-drift
+```
+
+Other scripts: `pnpm test`, `pnpm format`, `pnpm format:check`, `pnpm boundaries`.
 
 ## Repository layout
 
@@ -76,16 +96,20 @@ To be written.
 
 Known gaps at this stage:
 
-- The integration test job runs against a real Postgres service but contains no tests yet; its
-  runner is configured to pass with zero tests until the first database tests are added.
+- Immutability triggers and constraints protect against application bugs and ordinary SQL, not
+  against a database superuser, who can disable triggers.
+- The migration drift check compares the schema with drizzle-kit's snapshots. It does not detect
+  a hand edit to an already-committed migration file.
+- Development dependencies carry two moderate advisories, both in tooling only: `minimatch`
+  (through ESLint) and `esbuild` (through drizzle-kit's TypeScript loader; the advisory concerns
+  esbuild's development server, which is never started). Neither can be overridden without
+  breaking the parent package's version range. The CI audit fails on high and above.
 - Log redaction matches field names. A secret or document text placed inside a free-text log
   message is not caught, so the rule is to log ids and statuses only.
 - On the first push of a branch, the CI commit-hygiene job cannot check the root commit; the local
   pre-push hook covers it.
 - Git hooks are local to a clone and can be bypassed with `--no-verify`; the CI check is the
   safety net.
-- Development dependencies carry one moderate advisory (`minimatch`, through ESLint) that cannot
-  be overridden without breaking ESLint's version range; the CI audit fails on high and above.
 
 ## License
 

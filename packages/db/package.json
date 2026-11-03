@@ -2,7 +2,7 @@
   "name": "@specledger/db",
   "version": "0.0.0",
   "private": true,
-  "description": "Drizzle schema, migrations, repositories and queue SQL.",
+  "description": "Drizzle schema, migrations, repositories and the test database harness.",
   "license": "MIT",
   "type": "module",
   "exports": {
@@ -15,6 +15,18 @@
     "build": "tsc --project tsconfig.build.json",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
-    "test": "vitest run --dir src"
+    "test": "vitest run --dir src",
+    "db:generate": "node scripts/migrations.mjs generate",
+    "db:check-drift": "node scripts/migrations.mjs check"
+  },
+  "dependencies": {
+    "@specledger/core": "workspace:*",
+    "drizzle-orm": "0.45.4",
+    "pg": "8.23.1",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@types/pg": "8.23.1",
+    "drizzle-kit": "0.31.11"
   }
 }
