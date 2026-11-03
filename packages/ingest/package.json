@@ -1,0 +1,20 @@
+{
+  "name": "@specledger/ingest",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Upload validation and PDF text extraction in a worker thread.",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc --project tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run --dir src"
+  }
+}

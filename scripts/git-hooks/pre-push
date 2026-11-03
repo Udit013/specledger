@@ -1,0 +1,16 @@
+#!/bin/sh
+# Re-scan the commits about to be pushed: messages, author metadata, added paths.
+zero=0000000000000000000000000000000000000000
+while read -r local_ref local_sha _remote_ref remote_sha; do
+  [ "$local_sha" = "$zero" ] && continue
+  if [ "$remote_sha" = "$zero" ]; then range="$local_sha"; else range="$remote_sha..$local_sha"; fi
+  if git log --format='%an <%ae>%n%cn <%ce>%n%B' "$range" | \
+     grep -Eiq 'co-authored-by|noreply@anthropic\.com|generated with|claude|anthropic'; then
+    echo "pre-push: tool attribution found in $local_ref." >&2; exit 1
+  fi
+  if git log --format= --name-only "$range" | \
+     grep -Eq '(^|/)(CLAUDE(\.local)?\.md|AGENTS\.md|GEMINI\.md|\.cursorrules|\.claude/|\.cursor/)'; then
+    echo "pre-push: an assistant config file was added in $local_ref." >&2; exit 1
+  fi
+done
+exit 0

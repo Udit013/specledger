@@ -1,0 +1,25 @@
+{
+  "name": "@specledger/api",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Fastify routes, auth, error mapping and worker entry point.",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc --project tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run --dir src",
+    "start": "node --env-file-if-exists=../../.env dist/main.js"
+  },
+  "dependencies": {
+    "pino": "10.4.0",
+    "zod": "4.6.7"
+  }
+}

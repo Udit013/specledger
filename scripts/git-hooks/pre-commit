@@ -1,0 +1,11 @@
+#!/bin/sh
+# Block assistant config files and local env files from ever being committed.
+bad=$(git diff --cached --name-only --diff-filter=ACMR | \
+  grep -E '(^|/)(CLAUDE(\.local)?\.md|AGENTS\.md|GEMINI\.md|\.cursorrules|\.claude/|\.cursor/)|(^|/)\.env($|\.)' | \
+  grep -v '\.env\.example$')
+if [ -n "$bad" ]; then
+  echo "pre-commit: refusing to commit these paths:" >&2
+  echo "$bad" >&2
+  echo "Unstage them with: git restore --staged <path>" >&2
+  exit 1
+fi

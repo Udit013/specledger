@@ -1,0 +1,23 @@
+# dependencies and build output
+node_modules/
+dist/
+coverage/
+.turbo/
+*.tsbuildinfo
+
+# logs
+logs/
+*.log
+
+# local tooling
+CLAUDE.md
+CLAUDE.local.md
+.claude/
+
+# secrets and env
+.env
+.env.*
+!.env.example
+
+# OS noise
+.DS_Store

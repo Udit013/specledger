@@ -1,0 +1,16 @@
+#!/bin/sh
+# Conventional subject, no trailers, no tool attribution.
+msg="$1"
+subject=$(sed -n '1p' "$msg")
+if ! printf '%s' "$subject" | grep -Eq '^(feat|fix|docs|test|refactor|perf|build|ci|chore)(\([a-z0-9-]+\))?!?: .{3,}$'; then
+  echo "commit-msg: use type(scope): summary (feat, fix, docs, test, refactor, perf, build, ci, chore)." >&2
+  exit 1
+fi
+if [ "$(printf '%s' "$subject" | wc -c)" -gt 72 ]; then
+  echo "commit-msg: subject is longer than 72 characters." >&2
+  exit 1
+fi
+if grep -Eiq '^(co-authored-by|generated-by|signed-off-by|[a-z-]*session):|noreply@anthropic\.com|generated with|claude|anthropic' "$msg"; then
+  echo "commit-msg: remove trailers and any tool attribution." >&2
+  exit 1
+fi

@@ -1,0 +1,6 @@
+packages:
+  - apps/*
+  - packages/*
+
+# Refuse to install when the running Node does not satisfy "engines" in package.json.
+engineStrict: true

@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "//": "Read only by dependency-cruiser: maps workspace names to source so the import graph is the same before and after a build.",
+  "compilerOptions": {
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "paths": {
+      "@specledger/api": ["./apps/api/src/index.ts"],
+      "@specledger/web": ["./apps/web/src/index.ts"],
+      "@specledger/*": ["./packages/*/src/index.ts"]
+    }
+  },
+  "include": ["apps/*/src", "apps/*/test", "packages/*/src", "packages/*/test"]
+}

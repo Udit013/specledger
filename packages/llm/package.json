@@ -1,0 +1,20 @@
+{
+  "name": "@specledger/llm",
+  "version": "0.0.0",
+  "private": true,
+  "description": "LlmProvider interface and its Gemini, Replay, Recorder and Failover implementations.",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc --project tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run --dir src"
+  }
+}

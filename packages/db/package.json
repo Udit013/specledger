@@ -1,0 +1,20 @@
+{
+  "name": "@specledger/db",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Drizzle schema, migrations, repositories and queue SQL.",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc --project tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run --dir src"
+  }
+}
