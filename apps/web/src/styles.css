@@ -1,0 +1,12 @@
+@import 'tailwindcss';
+
+/* The UI is designed in one light scheme; without this a dark browser theme paints the canvas
+   dark under dark text. */
+:root {
+  color-scheme: light;
+}
+
+body {
+  background-color: #ffffff;
+  color: #0f172a;
+}

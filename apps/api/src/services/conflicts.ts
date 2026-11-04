@@ -1,4 +1,4 @@
-import { normalizeValue, reconcile } from '@specledger/core';
+import { reconcile } from '@specledger/core';
 import type {
   ConflictSuggestion,
   ConflictView,
@@ -10,7 +10,13 @@ import type { ConflictWithTag, Database, ReconcileSourceRow, Repositories } from
 
 import { ApiError, notFound } from '../http/errors.js';
 import { reconcileCandidates, verifiedByVerifier } from './candidates.js';
-import { definitionOf, definitionsFor, invalidValue, lineageOf } from './decisions.js';
+import {
+  acceptableValue,
+  definitionOf,
+  definitionsFor,
+  invalidValue,
+  lineageOf,
+} from './decisions.js';
 
 // The latest field of each document of the equipment for the conflict's field, by field id.
 async function candidatesOf(
@@ -141,11 +147,9 @@ export function resolveConflict(database: Database, input: ResolveInput): Promis
     } else {
       decided = { value: choice.value, unit: choice.unit, chosenFieldId: null };
     }
-    // A decision reconciliation cannot read would be skipped there: refuse it here instead.
-    if (
-      definition === undefined ||
-      normalizeValue(decided.value, decided.unit, definition) === null
-    ) {
+    // A decision reconciliation cannot read would be skipped there, and an implausible one is almost
+    // certainly a typo: refuse both here instead.
+    if (definition === undefined || !acceptableValue(decided.value, decided.unit, definition)) {
       throw invalidValue();
     }
 

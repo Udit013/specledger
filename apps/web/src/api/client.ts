@@ -1,12 +1,31 @@
+import {
+  apiErrorSchema,
+  auditListSchema,
+  conflictListSchema,
+  conflictSchema,
+  documentListSchema,
+  documentSummarySchema,
+  fieldListSchema,
+  fieldSchema,
+  pageSchema,
+  publishResponseSchema,
+  reviewFieldBodySchema,
+  resolveConflictBodySchema,
+} from '@specledger/core';
+import { publishBlockerSchema } from '@specledger/core';
 import type {
+  AuditEvent,
   ConflictView,
   DocumentSummary,
   FieldView,
+  PublishBlocker,
   ResolveConflictBody,
   ReviewFieldBody,
 } from '@specledger/core';
-import { notImplemented } from '../lib/not-implemented.js';
+import { z } from 'zod';
+
 import type { Tokens } from '../lib/tokens.js';
+
 export type ApiErrorKind =
   | 'unauthenticated'
   | 'forbidden'
@@ -17,12 +36,19 @@ export type ApiErrorKind =
   | 'server'
   | 'network'
   | 'invalid_response';
+
+// Every failure of a request, with a message written for the reviewer. The server's own message is
+// used only for codes the UI has no wording for.
 export class ApiClientError extends Error {
   readonly kind: ApiErrorKind;
   readonly status: number | null;
   readonly code: string | null;
   readonly details: unknown;
-  readonly currentField: FieldView | null = null;
+  // For a 409 VERSION_CONFLICT: the field as the server has it now.
+  readonly currentField: FieldView | null;
+  // For a 409 PUBLISH_BLOCKED: what stands in the way.
+  readonly blockers: readonly PublishBlocker[];
+
   constructor(
     kind: ApiErrorKind,
     message: string,
@@ -31,36 +57,157 @@ export class ApiClientError extends Error {
     details: unknown,
   ) {
     super(message);
+    this.name = 'ApiClientError';
     this.kind = kind;
     this.status = status;
     this.code = code;
     this.details = details;
+    const current = z.object({ current: fieldSchema }).safeParse(details);
+    this.currentField = current.success ? current.data.current : null;
+    const blocked = z.object({ blockers: z.array(publishBlockerSchema) }).safeParse(details);
+    this.blockers = blocked.success ? blocked.data.blockers : [];
   }
 }
+
+type Role = 'engineer' | 'approver';
+
 export interface ApiClientOptions {
   readonly baseUrl: string;
   readonly tokens: () => Tokens;
   readonly fetch?: typeof fetch;
 }
+
+const MESSAGES: Readonly<Record<string, string>> = {
+  UNAUTHENTICATED: 'Your API token is missing or was not accepted. Enter a valid token.',
+  FORBIDDEN:
+    'Your token’s role is not allowed to do this. Reviews and resolutions need the engineer token; publishing needs the approver token.',
+  RATE_LIMITED: 'Too many requests. Wait a moment and try again.',
+  INTERNAL: 'The server hit an unexpected error. Try again.',
+  NOT_READY: 'The server is not ready. Try again shortly.',
+};
+
+function kindFor(status: number): ApiErrorKind {
+  if (status === 401) return 'unauthenticated';
+  if (status === 403) return 'forbidden';
+  if (status === 404) return 'not_found';
+  if (status === 409) return 'conflict';
+  if (status === 429) return 'rate_limited';
+  if (status >= 500) return 'server';
+  return 'validation';
+}
+
+// A typed client over the shared Zod schemas: request bodies are checked before they are sent and
+// every response is validated before the UI sees it. Each call names the role it needs; the token
+// for that role is sent if present, otherwise the other one, so the server answers 403 rather than
+// the client guessing.
 export function createApiClient(options: ApiClientOptions) {
-  const stub = (name: string) => (): Promise<never> =>
-    Promise.reject(new Error(`${name} is not implemented yet ${options.baseUrl}`));
+  const send = options.fetch ?? ((input, init) => fetch(input, init));
+
+  async function request<S extends z.ZodType>(
+    schema: S,
+    path: string,
+    init: { method?: string; body?: unknown; role?: Role } = {},
+  ): Promise<z.output<S>> {
+    const tokens = options.tokens();
+    const role = init.role ?? 'engineer';
+    const token =
+      role === 'approver'
+        ? (tokens.approver ?? tokens.engineer)
+        : (tokens.engineer ?? tokens.approver);
+    const headers: Record<string, string> = { accept: 'application/json' };
+    if (token !== null) headers.authorization = `Bearer ${token}`;
+    if (init.body !== undefined) headers['content-type'] = 'application/json';
+
+    let response: Response;
+    try {
+      response = await send(`${options.baseUrl}${path}`, {
+        method: init.method ?? 'GET',
+        headers,
+        ...(init.body === undefined ? {} : { body: JSON.stringify(init.body) }),
+      });
+    } catch {
+      throw new ApiClientError('network', 'The server could not be reached.', null, null, null);
+    }
+
+    let json: unknown;
+    try {
+      json = await response.json();
+    } catch {
+      json = null;
+    }
+    if (!response.ok) {
+      const parsed = apiErrorSchema.safeParse(json);
+      const code = parsed.success ? parsed.data.error.code : 'UNKNOWN';
+      const message =
+        MESSAGES[code] ??
+        (parsed.success ? parsed.data.error.message : 'The request failed unexpectedly.');
+      throw new ApiClientError(
+        kindFor(response.status),
+        message,
+        response.status,
+        code,
+        parsed.success ? parsed.data.error.details : null,
+      );
+    }
+    const parsed = schema.safeParse(json);
+    if (!parsed.success) {
+      throw new ApiClientError(
+        'invalid_response',
+        'The server sent a response this screen does not understand.',
+        response.status,
+        null,
+        null,
+      );
+    }
+    return parsed.data;
+  }
+
+  const id = (value: string) => encodeURIComponent(value);
+
   return {
-    listDocuments: stub('listDocuments') as () => Promise<DocumentSummary[]>,
-    getDocument: stub('getDocument') as (id: string) => Promise<DocumentSummary>,
-    getPage: stub('getPage') as (
-      id: string,
-      n: number,
-    ) => Promise<{ documentId: string; pageNumber: number; content: string }>,
-    listFields: stub('listFields') as (id: string) => Promise<FieldView[]>,
-    reviewField: stub('reviewField') as (id: string, body: ReviewFieldBody) => Promise<FieldView>,
-    listConflicts: stub('listConflicts') as () => Promise<ConflictView[]>,
-    resolveConflict: stub('resolveConflict') as (
-      id: string,
-      body: ResolveConflictBody,
-    ) => Promise<ConflictView>,
-    publish: stub('publish') as () => Promise<unknown>,
-    audit: stub('audit') as (kind: string, id: string) => Promise<unknown>,
+    async listDocuments(): Promise<DocumentSummary[]> {
+      return (await request(documentListSchema, '/documents?limit=100')).documents;
+    },
+    getDocument(documentId: string): Promise<DocumentSummary> {
+      return request(documentSummarySchema, `/documents/${id(documentId)}`);
+    },
+    getPage(documentId: string, n: number) {
+      return request(pageSchema, `/documents/${id(documentId)}/pages/${String(n)}`);
+    },
+    async listFields(documentId: string): Promise<FieldView[]> {
+      return (await request(fieldListSchema, `/documents/${id(documentId)}/fields`)).fields;
+    },
+    reviewField(fieldId: string, body: ReviewFieldBody): Promise<FieldView> {
+      return request(fieldSchema, `/fields/${id(fieldId)}`, {
+        method: 'PATCH',
+        body: reviewFieldBodySchema.parse(body),
+        role: 'engineer',
+      });
+    },
+    async listConflicts(status: 'open' | 'resolved' = 'open'): Promise<ConflictView[]> {
+      return (await request(conflictListSchema, `/conflicts?status=${status}`)).conflicts;
+    },
+    resolveConflict(conflictId: string, body: ResolveConflictBody): Promise<ConflictView> {
+      return request(conflictSchema, `/conflicts/${id(conflictId)}/resolve`, {
+        method: 'POST',
+        body: resolveConflictBodySchema.parse(body),
+        role: 'engineer',
+      });
+    },
+    publish() {
+      return request(publishResponseSchema, '/register/publish', {
+        method: 'POST',
+        role: 'approver',
+      });
+    },
+    async audit(
+      kind: 'field' | 'conflict' | 'register_version',
+      entityId: string,
+    ): Promise<AuditEvent[]> {
+      const entity = encodeURIComponent(`${kind}:${entityId}`);
+      return (await request(auditListSchema, `/audit?entity=${entity}`)).events;
+    },
   };
 }
-export const unused = notImplemented;
+
+export type ApiClient = ReturnType<typeof createApiClient>;

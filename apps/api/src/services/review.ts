@@ -1,10 +1,9 @@
-import { normalizeValue } from '@specledger/core';
 import type { FieldRecord, ReviewFieldBody, ReviewStatus } from '@specledger/core';
 import type { Database } from '@specledger/db';
 
 import { ApiError, notFound } from '../http/errors.js';
 import { fieldView } from '../http/views.js';
-import { definitionOf, invalidValue } from './decisions.js';
+import { acceptableValue, definitionOf, invalidValue } from './decisions.js';
 
 export interface ReviewInput {
   readonly fieldId: string;
@@ -51,7 +50,7 @@ export function reviewField(database: Database, input: ReviewInput): Promise<Fie
       const equipment = await tx.equipment.getById(field.equipmentId);
       const definition =
         equipment === null ? undefined : definitionOf(equipment.equipmentClass, field.name);
-      if (definition === undefined || normalizeValue(body.value, body.unit, definition) === null) {
+      if (definition === undefined || !acceptableValue(body.value, body.unit, definition)) {
         throw invalidValue();
       }
     }

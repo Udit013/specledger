@@ -94,6 +94,14 @@ function findQuote(quote: string, page: NormalizedText, pageText: string): Span 
   return { start, end: lastStart + Math.max(1, last.length) };
 }
 
+// Whether a canonical value (both bounds of a range) lies in the field's plausible range, bounds
+// included. The verifier's rule (f), also applied to values a reviewer enters.
+export function isPlausible(value: NormalizedValue, field: FieldDefinition): boolean {
+  const values = value.kind === 'scalar' ? [value.value] : [value.low, value.high];
+  const { min, max } = field.plausibleRange;
+  return values.every((v) => v >= min && v <= max);
+}
+
 // Where a quote occurs in the original page text, as UTF-16 offsets, or null. Both are normalized
 // as the verifier normalizes them, so a quote that differs from the page only in whitespace,
 // quote and dash variants or NFKC forms is found, and the span covers the original characters.
@@ -277,12 +285,7 @@ function check(
   let normalizedValue: NormalizedValue | null = null;
   if (value.ok && unit.ok && unit.value.dimension === field.dimension) {
     normalizedValue = normalize(value.value, unit.value, field);
-    const values =
-      normalizedValue.kind === 'scalar'
-        ? [normalizedValue.value]
-        : [normalizedValue.low, normalizedValue.high];
-    const { min, max } = field.plausibleRange;
-    if (values.some((v) => !(v >= min && v <= max))) reasons.add('OUT_OF_RANGE');
+    if (!isPlausible(normalizedValue, field)) reasons.add('OUT_OF_RANGE');
   }
 
   const ordered = RULE_ORDER.filter((reason) => reasons.has(reason));

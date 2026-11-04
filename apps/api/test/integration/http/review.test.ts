@@ -197,6 +197,7 @@ describe('PATCH /fields/:id', () => {
     ['a value that is not a number', 'about 300', 'ft'],
     ['a unit of another quantity', '296', 'kW'],
     ['an unknown unit', '296', 'cubits'],
+    ['a value outside the plausible range', '295296', 'ft'],
   ])('rejects an edit with %s as INVALID_VALUE', async (_case, value, unit) => {
     const head = byName(await processedFields(), 'rated_head');
     const response = await patch(head.id, { action: 'edit', expectedVersion: 1, value, unit });

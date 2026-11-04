@@ -1,4 +1,4 @@
-import { FIELD_DEFINITIONS, normalizeValue } from '@specledger/core';
+import { FIELD_DEFINITIONS, isPlausible, normalizeValue } from '@specledger/core';
 import type {
   ConflictRecord,
   EquipmentClass,
@@ -18,12 +18,20 @@ export const definitionsFor = (equipmentClass: EquipmentClass) =>
 export const definitionOf = (equipmentClass: EquipmentClass, name: string) =>
   FIELD_DEFINITIONS[equipmentClass].find((field) => field.name === name);
 
-// A reviewer's value the field cannot read: not a number, or a unit of another quantity.
+// A value a reviewer enters is accepted only if it reads as the field's quantity and is plausible
+// for it, the verifier's rules (d) and (f): a typo such as "295296 ft" for a pump head is refused.
+export function acceptableValue(value: string, unit: string, definition: FieldDefinition): boolean {
+  const normalized = normalizeValue(value, unit, definition);
+  return normalized !== null && isPlausible(normalized, definition);
+}
+
+// A reviewer's value the field cannot read: not a number, a unit of another quantity, or a value
+// outside the field's plausible range.
 export const invalidValue = () =>
   new ApiError(
     400,
     'INVALID_VALUE',
-    'The value must be a number with a unit of the field’s quantity.',
+    'The value must be a plausible number with a unit of the field’s quantity.',
   );
 
 // Resolved conflicts as Phase 6 human decisions: the decided value normalized for its field, the

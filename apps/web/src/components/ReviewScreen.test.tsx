@@ -78,8 +78,9 @@ describe('review screen', () => {
     // "r", "a" and "j" typed here are text, not shortcuts.
     await user.clear(value);
     await user.type(value, '296');
-    await user.type(screen.getByLabelText('Reason (optional)'), 'rejaj erratum');
+    await user.type(screen.getByLabelText('Reason (optional)'), 'rejaj erratum, why?');
     expect(state.fields.find((f) => f.id === FIELD_IDS.head)?.reviewStatus).toBe('pending');
+    expect(screen.queryByRole('dialog')).toBeNull();
     await user.type(screen.getByLabelText('Unit'), '{Enter}');
     await waitFor(() => {
       expect(announcements().textContent).toBe('rated_head edited.');
@@ -194,6 +195,28 @@ describe('review screen', () => {
       expect(screen.queryByRole('dialog')).toBeNull();
     });
     expect(document.activeElement).toBe(before);
+  });
+
+  it('replaces the value when the reviewer types straight into the edit form', async () => {
+    const state = fakeApi();
+    const { user } = renderApp({ hash: REVIEW });
+    await fieldButton('rated_flow');
+    await user.keyboard('je');
+    await screen.findByLabelText('Value');
+    await user.keyboard('296{Enter}');
+    await waitFor(() => {
+      expect(state.fields.find((f) => f.id === FIELD_IDS.head)?.value).toBe('296');
+    });
+  });
+
+  it('ignores review shortcuts while a dialog from the header is open', async () => {
+    const state = fakeApi();
+    const { user } = renderApp({ hash: REVIEW });
+    await fieldButton('rated_flow');
+    await user.click(screen.getByRole('button', { name: 'Publish register' }));
+    await screen.findByRole('dialog', { name: 'Publish register' });
+    await user.keyboard('ar');
+    expect(state.fields.every((f) => f.reviewStatus === 'pending')).toBe(true);
   });
 
   it('displays hostile page text literally and creates no HTML from it', async () => {

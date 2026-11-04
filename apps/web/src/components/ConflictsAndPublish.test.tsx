@@ -1,7 +1,17 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
-import { CONFLICT_ID, DOC_ID, fakeApi, FIELD_IDS, TOKENS } from '../../test/fake-api.js';
+import { http, HttpResponse } from 'msw';
+
+import {
+  API,
+  CONFLICT_ID,
+  DOC_ID,
+  fakeApi,
+  FIELD_IDS,
+  server,
+  TOKENS,
+} from '../../test/fake-api.js';
 import { announcements, expectNoAxeViolations, renderApp, tabTo } from '../../test/render.js';
 
 describe('conflicts panel', () => {
@@ -90,6 +100,54 @@ describe('publish dialog', () => {
       .map((li) => li.textContent);
     expect(items).toContain('Field pending review: P-106 rated_flow');
     expect(items).toContain('Open conflict: P-106 rated_head');
+  });
+
+  it('closes with Escape even when focus has left the dialog, and on navigation', async () => {
+    fakeApi();
+    const { user } = renderApp();
+    await screen.findByRole('link', { name: 'Review p-106-datasheet.pdf' });
+    await user.click(screen.getByRole('button', { name: 'Publish register' }));
+    await screen.findByRole('dialog', { name: 'Publish register' });
+    (document.activeElement as HTMLElement | null)?.blur();
+    await user.keyboard('{Escape}');
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).toBeNull();
+    });
+    await user.click(screen.getByRole('button', { name: 'Publish register' }));
+    await screen.findByRole('dialog', { name: 'Publish register' });
+    window.location.hash = '#/conflicts';
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).toBeNull();
+    });
+  });
+
+  it('keeps Publish now focusable while the request runs', async () => {
+    fakeApi();
+    let release: (value: unknown) => void = () => undefined;
+    server.use(
+      http.post(`${API}/register/publish`, async () => {
+        await new Promise((resolve) => {
+          release = resolve;
+        });
+        return HttpResponse.json(
+          { error: { code: 'NOTHING_TO_PUBLISH', message: 'Nothing.' } },
+          { status: 409 },
+        );
+      }),
+    );
+    const { user } = renderApp();
+    await screen.findByRole('link', { name: 'Review p-106-datasheet.pdf' });
+    await user.click(screen.getByRole('button', { name: 'Publish register' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Publish register' });
+    const button = within(dialog).getByRole('button', { name: 'Publish now' });
+    await user.click(button);
+    await waitFor(() => {
+      expect(button.getAttribute('aria-disabled')).toBe('true');
+    });
+    expect(button.hasAttribute('disabled')).toBe(false);
+    expect(document.activeElement).toBe(button);
+    release(null);
+    expect(await within(dialog).findByRole('alert')).toBeTruthy();
   });
 
   it('explains when the token cannot publish', async () => {

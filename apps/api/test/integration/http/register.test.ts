@@ -153,6 +153,13 @@ describe('conflict resolution feeding reconciliation and publish', () => {
       reason: 'x',
     });
     expect(badValue.json()).toMatchObject({ error: { code: 'INVALID_VALUE' } });
+    const implausible = await s.call(
+      'POST',
+      `/conflicts/${conflict?.id ?? ''}/resolve`,
+      'engineer',
+      { choice: { kind: 'value', value: '255000', unit: 'ft' }, reason: 'x' },
+    );
+    expect(implausible.json()).toMatchObject({ error: { code: 'INVALID_VALUE' } });
     const stranger = await s.call('POST', `/conflicts/${conflict?.id ?? ''}/resolve`, 'engineer', {
       choice: { kind: 'candidate', fieldId: randomUUID() },
       reason: 'x',
