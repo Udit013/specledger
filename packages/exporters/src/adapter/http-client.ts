@@ -108,6 +108,30 @@ const defaultSleep = (ms: number, signal?: AbortSignal) =>
     );
   });
 
+// The body, read under the attempt's signal. A transport is not trusted to abort a body that
+// stalls after the headers arrived (an injected fetch may not), so the read races the signal and
+// the stream is cancelled when it fires.
+function readText(response: Response, signal: AbortSignal): Promise<string> {
+  if (signal.aborted) return Promise.reject(new Error('aborted'));
+  return new Promise<string>((resolve, reject) => {
+    const onAbort = () => {
+      void response.body?.cancel().catch(() => undefined);
+      reject(new Error('aborted'));
+    };
+    signal.addEventListener('abort', onAbort, { once: true });
+    response.text().then(
+      (text) => {
+        signal.removeEventListener('abort', onAbort);
+        resolve(text);
+      },
+      (error: unknown) => {
+        signal.removeEventListener('abort', onAbort);
+        reject(error instanceof Error ? error : new Error('body read failed'));
+      },
+    );
+  });
+}
+
 const fieldsSchema = z.object({ error: z.object({ fields: z.array(z.string()).max(100) }) });
 
 type Attempt =
@@ -152,7 +176,7 @@ export function createHttpAssetClient(options: HttpAssetClientOptions): AssetSys
       signal === undefined ? timeout.signal : AbortSignal.any([signal, timeout.signal]);
     try {
       const response = await send(url, { method: 'POST', headers, body, signal: combined });
-      const text = await response.text();
+      const text = await readText(response, combined);
       let parsed: unknown;
       try {
         parsed = text === '' ? null : JSON.parse(text);

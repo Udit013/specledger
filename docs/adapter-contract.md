@@ -144,3 +144,23 @@ uses these paths, fields, status codes, header names or idempotency semantics. T
 would read the ACC Assets API reference, obtain a sandbox account, record real responses for
 each case (success, validation error, rate limit, outage), and replace the mock's answers with
 those recordings so the same contract tests run against them.
+
+## Verifying against a real asset system
+
+Nothing below has been done; each item is what the mock and the contract tests cannot show.
+
+| Question                                                       | How to find out                                             |
+| -------------------------------------------------------------- | ----------------------------------------------------------- |
+| Which endpoint creates or updates an asset, and its path       | ACC Assets API reference; a request in a sandbox account    |
+| Does it match on an external id, or must we store its id?      | create, then send the same external id again                |
+| Does it honour an idempotency key, under which header name?    | send one request twice with the same key; count the records |
+| What a validation error looks like (status, body, field paths) | send a payload with one bad attribute                       |
+| Rate-limit status, `Retry-After` format, and the real limits   | read the documented limits; record a throttled response     |
+| What an outage looks like through its gateway (502? 504?)      | recorded responses or vendor documentation                  |
+| Authentication: token type, scope, expiry and refresh          | out of scope here; needed before any real call              |
+| Attribute model: custom attributes, units, types, length caps  | create the attribute set in the sandbox, then map to it     |
+
+The client code does not change shape for any of these: the port (`AssetSystemClient`), the
+retry policy and the drift report stay; the mapping, paths and status table are what a real
+integration would adjust. The contract tests in `http-client.contract.test.ts` pin what the
+client sends and how it reads answers, so such an adjustment shows up as a deliberate test change.
