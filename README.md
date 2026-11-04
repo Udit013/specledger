@@ -31,8 +31,14 @@ Phases 0 to 4 of the plan are in place:
   delimited data blocks, and schema-validated output with bounded correction retries. Tests run
   with every network socket blocked.
 
-There is no verification, reconciliation, job queue, API route or user interface yet, and nothing
-calls the model layer outside its tests and the manual smoke script.
+- Verifier (Phase 5, in progress, test-first): the public types and signatures of
+  `normalizeWithMap`, `parseNumber`, the units registry and `verifyCandidate` exist in
+  `packages/core`, with bodies that throw `NotImplementedError`, and the complete test suite is
+  written against them. The suite fails until the bodies are implemented; that work is on the
+  `feat/phase-5-verifier-tests` branch and is not merged.
+
+There is no working verification, reconciliation, job queue, API route or user interface yet, and
+nothing calls the model layer outside its tests and the manual smoke script.
 
 ## Quick start
 
