@@ -196,7 +196,8 @@ Known gaps at this stage:
   broken at a line end joined, whitespace collapsed) and checks, in order: the quote is long
   enough, it is on the page, the value is among the numbers in the quote (ranges as ranges, and
   ambiguous formats such as `1,234` refused unless the document's decimal mark is known), the
-  unit is in the registry and of the field's dimension, two unit systems in the quote agree within
+  unit is in the registry and of the field's dimension and is the unit the quote states for that
+  value (the unit written immediately after the number), two unit systems in the quote agree within
   0.5 percent by the verifier's own conversion, and the canonical value is in the field's
   plausible range. It reports every failing reason, returns `INTERNAL` instead of throwing on
   unexpected input, and maps the quote back to page offsets for highlighting.
@@ -206,10 +207,19 @@ Known gaps at this stage:
 - The verifier proves that a quote and its number are on the page, not that the quote is about the
   field: a real "Maximum flow: 2596 gpm" offered as the rated flow is verified. Reconciliation and
   human review are the controls for that.
-- The value must appear in the quote, but not necessarily next to the stated unit: in
-  `500 gpm (113.6 m³/h)`, a candidate of "500 m³/h" passes the rules as specified.
-- Relative tolerance on temperatures is measured in kelvin, so 0.5 percent is about 1.7 °C at
-  ambient temperatures.
+- A unit binds only to the number written immediately before it. Layouts that put the unit
+  elsewhere, such as a table header (`Flow (m³/h): 287`), a unit in brackets (`500 (gpm)`), a
+  word in between (`500 nominal gpm`) or a shared unit (`400/690 V`), do not verify. That costs
+  recall on real datasheets, never accuracy: the claim stays unverified for review. Every corpus
+  value is written value-then-unit and verifies.
+- Digits written straight after a letter (`P-101`, `m3`, `DN100`) are treated as part of an
+  identifier, not as numbers. A value written that way (`Q=287` is fine, `Q287` is not) is not
+  found.
+- A range is only read as one when its unit follows the second bound (`2900 to 3600 rpm`);
+  `2900 rpm to 3600 rpm` is two separate numbers.
+- The dual-unit tolerance is 0.5 percent in the canonical unit, as specified, which for
+  temperature is the kelvin: at 80 °C it accepts a °F statement within about ±1.8 °C. A relative
+  tolerance in °C or °F would be undefined near zero; tests pin both ends of the band.
 - Words joined across a line-end hyphen lose the hyphen even in compound words ("self-\npriming"
   becomes "selfpriming"), so such a quote must be written the same way to match; this fails safe.
 

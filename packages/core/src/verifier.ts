@@ -102,7 +102,8 @@ interface NumberToken {
 // The numbers in a normalized quote, read with the same grammar as parseNumber and preferring the
 // longest reading, so "2900 to 3600" and "1450-1780" are one range each, not two numbers. A "-" is
 // a sign only at the start, or after "(", ":" or a space that does not follow a digit; otherwise it
-// is part of a label ("P-101") or joins a range.
+// is part of a label or joins a range. Digits written straight after a letter, or after a letter
+// and "-", belong to an identifier and are not numbers: "P-101", "m3/h", "DN100".
 function numberTokens(quote: string): NumberToken[] {
   const scalars: { start: number; end: number }[] = [];
   for (const match of quote.matchAll(/-?\d(?:[\d.,]*\d)?/g)) {
@@ -112,6 +113,7 @@ function numberTokens(quote: string): NumberToken[] {
       const isSign = before === '' || (/[\s(:]$/.test(before) && !/\d\s*$/.test(before));
       if (!isSign) start += 1;
     }
+    if (/\p{L}-?$/u.test(quote.slice(0, start))) continue;
     scalars.push({ start, end: match.index + match[0].length });
   }
   const tokens: NumberToken[] = [];
@@ -130,9 +132,13 @@ function numberTokens(quote: string): NumberToken[] {
   return tokens;
 }
 
-// The unit written right after a number, trying a two-word spelling ("US gpm") before one word.
+// The unit bound to a number: the spelling written immediately after it, with at most one space
+// between (the quote is normalized, so whitespace runs are single spaces), trying a two-word
+// spelling ("US gpm") before one word. A unit word stops at brackets and punctuation, none of which
+// occurs in a registry spelling, so "45 m." binds "m" and "500 (gpm)" binds nothing. This is a
+// grammar, not a distance heuristic: a number followed by anything else has no unit.
 function unitAfter(quote: string, end: number): UnitDefinition | null {
-  const words = /^ ?([^\s(),;]+)(?: ([^\s(),;]+))?/.exec(quote.slice(end));
+  const words = /^ ?([^\s(),;:.!?]+)(?: ([^\s(),;:.!?]+))?/.exec(quote.slice(end));
   if (words?.[1] === undefined) return null;
   if (words[2] !== undefined) {
     const twoWords = parseUnit(`${words[1]} ${words[2]}`);
@@ -219,18 +225,28 @@ function check(
         ? 'AMBIGUOUS_NUMBER_FORMAT'
         : 'VALUE_NOT_IN_QUOTE',
     );
-  } else {
-    const inQuote = tokens.some((token) => {
-      const stated = parseNumber(token.text, hints);
-      return stated.ok && sameNumber(stated.value, value.value);
-    });
-    if (!inQuote) reasons.add('VALUE_NOT_IN_QUOTE');
   }
+  const matches = value.ok
+    ? tokens.filter((token) => {
+        const stated = parseNumber(token.text, hints);
+        return stated.ok && sameNumber(stated.value, value.value);
+      })
+    : [];
+  if (value.ok && matches.length === 0) reasons.add('VALUE_NOT_IN_QUOTE');
 
-  // (d): the unit is known and measures the field's quantity.
+  // (d): the unit is known and measures the field's quantity, and the quote states the value in
+  // that unit: some occurrence of the value has the candidate's unit bound to it (aliases count as
+  // the same unit). Otherwise the quote proves a number, but not this quantity: "287.0 m³/h
+  // (1264 gpm)" does not support "1264 m³/h", and "45.0 kW at 2900 rpm" does not support "2900 kW".
   const unit = parseUnit(candidate.unit);
   if (!unit.ok) reasons.add('UNIT_UNKNOWN');
   else if (unit.value.dimension !== field.dimension) reasons.add('UNIT_MISMATCH');
+  else if (
+    matches.length > 0 &&
+    !matches.some((token) => unitAfter(quote, token.end)?.symbol === unit.value.symbol)
+  ) {
+    reasons.add('UNIT_MISMATCH');
+  }
 
   // (e): two unit systems in the quote agree, by the verifier's own conversion.
   if (!dualUnitsAgree(quote, tokens, field, hints)) reasons.add('UNIT_MISMATCH');
@@ -266,7 +282,9 @@ function check(
 //     VALUE_NOT_IN_QUOTE   otherwise, the value does not parse, or no number in the quote equals
 //                          it (a range must match a range in the quote with the same bounds).
 // (d) UNIT_UNKNOWN         the unit is not in the registry.
-//     UNIT_MISMATCH        the unit's dimension is not the field's.
+//     UNIT_MISMATCH        the unit's dimension is not the field's, or the value is in the quote
+//                          but never with this unit bound to it (the unit written immediately
+//                          after the number; aliases are the same unit).
 // (e) UNIT_MISMATCH        the quote states the quantity in two or more units of the field's
 //                          dimension ("287.0 m³/h (1264 gpm)") and, converted by the verifier, they
 //                          differ by more than DUAL_UNIT_TOLERANCE. The model's own conversion is
