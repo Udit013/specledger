@@ -28,8 +28,15 @@ describe('fields.review (optimistic concurrency)', () => {
   it('returns the current state, changing nothing, for a stale version', async () => {
     const { field } = await seed();
     await repos().fields.review({ id: field.id, expectedVersion: 1, reviewStatus: 'accepted' });
-    const stale = await repos().fields.review({ id: field.id, expectedVersion: 1, reviewStatus: 'rejected' });
-    expect(stale).toMatchObject({ kind: 'stale', current: { reviewStatus: 'accepted', version: 2 } });
+    const stale = await repos().fields.review({
+      id: field.id,
+      expectedVersion: 1,
+      reviewStatus: 'rejected',
+    });
+    expect(stale).toMatchObject({
+      kind: 'stale',
+      current: { reviewStatus: 'accepted', version: 2 },
+    });
   });
 
   it('lets exactly one of two concurrent reviews of one version win', async () => {
@@ -78,7 +85,10 @@ describe('register.takeNextNumber', () => {
 describe('conflicts.resolve', () => {
   it('records the decision once, and refuses to resolve a resolved conflict', async () => {
     const { equipment } = await seed();
-    const { conflict } = await repos().conflicts.openIfAbsent({ equipmentId: equipment.id, fieldName: 'rated_head' });
+    const { conflict } = await repos().conflicts.openIfAbsent({
+      equipmentId: equipment.id,
+      fieldName: 'rated_head',
+    });
     const input = {
       id: conflict.id,
       resolvedBy: 'role:engineer',

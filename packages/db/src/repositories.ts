@@ -33,11 +33,10 @@ import type {
   VerificationReason,
   VerificationStatus,
 } from '@specledger/core';
-import { and, asc, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNotNull, isNull, sql } from 'drizzle-orm';
 import type { PgDatabase, PgQueryResultHKT } from 'drizzle-orm/pg-core';
 import { z } from 'zod';
 
-import { notImplemented } from './not-implemented.js';
 import { createQueue } from './queue.js';
 import type { JobStatus } from './queue-types.js';
 import { toDomain } from './rows.js';
@@ -53,6 +52,8 @@ import {
   equipment,
   extractionRuns,
   fields,
+  jobs,
+  registerCounter,
   registerItems,
   registerVersions,
   reviewEvents,
@@ -214,6 +215,50 @@ function reviewEventFromRow(row: typeof reviewEvents.$inferSelect): ReviewEventR
 }
 
 export function createRepositories(db: Executor) {
+  // The id of the latest extraction run of every document.
+  const latestRunIds = () =>
+    db
+      .selectDistinctOn([extractionRuns.documentId], { id: extractionRuns.id })
+      .from(extractionRuns)
+      .orderBy(extractionRuns.documentId, desc(extractionRuns.createdAt), desc(extractionRuns.id));
+
+  // Each document with its latest processing job.
+  async function withProcessing(
+    found: readonly DocumentRecord[],
+  ): Promise<DocumentWithProcessing[]> {
+    if (found.length === 0) return [];
+    const ids = found.map((document) => document.id);
+    const rows = await db
+      .selectDistinctOn([sql`${jobs.payload} ->> 'documentId'`], {
+        documentId: sql<string>`${jobs.payload} ->> 'documentId'`,
+        id: jobs.id,
+        status: jobs.status,
+        attempts: jobs.attempts,
+        lastError: jobs.lastError,
+      })
+      .from(jobs)
+      .where(
+        and(eq(jobs.type, 'process_document'), inArray(sql`${jobs.payload} ->> 'documentId'`, ids)),
+      )
+      .orderBy(sql`${jobs.payload} ->> 'documentId'`, desc(jobs.createdAt), desc(jobs.id));
+    const byDocument = new Map(rows.map((row) => [row.documentId, row]));
+    return found.map((document) => {
+      const job = byDocument.get(document.id);
+      return {
+        document,
+        job:
+          job === undefined
+            ? null
+            : {
+                id: job.id,
+                status: job.status as JobStatus,
+                attempts: job.attempts,
+                lastError: job.lastError,
+              },
+      };
+    });
+  }
+
   return {
     jobs: createQueue(db),
 
@@ -268,14 +313,33 @@ export function createRepositories(db: Executor) {
         await db.insert(documentPages).values(pages.map((page) => ({ documentId, ...page })));
       },
       // Newest first (created_at, then id), with the state of each document's processing job.
-      list(options: { limit: number; offset: number }): Promise<DocumentWithProcessing[]> {
-        return notImplemented('documents.list', db, options);
+      async list(options: { limit: number; offset: number }): Promise<DocumentWithProcessing[]> {
+        const rows = await db
+          .select()
+          .from(documents)
+          .orderBy(desc(documents.createdAt), desc(documents.id))
+          .limit(options.limit)
+          .offset(options.offset);
+        return withProcessing(rows.map((row) => toDomain('document', documentRecordSchema, row)));
       },
-      getWithProcessing(id: string): Promise<DocumentWithProcessing | null> {
-        return notImplemented('documents.getWithProcessing', db, id);
+      async getWithProcessing(id: string): Promise<DocumentWithProcessing | null> {
+        const [row] = await db.select().from(documents).where(eq(documents.id, id));
+        if (row === undefined) return null;
+        const [found] = await withProcessing([toDomain('document', documentRecordSchema, row)]);
+        return found ?? null;
       },
-      getPage(documentId: string, pageNumber: number): Promise<DocumentPage | null> {
-        return notImplemented('documents.getPage', db, documentId, pageNumber);
+      async getPage(documentId: string, pageNumber: number): Promise<DocumentPage | null> {
+        const [row] = await db
+          .select({
+            documentId: documentPages.documentId,
+            pageNumber: documentPages.pageNumber,
+            content: documentPages.content,
+          })
+          .from(documentPages)
+          .where(
+            and(eq(documentPages.documentId, documentId), eq(documentPages.pageNumber, pageNumber)),
+          );
+        return row === undefined ? null : toDomain('document_page', documentPageSchema, row);
       },
       async listPages(documentId: string): Promise<DocumentPage[]> {
         const rows = await db
@@ -333,6 +397,10 @@ export function createRepositories(db: Executor) {
           .from(equipment)
           .where(eq(equipment.id, id))
           .for('update');
+      },
+      async getById(id: string): Promise<EquipmentRecord | null> {
+        const [row] = await db.select().from(equipment).where(eq(equipment.id, id));
+        return row === undefined ? null : toDomain('equipment', equipmentRecordSchema, row);
       },
       async getByTag(tag: string): Promise<EquipmentRecord | null> {
         const [row] = await db.select().from(equipment).where(eq(equipment.tag, tag));
@@ -405,20 +473,48 @@ export function createRepositories(db: Executor) {
         return row === undefined ? null : toDomain('field', fieldRecordSchema, row);
       },
       // The fields of the document's latest extraction run, by name.
-      listLatestForDocument(documentId: string): Promise<FieldRecord[]> {
-        return notImplemented('fields.listLatestForDocument', db, documentId);
+      async listLatestForDocument(documentId: string): Promise<FieldRecord[]> {
+        const [latest] = await db
+          .select({ id: extractionRuns.id })
+          .from(extractionRuns)
+          .where(eq(extractionRuns.documentId, documentId))
+          .orderBy(desc(extractionRuns.createdAt), desc(extractionRuns.id))
+          .limit(1);
+        if (latest === undefined) return [];
+        const rows = await db
+          .select()
+          .from(fields)
+          .where(eq(fields.extractionRunId, latest.id))
+          .orderBy(asc(fields.name));
+        return rows.map((row) => toDomain('field', fieldRecordSchema, row));
       },
       // Optimistic concurrency: UPDATE ... WHERE id = $1 AND version = $2, bumping the version.
       // Zero rows means the field changed since it was read (stale, with its current state) or
       // does not exist (missing).
-      review(input: {
+      async review(input: {
         id: string;
         expectedVersion: number;
         reviewStatus: ReviewStatus;
         value?: string;
         unit?: string;
       }): Promise<ReviewOutcome> {
-        return notImplemented('fields.review', db, input);
+        const [updated] = await db
+          .update(fields)
+          .set({
+            reviewStatus: input.reviewStatus,
+            ...(input.value === undefined ? {} : { value: input.value }),
+            ...(input.unit === undefined ? {} : { unit: input.unit }),
+            version: sql`${fields.version} + 1`,
+          })
+          .where(and(eq(fields.id, input.id), eq(fields.version, input.expectedVersion)))
+          .returning();
+        if (updated !== undefined) {
+          return { kind: 'updated', field: toDomain('field', fieldRecordSchema, updated) };
+        }
+        const [current] = await db.select().from(fields).where(eq(fields.id, input.id));
+        return current === undefined
+          ? { kind: 'missing' }
+          : { kind: 'stale', current: toDomain('field', fieldRecordSchema, current) };
       },
       // The fields of the equipment from the latest extraction run of each of its documents
       // (latest by created_at, then id), sorted by field id.
@@ -497,19 +593,57 @@ export function createRepositories(db: Executor) {
         return { conflict: toDomain('conflict', conflictRecordSchema, existing), created: false };
       },
       // With the equipment tag, oldest first; all conflicts, or those with the given status.
-      list(options: { status?: ConflictStatus }): Promise<ConflictWithTag[]> {
-        return notImplemented('conflicts.list', db, options);
+      async list(options: { status?: ConflictStatus }): Promise<ConflictWithTag[]> {
+        const rows = await db
+          .select({ conflict: conflicts, equipmentTag: equipment.tag })
+          .from(conflicts)
+          .innerJoin(equipment, eq(equipment.id, conflicts.equipmentId))
+          .where(options.status === undefined ? undefined : eq(conflicts.status, options.status))
+          .orderBy(asc(conflicts.createdAt), asc(conflicts.id));
+        return rows.map((row) => ({
+          ...toDomain('conflict', conflictRecordSchema, row.conflict),
+          equipmentTag: row.equipmentTag,
+        }));
       },
-      getWithTag(id: string): Promise<ConflictWithTag | null> {
-        return notImplemented('conflicts.getWithTag', db, id);
+      async getWithTag(id: string): Promise<ConflictWithTag | null> {
+        const [row] = await db
+          .select({ conflict: conflicts, equipmentTag: equipment.tag })
+          .from(conflicts)
+          .innerJoin(equipment, eq(equipment.id, conflicts.equipmentId))
+          .where(eq(conflicts.id, id));
+        return row === undefined
+          ? null
+          : {
+              ...toDomain('conflict', conflictRecordSchema, row.conflict),
+              equipmentTag: row.equipmentTag,
+            };
       },
       // Records the decision on an open conflict. Null, changing nothing, if it is not open.
-      resolve(input: ResolveInput): Promise<ConflictRecord | null> {
-        return notImplemented('conflicts.resolve', db, input);
+      async resolve(input: ResolveInput): Promise<ConflictRecord | null> {
+        const [row] = await db
+          .update(conflicts)
+          .set({
+            status: 'resolved',
+            resolution: input.reason,
+            resolvedAt: input.resolvedAt,
+            resolvedBy: input.resolvedBy,
+            chosenFieldId: input.chosenFieldId,
+            decidedValue: input.decidedValue,
+            decidedUnit: input.decidedUnit,
+            basedOn: input.basedOn,
+          })
+          .where(and(eq(conflicts.id, input.id), eq(conflicts.status, 'open')))
+          .returning();
+        return row === undefined ? null : toDomain('conflict', conflictRecordSchema, row);
       },
       // The latest resolved conflict of each field of the equipment: its standing decisions.
-      listDecisions(equipmentId: string): Promise<ConflictRecord[]> {
-        return notImplemented('conflicts.listDecisions', db, equipmentId);
+      async listDecisions(equipmentId: string): Promise<ConflictRecord[]> {
+        const rows = await db
+          .selectDistinctOn([conflicts.fieldName])
+          .from(conflicts)
+          .where(and(eq(conflicts.equipmentId, equipmentId), eq(conflicts.status, 'resolved')))
+          .orderBy(conflicts.fieldName, desc(conflicts.resolvedAt), desc(conflicts.id));
+        return rows.map((row) => toDomain('conflict', conflictRecordSchema, row));
       },
       async listOpen(equipmentId: string): Promise<ConflictRecord[]> {
         const rows = await db
@@ -557,17 +691,69 @@ export function createRepositories(db: Executor) {
     register: {
       // Locks the counter row (SELECT ... FOR UPDATE) for the rest of the transaction, advances it
       // and returns the new number, so concurrent publishes take consecutive numbers in turn.
-      takeNextNumber(): Promise<number> {
-        return notImplemented('register.takeNextNumber', db);
+      async takeNextNumber(): Promise<number> {
+        // The lock is what serializes publishes: without it two transactions would read the same
+        // last number and both try to create the next version.
+        const [counter] = await db
+          .select({ lastNumber: registerCounter.lastNumber })
+          .from(registerCounter)
+          .where(eq(registerCounter.id, 1))
+          .for('update');
+        if (counter === undefined) throw new Error('the register counter row is missing');
+        const next = counter.lastNumber + 1;
+        await db.update(registerCounter).set({ lastNumber: next }).where(eq(registerCounter.id, 1));
+        return next;
       },
-      blockers(): Promise<StoredPublishBlockers> {
-        return notImplemented('register.blockers', db);
+      async blockers(): Promise<StoredPublishBlockers> {
+        const jobsInProgress = await db
+          .select({ jobId: jobs.id, documentId: sql<string>`${jobs.payload} ->> 'documentId'` })
+          .from(jobs)
+          .where(
+            and(eq(jobs.type, 'process_document'), inArray(jobs.status, ['queued', 'running'])),
+          )
+          .orderBy(asc(jobs.id));
+        const pendingFields = await db
+          .select({ fieldId: fields.id, equipmentTag: equipment.tag, fieldName: fields.name })
+          .from(fields)
+          .innerJoin(equipment, eq(equipment.id, fields.equipmentId))
+          .where(
+            and(
+              eq(fields.reviewStatus, 'pending'),
+              inArray(fields.extractionRunId, latestRunIds()),
+            ),
+          )
+          .orderBy(asc(equipment.tag), asc(fields.name), asc(fields.id));
+        const openConflicts = await db
+          .select({
+            conflictId: conflicts.id,
+            equipmentTag: equipment.tag,
+            fieldName: conflicts.fieldName,
+          })
+          .from(conflicts)
+          .innerJoin(equipment, eq(equipment.id, conflicts.equipmentId))
+          .where(eq(conflicts.status, 'open'))
+          .orderBy(asc(equipment.tag), asc(conflicts.fieldName), asc(conflicts.id));
+        return { jobsInProgress, pendingFields, openConflicts };
       },
-      getPublished(number: number): Promise<PublishedVersion | null> {
-        return notImplemented('register.getPublished', db, number);
+      async getPublished(number: number): Promise<PublishedVersion | null> {
+        const [row] = await db
+          .select()
+          .from(registerVersions)
+          .where(and(eq(registerVersions.number, number), isNotNull(registerVersions.publishedAt)));
+        if (row === undefined) return null;
+        const items = await db
+          .select()
+          .from(registerItems)
+          .where(eq(registerItems.registerVersionId, row.id))
+          .orderBy(asc(registerItems.tag));
+        return {
+          version: toDomain('register_version', registerVersionRecordSchema, row),
+          items: items.map((item) => toDomain('register_item', registerItemRecordSchema, item)),
+        };
       },
-      listEquipment(): Promise<EquipmentRecord[]> {
-        return notImplemented('register.listEquipment', db);
+      async listEquipment(): Promise<EquipmentRecord[]> {
+        const rows = await db.select().from(equipment).orderBy(asc(equipment.tag));
+        return rows.map((row) => toDomain('equipment', equipmentRecordSchema, row));
       },
       async createDraftVersion(number: number): Promise<RegisterVersionRecord> {
         const row = single(await db.insert(registerVersions).values({ number }).returning());
