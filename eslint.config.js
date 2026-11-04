@@ -1,12 +1,13 @@
 import js from '@eslint/js';
 import prettier from 'eslint-config-prettier';
+import reactHooks from 'eslint-plugin-react-hooks';
 import { defineConfig, globalIgnores } from 'eslint/config';
 import tseslint from 'typescript-eslint';
 
 export default defineConfig(
   globalIgnores(['**/dist/', '**/coverage/', '**/.turbo/']),
   {
-    files: ['**/*.ts'],
+    files: ['**/*.ts', '**/*.tsx'],
     extends: [js.configs.recommended, tseslint.configs.strictTypeChecked],
     languageOptions: {
       parserOptions: {
@@ -23,6 +24,10 @@ export default defineConfig(
       '@typescript-eslint/ban-ts-comment': 'error',
       '@typescript-eslint/consistent-type-imports': 'error',
     },
+  },
+  {
+    files: ['apps/web/**/*.tsx', 'apps/web/**/*.ts'],
+    extends: [reactHooks.configs.flat.recommended],
   },
   prettier,
 );

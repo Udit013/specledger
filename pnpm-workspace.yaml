@@ -7,5 +7,7 @@ engineStrict: true
 
 # esbuild (via drizzle-kit) ships its binary as an optional platform package; its install
 # script only re-verifies it, so it is denied rather than allowed to run.
+# msw's install script copies its browser service worker; tests use msw in Node only.
 allowBuilds:
   esbuild: false
+  msw: false

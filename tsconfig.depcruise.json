@@ -4,9 +4,9 @@
   "compilerOptions": {
     "module": "nodenext",
     "moduleResolution": "nodenext",
+    "jsx": "react-jsx",
     "paths": {
       "@specledger/api": ["./apps/api/src/index.ts"],
-      "@specledger/web": ["./apps/web/src/index.ts"],
       "@specledger/*": ["./packages/*/src/index.ts"]
     }
   },
