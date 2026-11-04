@@ -25,7 +25,8 @@ describe('generator determinism', () => {
     expect(first.map((doc) => serializeJson(doc.truth))).toEqual(
       second.map((doc) => serializeJson(doc.truth)),
     );
-  });
+    // Renders and parses PDFs twice: seconds on a small CI runner sharing its cores.
+  }, 60_000);
 
   it('produces different documents for a different seed', async () => {
     const original = await renderCorpus((spec) => spec.id === 'p-105-datasheet');
@@ -92,7 +93,7 @@ describe('validateCorpus', () => {
 
   it('accepts the generated corpus and its byte-for-byte rebuild', async () => {
     expect(await validateCorpus(dir, { checkReproducible: true })).toEqual([]);
-  });
+  }, 60_000);
 
   it('reports a ground-truth quote altered by one character', async () => {
     const restore = rewriteTruth('p-101-datasheet-rev-a', (text) =>

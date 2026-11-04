@@ -14,6 +14,20 @@ export interface LoadedCorpus {
   readonly documents: readonly EvalDocument[];
 }
 
+// Page text by the PDF's sha256 from the manifest: content-addressed, so a cached entry is always
+// the text of exactly those bytes. Parsing is the slow part of a run, and the CLI's checks load
+// the corpus several times in one process.
+const pageCache = new Map<string, Promise<string[]>>();
+
+function pagesOf(path: string, sha256: string): Promise<string[]> {
+  let pages = pageCache.get(sha256);
+  if (pages === undefined) {
+    pages = readFile(path).then((bytes) => extractPageTexts(new Uint8Array(bytes)));
+    pageCache.set(sha256, pages);
+  }
+  return pages;
+}
+
 // Reads the documents of one split with their ground truth and page text. The holdout split is
 // refused unless the caller passes allowHoldout, before any of its files is read: it is evaluated
 // once, after tuning, never by default.
@@ -30,9 +44,7 @@ export async function loadEvalCorpus(
     const truth = groundTruthSchema.parse(
       JSON.parse(await readFile(join(dir, entry.truth), 'utf8')),
     );
-    const pages = truth.textLayer
-      ? await extractPageTexts(new Uint8Array(await readFile(join(dir, entry.pdf))))
-      : null;
+    const pages = truth.textLayer ? await pagesOf(join(dir, entry.pdf), entry.pdfSha256) : null;
     documents.push({ id: entry.id, split: entry.split, cases: entry.cases, truth, pages });
   }
   return ok({ corpusSha256: manifest.corpusSha256, documents });
