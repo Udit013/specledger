@@ -31,14 +31,14 @@ Phases 0 to 4 of the plan are in place:
   delimited data blocks, and schema-validated output with bounded correction retries. Tests run
   with every network socket blocked.
 
-- Verifier (Phase 5, in progress, test-first): the public types and signatures of
-  `normalizeWithMap`, `parseNumber`, the units registry and `verifyCandidate` exist in
-  `packages/core`, with bodies that throw `NotImplementedError`, and the complete test suite is
-  written against them. The suite fails until the bodies are implemented; that work is on the
-  `feat/phase-5-verifier-tests` branch and is not merged.
+- Verifier (Phase 5): text normalization with an offset map back to the page, number parsing
+  that refuses ambiguous formats, a units registry with conversion to canonical units, and
+  `verifyCandidate`, which accepts a value only when its quote is on the page, the value is in
+  the quote, the unit is known and of the right kind, dual-unit statements agree and the value is
+  plausible. Written test-first; property tests run with a fixed seed.
 
-There is no working verification, reconciliation, job queue, API route or user interface yet, and
-nothing calls the model layer outside its tests and the manual smoke script.
+There is no reconciliation, job queue, API route or user interface yet, and nothing calls the
+model layer or the verifier outside tests and the manual smoke script.
 
 ## Quick start
 
@@ -190,6 +190,28 @@ Known gaps at this stage:
   pre-push hook covers it.
 - Git hooks are local to a clone and can be bypassed with `--no-verify`; the CI check is the
   safety net.
+
+- **Verifier** (`packages/core`). `verifyCandidate` normalizes the quote and the page the same
+  way (`normalizeWithMap`: NFKC, invisible characters removed, quotes and dashes unified, words
+  broken at a line end joined, whitespace collapsed) and checks, in order: the quote is long
+  enough, it is on the page, the value is among the numbers in the quote (ranges as ranges, and
+  ambiguous formats such as `1,234` refused unless the document's decimal mark is known), the
+  unit is in the registry and of the field's dimension, two unit systems in the quote agree within
+  0.5 percent by the verifier's own conversion, and the canonical value is in the field's
+  plausible range. It reports every failing reason, returns `INTERNAL` instead of throwing on
+  unexpected input, and maps the quote back to page offsets for highlighting.
+
+## Verifier limitations
+
+- The verifier proves that a quote and its number are on the page, not that the quote is about the
+  field: a real "Maximum flow: 2596 gpm" offered as the rated flow is verified. Reconciliation and
+  human review are the controls for that.
+- The value must appear in the quote, but not necessarily next to the stated unit: in
+  `500 gpm (113.6 m³/h)`, a candidate of "500 m³/h" passes the rules as specified.
+- Relative tolerance on temperatures is measured in kelvin, so 0.5 percent is about 1.7 °C at
+  ambient temperatures.
+- Words joined across a line-end hyphen lose the hyphen even in compound words ("self-\npriming"
+  becomes "selfpriming"), so such a quote must be written the same way to match; this fails safe.
 
 ## Model layer limitations
 

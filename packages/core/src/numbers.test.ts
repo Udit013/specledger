@@ -93,6 +93,9 @@ describe('parseNumber: rejected tokens', () => {
     '5-',
     '3600-2900',
     '2900 to',
+    '1,23.4',
+    '1.234,5,6',
+    '9'.repeat(400),
   ])('%j is INVALID_NUMBER', (token) => {
     expect(parseNumber(token)).toEqual({ ok: false, error: { code: 'INVALID_NUMBER' } });
   });
