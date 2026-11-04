@@ -14,7 +14,12 @@ import {
   spinningWorker,
   throwingWorker,
 } from '../test/support/fake-workers.js';
-import { buildPdf, ownerPasswordOnlyPdf, userPasswordPdf } from '../test/support/pdfs.js';
+import {
+  buildPdf,
+  decompressionBombPdf,
+  ownerPasswordOnlyPdf,
+  userPasswordPdf,
+} from '../test/support/pdfs.js';
 import { INGEST_ERROR_CODES, ingestError } from './errors.js';
 import type { IngestErrorCode } from './errors.js';
 import { hasValidCrossReference } from './extract-worker.js';
@@ -262,6 +267,27 @@ describe('worker isolation', () => {
       error: ingestError('RESOURCE_LIMIT', { limit: 32 }),
     });
   }, 15_000);
+
+  // The heap limit alone does not cover this: pdfjs decodes streams into ArrayBuffers, which live
+  // outside the V8 heap. Without the memory watchdog this file grows the process by about 1 GB.
+  it('stops a decompression bomb before it can exhaust process memory', async () => {
+    const bomb = await decompressionBombPdf(512);
+    expect(bomb.length).toBeLessThan(1024 * 1024);
+    const before = process.memoryUsage().rss;
+    let peak = before;
+    const sampler = setInterval(() => {
+      peak = Math.max(peak, process.memoryUsage().rss);
+    }, 5);
+    try {
+      expect(await extractPages(bomb, { limits: { ...LIMITS, parseMemoryMb: 32 } })).toEqual({
+        ok: false,
+        error: ingestError('RESOURCE_LIMIT', { limit: 32 }),
+      });
+    } finally {
+      clearInterval(sampler);
+    }
+    expect((peak - before) / (1024 * 1024)).toBeLessThan(256);
+  }, 30_000);
 
   it('reports a crashing parser as CORRUPT without its error text', async () => {
     const extractor = createWorkerExtractor({ workerUrl: workers.write('throw', throwingWorker) });

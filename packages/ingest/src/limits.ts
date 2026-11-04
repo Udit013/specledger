@@ -5,7 +5,8 @@ export interface IngestLimits {
   readonly maxPages: number;
   // Wall-clock limit for one extraction, worker start-up included.
   readonly parseTimeoutMs: number;
-  // V8 old-generation heap of the extraction worker.
+  // Memory budget of the extraction worker: its V8 heap limit, and the limit a watchdog applies to
+  // heap plus decoded-stream buffers (ArrayBuffers outside the heap).
   readonly parseMemoryMb: number;
   // Below this many non-whitespace characters in the whole document, it has no text layer.
   readonly minTextChars: number;

@@ -103,3 +103,57 @@ export function userPasswordPdf(): Buffer {
       `/P -4 >> /ID [<${FILE_ID.toString('hex')}> <${FILE_ID.toString('hex')}>] `,
   });
 }
+
+// A one-page PDF whose content stream is small on disk but inflates to `inflatedMb` megabytes
+// (mostly spaces after a short line of text): a decompression bomb. The stream is compressed in
+// chunks so the test never holds the inflated bytes.
+export async function decompressionBombPdf(inflatedMb: number): Promise<Buffer> {
+  const { createDeflate } = await import('node:zlib');
+  const deflate = createDeflate({ level: 9 });
+  const chunks: Buffer[] = [];
+  deflate.on('data', (chunk: Buffer) => chunks.push(chunk));
+  const done = new Promise((resolve) => deflate.on('end', resolve));
+  deflate.write('BT /F1 12 Tf 72 720 Td (Rated flow: 500 gpm, rated head: 45 m) Tj ET\n');
+  const spaces = Buffer.alloc(1024 * 1024, 0x20);
+  for (let mb = 0; mb < inflatedMb; mb += 1) deflate.write(spaces);
+  deflate.end();
+  await done;
+  const stream = Buffer.concat(chunks);
+
+  const objects: Buffer[] = [
+    Buffer.from('<< /Type /Catalog /Pages 2 0 R >>'),
+    Buffer.from('<< /Type /Pages /Kids [3 0 R] /Count 1 >>'),
+    Buffer.from(
+      '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R ' +
+        '/Resources << /Font << /F1 5 0 R >> >> >>',
+    ),
+    Buffer.concat([
+      Buffer.from(`<< /Length ${String(stream.length)} /Filter /FlateDecode >>\nstream\n`),
+      stream,
+      Buffer.from('\nendstream'),
+    ]),
+    Buffer.from('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>'),
+  ];
+  const parts = [Buffer.from('%PDF-1.4\n')];
+  const offsets: number[] = [];
+  let length = parts[0]?.length ?? 0;
+  objects.forEach((body, index) => {
+    offsets.push(length);
+    const part = Buffer.concat([
+      Buffer.from(`${String(index + 1)} 0 obj\n`),
+      body,
+      Buffer.from('\nendobj\n'),
+    ]);
+    parts.push(part);
+    length += part.length;
+  });
+  parts.push(
+    Buffer.from(
+      `xref\n0 ${String(objects.length + 1)}\n0000000000 65535 f \n` +
+        offsets.map((offset) => `${String(offset).padStart(10, '0')} 00000 n \n`).join('') +
+        `trailer\n<< /Size ${String(objects.length + 1)} /Root 1 0 R >>\n` +
+        `startxref\n${String(length)}\n%%EOF\n`,
+    ),
+  );
+  return Buffer.concat(parts);
+}

@@ -112,7 +112,10 @@ To be written in full. So far:
 
 - **Ingestion** (`packages/ingest`). `ingestDocument` validates the bytes (`validateUpload`), then
   parses them in a `node:worker_threads` worker (`extractPages`) that has a heap limit, an empty
-  environment and a hard time limit after which it is terminated. The worker first checks the
+  environment and a hard time limit after which it is terminated. Decoded PDF streams are
+  ArrayBuffers outside the V8 heap, which the heap limit does not cap, so the parent also samples
+  the worker's heap plus external memory every 25 ms and terminates it over budget
+  (`RESOURCE_LIMIT`); this stops decompression bombs. The worker first checks the
   cross-reference structure, because pdfjs silently repairs a damaged table, then extracts page
   text with the shared page-text convention (`assemblePageText` in core). Expected failures are
   returned as one typed error (`IngestError`) with a stable code and a fixed message. Storage is a
@@ -141,9 +144,13 @@ Known gaps at this stage:
   CJK or unusually encoded text produce no text. Lines are grouped by baseline rounded to half a
   unit, so text whose baseline straddles a rounding boundary can split into two lines; a quote
   across that split will not be found, which fails safe (the value stays unverified).
+- The memory watchdog samples every 25 ms. A decoded buffer that doubles between two samples can
+  overshoot the budget, so peak memory per parse is a few times `INGEST_PARSE_MEMORY_MB`, not
+  exactly it.
 - Each upload starts its own worker thread and parses before the duplicate check, so a repeated
-  upload costs a full parse. There is no cap on concurrent parses yet; the per-IP rate limit of
-  the HTTP phase is the intended control.
+  upload costs a full parse. There is no cap on concurrent parses yet, so total memory grows with
+  the number of simultaneous uploads; a concurrency cap and the per-IP rate limit belong with the
+  upload endpoint (Phase 8), the first point at which uploads can arrive concurrently.
 - Development dependencies carry two moderate advisories, both in tooling only: `minimatch`
   (through ESLint) and `esbuild` (through drizzle-kit's TypeScript loader; the advisory concerns
   esbuild's development server, which is never started). Neither can be overridden without

@@ -53,9 +53,16 @@ function isOutOfMemory(error: unknown): boolean {
   );
 }
 
-// Starts one worker per document and always ends it: on a reply, an error, an early exit or the
-// time limit. The promise settles only after the thread has stopped, so a parser stuck in a loop
-// is gone by the time the caller sees PARSE_TIMEOUT.
+// How often the parent samples the worker's memory. pdfjs decodes streams into ArrayBuffers, which
+// live outside the V8 heap and so are not capped by resourceLimits; a small compressed stream can
+// inflate to gigabytes. The watchdog adds them (external_memory) to the heap and terminates the
+// worker over budget. A buffer that doubles between two samples can overshoot, so the bound is a
+// few times parseMemoryMb rather than exact, but it is a bound.
+const MEMORY_POLL_MS = 25;
+
+// Starts one worker per document and always ends it: on a reply, an error, an early exit, the
+// memory budget or the time limit. The promise settles only after the thread has stopped, so a
+// parser stuck in a loop is gone by the time the caller sees PARSE_TIMEOUT.
 function runWorker(workerUrl: URL, bytes: Uint8Array, limits: IngestLimits): Promise<Outcome> {
   return new Promise((resolve) => {
     const request: WorkerRequest = { kind: WORKER_KIND, bytes, maxPages: limits.maxPages };
@@ -77,10 +84,12 @@ function runWorker(workerUrl: URL, bytes: Uint8Array, limits: IngestLimits): Pro
     worker.stderr.resume();
 
     let settled = false;
+    let watchdog: NodeJS.Timeout | undefined;
     const finish = (outcome: Outcome) => {
       if (settled) return;
       settled = true;
       clearTimeout(timer);
+      clearInterval(watchdog);
       void worker.terminate().finally(() => {
         resolve(outcome);
       });
@@ -88,6 +97,20 @@ function runWorker(workerUrl: URL, bytes: Uint8Array, limits: IngestLimits): Pro
     const timer = setTimeout(() => {
       finish({ kind: 'timeout' });
     }, limits.parseTimeoutMs);
+    const budget = limits.parseMemoryMb * 1024 * 1024;
+    worker.once('online', () => {
+      watchdog = setInterval(() => {
+        worker.getHeapStatistics().then(
+          (stats) => {
+            if (stats.used_heap_size + stats.external_memory > budget) {
+              finish({ kind: 'out_of_memory' });
+            }
+          },
+          // The worker exited between samples; the exit handler settles the outcome.
+          () => undefined,
+        );
+      }, MEMORY_POLL_MS);
+    });
     worker.once('message', (reply: unknown) => {
       finish({ kind: 'reply', reply });
     });
