@@ -2,3 +2,5 @@
 *.docx binary
 *.pdf binary
 *.png binary
+# Golden exports are compared byte for byte; the CSV ends lines with CRLF (RFC 4180).
+packages/exporters/test/golden/*.csv -text

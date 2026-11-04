@@ -60,3 +60,35 @@ export function exportRegisterCsv(version: ExportableVersion): string {
   }
   return rows.map((row) => `${row.map(cell).join(',')}\r\n`).join('');
 }
+
+// ---- Phase 10 stubs --------------------------------------------------------------------------
+import { notImplemented } from './not-implemented.js';
+export const REGISTER_JSON_SCHEMA_VERSION = 1;
+export interface RegisterExporter {
+  readonly format: 'csv' | 'json';
+  readonly contentType: string;
+  readonly extension: string;
+  render(version: ExportableVersion): string;
+}
+export const csvExporter: RegisterExporter = {
+  format: 'csv',
+  contentType: '',
+  extension: '',
+  render: (v) => notImplemented('csvExporter', v),
+};
+export const jsonExporter: RegisterExporter = {
+  format: 'json',
+  contentType: '',
+  extension: '',
+  render: (v) => notImplemented('jsonExporter', v),
+};
+export function exporterFor(format: 'csv' | 'json'): RegisterExporter {
+  return notImplemented('exporterFor', format);
+}
+export type VerifyError =
+  'INVALID_JSON' | 'INVALID_SHAPE' | 'UNSUPPORTED_SCHEMA_VERSION' | 'HASH_MISMATCH';
+export function verifyRegisterJson(
+  text: string,
+): { ok: true; value: { version: number } } | { ok: false; error: VerifyError } {
+  return notImplemented('verifyRegisterJson', text);
+}

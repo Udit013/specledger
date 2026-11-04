@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "contentSha256": "91f1d98f8dd4bd2ee96fce4801f737a2c3126af2e6c8678cac0aad58edc17424",
+  "version": 7,
+  "approvedBy": "role:approver",
+  "publishedAt": "2031-05-06T07:08:09.000Z",
+  "items": [
+    {
+      "tag": "M-9",
+      "values": {
+        "rated_power": {
+          "value": "75",
+          "unit": "kW"
+        }
+      }
+    },
+    {
+      "tag": "P-1",
+      "values": {
+        "note": {
+          "value": "a, \"b\"\nc",
+          "unit": "-"
+        },
+        "rated_head": {
+          "value": "=HYPERLINK(\"http://evil.example\",\"x\")",
+          "unit": "m"
+        },
+        "suction_temp": {
+          "value": "-12.5",
+          "unit": "°C"
+        }
+      }
+    }
+  ]
+}

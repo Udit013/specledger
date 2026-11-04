@@ -1,0 +1,6 @@
+tag,field,value,unit
+M-9,rated_power,75,kW
+P-1,note,"a, ""b""
+c",'-
+P-1,rated_head,"'=HYPERLINK(""http://evil.example"",""x"")",m
+P-1,suction_temp,-12.5,°C
