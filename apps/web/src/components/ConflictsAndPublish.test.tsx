@@ -121,6 +121,23 @@ describe('publish dialog', () => {
     });
   });
 
+  it('keeps Tab and Shift+Tab inside the dialog', async () => {
+    fakeApi();
+    const { user } = renderApp();
+    await screen.findByRole('link', { name: 'Review p-106-datasheet.pdf' });
+    await user.click(screen.getByRole('button', { name: 'Publish register' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Publish register' });
+    const publish = within(dialog).getByRole('button', { name: 'Publish now' });
+    const close = within(dialog).getByRole('button', { name: 'Close' });
+    expect(document.activeElement).toBe(publish);
+    await user.tab();
+    expect(document.activeElement).toBe(close);
+    await user.tab();
+    expect(document.activeElement).toBe(publish);
+    await user.tab({ shift: true });
+    expect(document.activeElement).toBe(close);
+  });
+
   it('keeps Publish now focusable while the request runs', async () => {
     fakeApi();
     let release: (value: unknown) => void = () => undefined;

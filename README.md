@@ -8,7 +8,7 @@ it and an approver publishes an immutable register version.
 
 ## Status
 
-Phases 0 to 8 of the plan are in place:
+Phases 0 to 9 of the plan are in place:
 
 - Foundation and quality gates: the monorepo, strict TypeScript, lint and dependency-boundary
   rules, CI, a local Postgres container, validated configuration, a redacting logger and Git
@@ -51,7 +51,10 @@ Phases 0 to 8 of the plan are in place:
   register publishing with blockers and consecutive version numbers, CSV and JSON export, the
   audit log, job requeue, and health and readiness probes. See [HTTP API](#http-api).
 
-There is no user interface yet (Phase 9).
+- Review UI (Phase 9): a React app in `apps/web` with the document list, a review screen showing
+  each value beside its source page with the quote highlighted, keyboard review, the conflicts
+  panel with evidence and the rules' suggestion, the publish dialog and the audit history. See
+  [Review UI](#review-ui).
 
 ## Quick start
 
@@ -127,6 +130,14 @@ SIGTERM or SIGINT:
 pnpm worker
 ```
 
+The review UI runs on the Vite dev server, which proxies `/api` to the API (`API_URL`, default
+`http://127.0.0.1:3000`), so the API needs no CORS entry locally. Open http://127.0.0.1:5173 and
+paste the tokens from `.env`:
+
+```sh
+pnpm --filter @specledger/web dev
+```
+
 Other scripts: `pnpm test`, `pnpm format`, `pnpm format:check`, `pnpm boundaries`.
 
 ## Repository layout
@@ -134,7 +145,7 @@ Other scripts: `pnpm test`, `pnpm format`, `pnpm format:check`, `pnpm boundaries
 | Path                 | Purpose                                              |
 | -------------------- | ---------------------------------------------------- |
 | `apps/api`           | HTTP API and worker entry point                      |
-| `apps/web`           | Review UI                                            |
+| `apps/web`           | Review UI (React, Vite, TanStack Query, Tailwind)    |
 | `packages/core`      | Pure domain logic with no I/O; may import only zod   |
 | `packages/db`        | Database schema, migrations, repositories, queue     |
 | `packages/llm`       | Model provider interface and implementations         |
@@ -290,6 +301,12 @@ UUID, and is echoed on every response and carried by the upload's job.
 - Review: a stale `expectedVersion` is a 409 `VERSION_CONFLICT` with the current field. Accepting
   a value the verifier could not confirm needs a reason; an edit must read as a number with a unit
   of the field's quantity.
+- Conflicts carry each candidate's evidence (quote and page) and a `suggestion`: what the
+  reconciliation rules alone would select from the current candidates, and the rules they applied.
+  It is a hint for the reviewer and never applied automatically.
+- Values a reviewer enters, in an edit or a resolution, must read as the field's quantity and lie
+  in its plausible range, the verifier's rules (d) and (f); otherwise the answer is 400
+  `INVALID_VALUE`.
 - Resolution records the decided value, the chosen field if any, the reviewer's role and reason,
   and the candidates seen with their lineage and revision.
 - Publishing is refused while a job is queued or running, a latest field is pending review, a
@@ -297,6 +314,47 @@ UUID, and is echoed on every response and carried by the upload's job.
   per equipment, the reconciled accepted and edited values and the decisions, as stored text;
   rejected fields are left out. Numbers come from a counter row locked for the transaction, so
   concurrent publishes get consecutive numbers and a refused one uses none.
+
+## Review UI
+
+`apps/web` is React with Vite, TanStack Query and Tailwind. It talks to the API through a typed
+client built on the shared Zod schemas in `packages/core/src/api.ts`: request bodies are checked
+before they are sent, and every response is validated before a screen sees it.
+
+- Page text is untrusted document content. It is rendered as React text children only, never as
+  HTML, so markup in a document is shown literally. The highlight comes from core's
+  `locateQuote`, the verifier's own normalization and offset map, so a quote that differs from
+  the page only in whitespace, dash or quote variants is still found; when it is not on the page
+  the screen says "The quote could not be located on this page." rather than showing nothing.
+- Keyboard: `j` and `k` move between fields, `a` accepts, `e` edits, `r` rejects, `?` opens help,
+  Escape closes a form or dialog. Shortcuts are off while typing and while a dialog is open.
+  Focus moves to the next field after each action, and results are announced through a polite
+  live region. Statuses are words with a symbol, never color alone, in fixed-width boxes so a
+  change does not move the layout.
+- A 409 shows the server's current value and status and keeps the reviewer's change, which can be
+  reapplied on the current version or discarded; nothing is overwritten.
+- Accepting a value the verifier could not confirm asks for a reason first. Values a reviewer
+  enters (edits, resolutions) must also be plausible for the field, the verifier's range rule.
+- Tokens: the reviewer pastes the engineer and approver tokens; each request sends the token of
+  the role it needs. They are kept in memory and sessionStorage, never in localStorage or the URL.
+- The document list polls while a document is queued or running, doubling the delay from 1 s to
+  30 s while nothing changes, and stops when everything has settled.
+
+Tests (`pnpm --filter @specledger/web test`) run in jsdom against an in-memory API served by MSW,
+including a keyboard-only flow from the list to a published version, hostile page text, 409
+handling, and axe checks on the list, review and publish screens.
+
+## Review UI limitations
+
+- axe runs in jsdom, which has no layout, so color contrast is not checked automatically; the
+  palette was checked by eye in a browser only.
+- There is no upload screen; documents are uploaded with `POST /documents` (curl or a script).
+- The review screen shows the page of the selected field only, and it is plain text: there is no
+  rendering of the PDF itself, its tables or its layout.
+- A reviewer holding only one role's token gets a 403 for the other role's actions; the UI does
+  not hide those actions.
+- There is no browser end-to-end test yet (Playwright is Phase 12); keyboard flows are tested in
+  jsdom with Testing Library, and were checked by hand in a browser against the API.
 
 ## HTTP API limitations
 
