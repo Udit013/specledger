@@ -35,5 +35,7 @@ describe('recordings match what the pipeline sends', () => {
         synthetic: true,
       });
     },
+    // Parses a corpus PDF in a sandboxed worker thread: seconds on a shared CI runner.
+    30_000,
   );
 });

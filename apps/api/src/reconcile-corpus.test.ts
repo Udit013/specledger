@@ -63,7 +63,8 @@ describe('reconciliation of corpus documents', () => {
       });
     }
     expect(result.value.log.filter((e) => e.rule === 'LATER_REVISION')).toHaveLength(6);
-  });
+    // Parses corpus PDFs in sandboxed worker threads: seconds on a shared CI runner.
+  }, 30_000);
 
   it('takes every field of p-106 from the datasheet, never from the brochure', async () => {
     const result = reconcile({
@@ -84,5 +85,6 @@ describe('reconciliation of corpus documents', () => {
       candidateIds: ['p-106-brochure/rated_head'],
       winnerIds: ['p-106-datasheet/rated_head'],
     });
-  });
+    // Parses corpus PDFs in sandboxed worker threads: seconds on a shared CI runner.
+  }, 30_000);
 });

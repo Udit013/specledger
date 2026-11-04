@@ -26,41 +26,46 @@ const fieldOf = (equipmentClass: keyof typeof FIELD_DEFINITIONS, name: string): 
 // document, offered as a candidate, must verify, and an invented quote for every absent field must
 // not. Decimal commas are passed as the document's hint, as the pipeline will.
 describe('verifier on the dev corpus', () => {
-  it.each(devDocuments.map((entry) => [entry.id, entry] as const))('%s', async (_id, entry) => {
-    const truth = groundTruthSchema.parse(
-      JSON.parse(read(`fixtures/corpus/${entry.truth}`).toString('utf8')),
-    );
-    if (!truth.textLayer) return;
-    const extracted = await extractPages(read(`fixtures/corpus/${entry.pdf}`));
-    if (!extracted.ok) throw new Error(extracted.error.code);
-    const hints = {
-      decimalMark: entry.cases.includes('decimal_comma') ? 'comma' : 'point',
-    } as const;
+  it.each(devDocuments.map((entry) => [entry.id, entry] as const))(
+    '%s',
+    async (_id, entry) => {
+      const truth = groundTruthSchema.parse(
+        JSON.parse(read(`fixtures/corpus/${entry.truth}`).toString('utf8')),
+      );
+      if (!truth.textLayer) return;
+      const extracted = await extractPages(read(`fixtures/corpus/${entry.pdf}`));
+      if (!extracted.ok) throw new Error(extracted.error.code);
+      const hints = {
+        decimalMark: entry.cases.includes('decimal_comma') ? 'comma' : 'point',
+      } as const;
 
-    for (const [name, expected] of Object.entries(truth.fields)) {
-      const field = fieldOf(truth.equipmentClass, name);
-      if (expected === null) {
-        const invented = {
-          fieldName: name,
-          value: '123',
-          unit: field.canonicalUnit,
-          quote: `${name}: 123 ${field.canonicalUnit}`,
-          page: 1,
-        };
-        const result = verifyCandidate(
-          invented,
-          extracted.value.pages[0]?.text ?? '',
-          field,
-          hints,
-        );
-        expect(result.reasons, `${entry.id} ${name}`).toContain('QUOTE_NOT_FOUND');
-        continue;
+      for (const [name, expected] of Object.entries(truth.fields)) {
+        const field = fieldOf(truth.equipmentClass, name);
+        if (expected === null) {
+          const invented = {
+            fieldName: name,
+            value: '123',
+            unit: field.canonicalUnit,
+            quote: `${name}: 123 ${field.canonicalUnit}`,
+            page: 1,
+          };
+          const result = verifyCandidate(
+            invented,
+            extracted.value.pages[0]?.text ?? '',
+            field,
+            hints,
+          );
+          expect(result.reasons, `${entry.id} ${name}`).toContain('QUOTE_NOT_FOUND');
+          continue;
+        }
+        const page = extracted.value.pages[expected.page - 1]?.text ?? '';
+        const result = verifyCandidate({ fieldName: name, ...expected }, page, field, hints);
+        expect(result.reasons, `${entry.id} ${name}`).toEqual([]);
       }
-      const page = extracted.value.pages[expected.page - 1]?.text ?? '';
-      const result = verifyCandidate({ fieldName: name, ...expected }, page, field, hints);
-      expect(result.reasons, `${entry.id} ${name}`).toEqual([]);
-    }
-  });
+      // Parses a corpus PDF in a sandboxed worker thread: seconds on a shared CI runner.
+    },
+    30_000,
+  );
 });
 
 // The Phase 4 recording of a model that obeyed the injection in p-108, through the verifier.
