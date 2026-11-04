@@ -244,6 +244,7 @@ export const registerVersionSchema = z.strictObject({
   approvedBy: z.string(),
   publishedAt: isoTime,
 });
+export type RegisterVersionView = z.infer<typeof registerVersionSchema>;
 
 export const publishResponseSchema = z.strictObject({
   version: registerVersionSchema,
@@ -276,6 +277,7 @@ export const auditEventSchema = z.strictObject({
   reason: z.string().nullable(),
   createdAt: isoTime,
 });
+export type AuditEvent = z.infer<typeof auditEventSchema>;
 
 export const auditListSchema = z.strictObject({ events: z.array(auditEventSchema) });
 

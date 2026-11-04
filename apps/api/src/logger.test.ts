@@ -28,6 +28,10 @@ describe('createLogger redaction', () => {
     ['authorization header object', { headers: { authorization: `Bearer ${SECRET}` } }],
     ['top-level authorization', { authorization: `Bearer ${SECRET}` }],
     ['cookie header on a request', { req: { headers: { cookie: `session=${SECRET}` } } }],
+    [
+      'multipart parser options',
+      { busboyOptions: { headers: { authorization: `Bearer ${SECRET}` }, limits: { files: 1 } } },
+    ],
     ['bearer token field', { token: SECRET }],
     ['nested access token', { auth: { accessToken: SECRET } }],
     ['camelCase API key', { apiKey: SECRET }],

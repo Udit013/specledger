@@ -6,16 +6,22 @@ import type { Database, JobRecord, Repositories } from '@specledger/db';
 import { createWorkerExtractor, ingestDocument, ingestError } from '@specledger/ingest';
 import type { IngestedDocument, IngestError, IngestInput, IngestLimits } from '@specledger/ingest';
 
+import { PROMPT_VERSION } from '@specledger/llm';
+
 import { PROCESS_DOCUMENT, processDocumentPayloadSchema } from './worker/process-document.js';
 
 // How many times a document's processing is attempted before its job is dead-lettered.
 export const PROCESS_DOCUMENT_MAX_ATTEMPTS = 5;
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
 export interface UploadInput extends IngestInput {
   // The equipment the document describes, and whether it is a synthetic corpus document (only
   // those may go to the Gemini free tier). The uploader states both; the document does not.
   readonly equipment: { readonly tag: string; readonly equipmentClass: EquipmentClass };
   readonly synthetic: boolean;
+  // The request's correlation id, carried by the job when it is a UUID; otherwise a new one.
+  readonly correlationId?: string;
 }
 
 export interface Uploaded extends IngestedDocument {
@@ -66,10 +72,15 @@ export function createIngestion(
             {
               type: PROCESS_DOCUMENT,
               payload: { ...payload.data, documentId: document.id },
-              idempotencyKey: `${PROCESS_DOCUMENT}:${document.id}`,
+              // The same bytes under the same prompt are the same work: a re-upload, or a retry
+              // that races the first, never enqueues it twice.
+              idempotencyKey: `${PROCESS_DOCUMENT}:${document.sha256}:${PROMPT_VERSION}`,
               maxAttempts: PROCESS_DOCUMENT_MAX_ATTEMPTS,
               runAt: now,
-              correlationId: newId(),
+              correlationId:
+                input.correlationId !== undefined && UUID.test(input.correlationId)
+                  ? input.correlationId
+                  : newId(),
             },
             now,
           ));

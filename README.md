@@ -8,7 +8,7 @@ it and an approver publishes an immutable register version.
 
 ## Status
 
-Phases 0 to 7 of the plan are in place:
+Phases 0 to 8 of the plan are in place:
 
 - Foundation and quality gates: the monorepo, strict TypeScript, lint and dependency-boundary
   rules, CI, a local Postgres container, validated configuration, a redacting logger and Git
@@ -24,8 +24,7 @@ Phases 0 to 7 of the plan are in place:
   [docs/evaluation.md](docs/evaluation.md).
 - Ingestion: upload validation (magic bytes, size, page count) and PDF text extraction in a
   terminable worker thread with memory and time limits, typed rejection codes, and storage of the
-  document, its bytes and its page text in one transaction with deduplication by sha256. These are
-  service functions; there is no HTTP endpoint yet.
+  document, its bytes and its page text in one transaction with deduplication by sha256.
 - Model layer: an `LlmProvider` interface with Gemini (free tier, synthetic documents only),
   Replay, Recording and Failover implementations, a prompt builder that keeps document text in
   delimited data blocks, and schema-validated output with bounded correction retries. Tests run
@@ -46,9 +45,13 @@ Phases 0 to 7 of the plan are in place:
   extracts, verifies, reconciles and persists a document's fields, conflicts and audit events in
   one transaction. An upload enqueues its job in the same transaction as the document.
 
-There is no HTTP API or user interface yet (Phases 8 and 9): documents are uploaded and jobs
-requeued through the service functions only, and human conflict decisions are not stored in a
-structured form yet, so reconciliation runs without them.
+- HTTP API (Phase 8): a Fastify service with bearer-token roles (engineer, approver) declared on
+  every route, uploads, field review with optimistic concurrency, structured conflict
+  resolution that reconciliation (in the worker and at publish) takes as a human decision,
+  register publishing with blockers and consecutive version numbers, CSV and JSON export, the
+  audit log, job requeue, and health and readiness probes. See [HTTP API](#http-api).
+
+There is no user interface yet (Phase 9).
 
 ## Quick start
 
@@ -73,8 +76,9 @@ pnpm --filter @specledger/api build
 pnpm --filter @specledger/api start
 ```
 
-The API currently only validates its configuration and logs that it loaded; the HTTP server is not
-built yet.
+The API needs `API_ENGINEER_TOKEN` and `API_APPROVER_TOKEN` in `.env` (generate each with
+`openssl rand -hex 32`). It applies migrations at start-up, listens on `HOST:PORT`, and stops
+gracefully on SIGTERM or SIGINT. Uploaded documents are processed by the worker (below).
 
 Git hooks (once per clone):
 
@@ -198,9 +202,9 @@ Known gaps at this stage:
   overshoot the budget, so peak memory per parse is a few times `INGEST_PARSE_MEMORY_MB`, not
   exactly it.
 - Each upload starts its own worker thread and parses before the duplicate check, so a repeated
-  upload costs a full parse. There is no cap on concurrent parses yet, so total memory grows with
-  the number of simultaneous uploads; a concurrency cap and the per-IP rate limit belong with the
-  upload endpoint (Phase 8), the first point at which uploads can arrive concurrently.
+  upload costs a full parse. The upload endpoint limits uploads per client IP
+  (`UPLOAD_RATE_LIMIT_PER_MINUTE`) but does not cap concurrent parses, so total memory still grows
+  with the number of simultaneous uploads from different clients.
 - Development dependencies carry two moderate advisories, both in tooling only: `minimatch`
   (through ESLint) and `esbuild` (through drizzle-kit's TypeScript loader; the advisory concerns
   esbuild's development server, which is never started). Neither can be overridden without
@@ -253,6 +257,62 @@ locked_by = workerId` (fencing), so a worker whose lease was taken over cannot t
   conflict per field). Job errors carry a fixed code and message; `last_error` never holds an
   exception's own text.
 
+## HTTP API
+
+Every request needs `Authorization: Bearer <token>` except `/health` and `/ready`. Tokens are
+compared as SHA-256 digests with a constant-time comparison; there are no user accounts, and the
+audit log records the role (`role:engineer`, `role:approver`). Each route declares the roles that
+may call it, and the app refuses to start if one does not.
+
+| Method and path                    | Roles    | Purpose                                                         |
+| ---------------------------------- | -------- | --------------------------------------------------------------- |
+| `GET /health`                      | public   | Liveness; does not touch the database                           |
+| `GET /ready`                       | public   | Readiness; 503 `NOT_READY` if the database does not answer      |
+| `POST /documents`                  | engineer | Multipart upload; 202 with the queued job, 200 if a duplicate   |
+| `GET /documents`                   | both     | Newest first, with processing status (`limit`, `offset`)        |
+| `GET /documents/:id`               | both     | One document with its processing status                         |
+| `GET /documents/:id/pages/:n`      | both     | The extracted text of one page                                  |
+| `GET /documents/:id/fields`        | both     | The fields of the document's latest extraction run              |
+| `PATCH /fields/:id`                | engineer | `accept`, `reject` or `edit` with `expectedVersion`             |
+| `GET /conflicts`                   | both     | Conflicts with their candidates (`status=open\|resolved`)       |
+| `POST /conflicts/:id/resolve`      | engineer | Choose a candidate or enter a value, with a reason              |
+| `POST /register/publish`           | approver | Publish the next register version, or 409 with blockers         |
+| `GET /register/versions/:n/export` | both     | `format=csv` or `format=json`                                   |
+| `GET /audit`                       | both     | `entity=field:<id>`, `conflict:<id>` or `register_version:<id>` |
+| `POST /admin/jobs/:id/requeue`     | approver | Move a dead job back to the queue                               |
+
+Request and response shapes are the Zod schemas in `packages/core/src/api.ts`. Every error is
+`{"error": {"code", "message", "details"?}}` with a stable code; validation errors list the
+failing paths, never the input. An unexpected error is a 500 `INTERNAL` carrying only the
+correlation id, which is the request's `X-Request-Id` when it is short and plain, otherwise a new
+UUID, and is echoed on every response and carried by the upload's job.
+
+- Review: a stale `expectedVersion` is a 409 `VERSION_CONFLICT` with the current field. Accepting
+  a value the verifier could not confirm needs a reason; an edit must read as a number with a unit
+  of the field's quantity.
+- Resolution records the decided value, the chosen field if any, the reviewer's role and reason,
+  and the candidates seen with their lineage and revision.
+- Publishing is refused while a job is queued or running, a latest field is pending review, a
+  conflict is open, or reviewed values of equal rank disagree with no decision. A version holds,
+  per equipment, the reconciled accepted and edited values and the decisions, as stored text;
+  rejected fields are left out. Numbers come from a counter row locked for the transaction, so
+  concurrent publishes get consecutive numbers and a refused one uses none.
+
+## HTTP API limitations
+
+- Two static tokens stand in for identity, as specified: anyone holding a token acts as its role,
+  the audit log cannot tell two engineers apart, and rotating a token means restarting the API.
+- Rate limits are per client IP and kept in process memory, so they reset on restart and are not
+  shared between API instances. Behind a proxy, `TRUST_PROXY` must be set for the limit to see
+  client addresses rather than the proxy's.
+- Publishing reads the review state under the counter lock, which serializes publishes but does
+  not lock fields: a review committed while a publish is running may or may not be included.
+- Conflict lists load the candidates of each conflict with one query per conflict.
+- A document's processing status is its latest `process_document` job; there is no endpoint to
+  re-run extraction for a document that succeeded.
+- CSV export prefixes cells that a spreadsheet would read as a formula with `'`, which changes
+  those values as text.
+
 ## Queue and worker limitations
 
 - Fencing is by worker id, as specified. A worker that pauses for longer than its lease (a long
@@ -264,9 +324,9 @@ locked_by = workerId` (fencing), so a worker whose lease was taken over cannot t
   the dropped candidates themselves are not stored.
 - Equipment tag, class and the synthetic flag come from the uploader in the job payload; nothing
   checks them against the document's content.
-- Reconciliation runs without human decisions: resolved conflicts are left untouched and open
-  ones are never closed automatically, but structured decisions (value and the evidence they were
-  based on) arrive with the resolve endpoint in Phase 8.
+- Reconciliation takes the latest resolved conflict of each field as a human decision. A later
+  revision in a lineage the decision was based on opens a new conflict for re-review (its audit
+  event says `NEEDS_RE_REVIEW`); the decision keeps standing until it is resolved again.
 - Opening a conflict is audited with the `extract` action and actor `system:worker`; there is no
   separate action for it.
 - `dead` jobs can be requeued, `failed` (permanent) ones cannot, as specified.

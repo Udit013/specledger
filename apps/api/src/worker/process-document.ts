@@ -17,6 +17,7 @@ import { PROMPT_VERSION } from '@specledger/llm';
 import type { ExtractionResponse, LlmLogger, LlmProvider } from '@specledger/llm';
 import { z } from 'zod';
 
+import { decisionsFrom, lineageOf } from '../services/decisions.js';
 import { JobError, jobErrorFromLlm } from './job-error.js';
 import type { JobHandler } from './worker.js';
 
@@ -99,7 +100,7 @@ function toCandidates(
       {
         id: row.fieldId,
         fieldName: row.name,
-        lineage: `${tag}:${row.documentType}`,
+        lineage: lineageOf(tag, row.documentType),
         sourceType: row.documentType,
         revision: row.revision,
         verification: value === null ? 'unverified' : 'verified',
@@ -244,15 +245,39 @@ async function persist(tx: Repositories, input: PersistInput) {
   }
 
   const rows = await tx.fields.listLatestForEquipment(equipment.id);
+  // Standing human decisions take part: a decided field stays decided, unless a later revision in
+  // a lineage the decision was based on arrived, which calls for another look.
+  const decisions = decisionsFrom(
+    await tx.conflicts.listDecisions(equipment.id),
+    input.definitions,
+  );
   const reconciled = reconcile({
     candidates: toCandidates(rows, payload.equipmentTag, input.definitions),
-    decisions: [],
+    decisions,
   });
   if (!reconciled.ok) {
     throw new JobError('RECONCILE_FAILED', false, 'Reconciliation rejected the stored fields.');
   }
+  const toReview = [
+    ...reconciled.value.conflicts.map((conflict) => ({
+      fieldName: conflict.fieldName,
+      candidateIds: conflict.candidateIds,
+      reason: 'CONFLICT' as const,
+    })),
+    ...reconciled.value.fields.flatMap((field) =>
+      field.status === 'needs_re_review'
+        ? [
+            {
+              fieldName: field.fieldName,
+              candidateIds: field.newCandidateIds,
+              reason: 'NEEDS_RE_REVIEW' as const,
+            },
+          ]
+        : [],
+    ),
+  ];
   let conflictsOpened = 0;
-  for (const conflict of reconciled.value.conflicts) {
+  for (const conflict of toReview) {
     const opened = await tx.conflicts.openIfAbsent({
       equipmentId: equipment.id,
       fieldName: conflict.fieldName,
@@ -264,7 +289,7 @@ async function persist(tx: Repositories, input: PersistInput) {
       actor: WORKER_ACTOR,
       action: 'extract',
       before: null,
-      after: { status: 'open', candidateIds: conflict.candidateIds },
+      after: { status: 'open', candidateIds: conflict.candidateIds, reason: conflict.reason },
       reason: null,
     });
   }

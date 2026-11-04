@@ -14,6 +14,8 @@ export const REDACT_PATHS: readonly string[] = [
   'cookie',
   '*.cookie',
   'req.headers.cookie',
+  // @fastify/multipart logs the request's whole header set at trace level.
+  'busboyOptions.headers',
   'token',
   '*.token',
   'accessToken',

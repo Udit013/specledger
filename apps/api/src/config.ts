@@ -22,6 +22,31 @@ const ingestLimit = (name: keyof IngestLimits) =>
 const ingestExpected = (name: keyof IngestLimits) =>
   `an integer between ${String(INGEST_LIMIT_BOUNDS[name].min)} and ${String(INGEST_LIMIT_BOUNDS[name].max)}`;
 
+// API bearer tokens: long random strings (openssl rand -hex 32), one per role.
+const apiToken = z
+  .string()
+  .regex(/^[A-Za-z0-9._~+/=-]{32,256}$/)
+  .optional();
+
+// A comma-separated list of exact origins (scheme, host and optional port; no path).
+const corsOrigins = z
+  .string()
+  .default('')
+  .transform((value) =>
+    value
+      .split(',')
+      .map((origin) => origin.trim())
+      .filter((origin) => origin !== ''),
+  )
+  .pipe(z.array(z.string().regex(/^https?:\/\/[A-Za-z0-9.-]+(:\d{1,5})?$/)).max(20));
+
+// false (the default: X-Forwarded-For is ignored), true, or how many proxy hops to trust.
+const trustProxy = z
+  .string()
+  .default('false')
+  .pipe(z.union([z.enum(['true', 'false']), z.string().regex(/^[1-9]$/)]))
+  .transform((value) => (value === 'true' ? true : value === 'false' ? false : Number(value)));
+
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   HOST: z.string().min(1).default('127.0.0.1'),
@@ -40,6 +65,14 @@ const envSchema = z.object({
     .regex(/^[a-z0-9][a-z0-9.-]{0,63}$/)
     .default(DEFAULT_GEMINI_MODEL),
   LLM_TIMEOUT_MS: z.coerce.number().int().min(1_000).max(300_000).default(60_000),
+  API_ENGINEER_TOKEN: apiToken,
+  API_APPROVER_TOKEN: apiToken,
+  CORS_ORIGINS: corsOrigins,
+  TRUST_PROXY: trustProxy,
+  RATE_LIMIT_PER_MINUTE: z.coerce.number().int().min(1).max(100_000).default(300),
+  UPLOAD_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().min(1).max(10_000).default(20),
+  REQUEST_TIMEOUT_MS: z.coerce.number().int().min(1_000).max(600_000).default(60_000),
+  JSON_BODY_LIMIT_BYTES: z.coerce.number().int().min(1_024).max(10_485_760).default(1_048_576),
 });
 
 export type ConfigKey = keyof typeof envSchema.shape;
@@ -63,6 +96,14 @@ const EXPECTED: Record<ConfigKey, string> = {
   GEMINI_API_KEY: 'a Gemini API key (required when LLM_PROVIDER is gemini)',
   GEMINI_MODEL: 'a model id such as gemini-3.5-flash-lite',
   LLM_TIMEOUT_MS: 'an integer between 1000 and 300000',
+  API_ENGINEER_TOKEN: 'a token of 32 to 256 URL-safe characters, unlike the approver token',
+  API_APPROVER_TOKEN: 'a token of 32 to 256 URL-safe characters, unlike the engineer token',
+  CORS_ORIGINS: 'a comma-separated list of origins such as https://review.example.com',
+  TRUST_PROXY: 'true, false or a hop count from 1 to 9',
+  RATE_LIMIT_PER_MINUTE: 'an integer between 1 and 100000',
+  UPLOAD_RATE_LIMIT_PER_MINUTE: 'an integer between 1 and 10000',
+  REQUEST_TIMEOUT_MS: 'an integer between 1000 and 600000',
+  JSON_BODY_LIMIT_BYTES: 'an integer between 1024 and 10485760',
 };
 
 export interface Config {
@@ -78,6 +119,17 @@ export interface Config {
     readonly geminiApiKey: string | null;
     readonly geminiModel: string;
     readonly timeoutMs: number;
+  };
+  readonly http: {
+    // Never logged. Optional here (the worker needs none); the API refuses to start without both.
+    readonly engineerToken: string | null;
+    readonly approverToken: string | null;
+    readonly corsOrigins: readonly string[];
+    readonly trustProxy: boolean | number;
+    readonly rateLimitPerMinute: number;
+    readonly uploadRateLimitPerMinute: number;
+    readonly requestTimeoutMs: number;
+    readonly bodyLimitBytes: number;
   };
 }
 
@@ -115,6 +167,19 @@ export function parseConfig(env: Readonly<Record<string, string | undefined>>): 
       issues: [{ key: 'GEMINI_API_KEY', problem: 'missing', expected: EXPECTED.GEMINI_API_KEY }],
     };
   }
+  if (
+    parsed.success &&
+    parsed.data.API_ENGINEER_TOKEN !== undefined &&
+    parsed.data.API_ENGINEER_TOKEN === parsed.data.API_APPROVER_TOKEN
+  ) {
+    // One token for both roles would make every engineer an approver.
+    return {
+      ok: false,
+      issues: [
+        { key: 'API_APPROVER_TOKEN', problem: 'invalid', expected: EXPECTED.API_APPROVER_TOKEN },
+      ],
+    };
+  }
   if (parsed.success) {
     const values = parsed.data;
     return {
@@ -137,6 +202,16 @@ export function parseConfig(env: Readonly<Record<string, string | undefined>>): 
           geminiApiKey: values.GEMINI_API_KEY ?? null,
           geminiModel: values.GEMINI_MODEL,
           timeoutMs: values.LLM_TIMEOUT_MS,
+        }),
+        http: Object.freeze({
+          engineerToken: values.API_ENGINEER_TOKEN ?? null,
+          approverToken: values.API_APPROVER_TOKEN ?? null,
+          corsOrigins: Object.freeze(values.CORS_ORIGINS),
+          trustProxy: values.TRUST_PROXY,
+          rateLimitPerMinute: values.RATE_LIMIT_PER_MINUTE,
+          uploadRateLimitPerMinute: values.UPLOAD_RATE_LIMIT_PER_MINUTE,
+          requestTimeoutMs: values.REQUEST_TIMEOUT_MS,
+          bodyLimitBytes: values.JSON_BODY_LIMIT_BYTES,
         }),
       }),
     };

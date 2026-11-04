@@ -28,6 +28,7 @@
     "@specledger/core": "workspace:*",
     "@specledger/db": "workspace:*",
     "@specledger/eval": "workspace:*",
+    "@specledger/exporters": "workspace:*",
     "@specledger/ingest": "workspace:*",
     "@specledger/llm": "workspace:*",
     "fastify": "5.12.7",

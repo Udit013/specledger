@@ -17,6 +17,20 @@ const VALID_ENV = {
   INGEST_MIN_TEXT_CHARS: '40',
 };
 
+const HTTP_DEFAULTS = {
+  engineerToken: null,
+  approverToken: null,
+  corsOrigins: [],
+  trustProxy: false,
+  rateLimitPerMinute: 300,
+  uploadRateLimitPerMinute: 20,
+  requestTimeoutMs: 60_000,
+  bodyLimitBytes: 1_048_576,
+};
+
+const ENGINEER_TOKEN = 'e'.repeat(40);
+const APPROVER_TOKEN = 'a'.repeat(40);
+
 function expectIssues(result: ConfigResult): readonly ConfigIssue[] {
   if (result.ok) throw new Error('expected configuration to be rejected');
   return result.issues;
@@ -45,6 +59,7 @@ describe('parseConfig', () => {
           geminiModel: 'gemini-3.5-flash-lite',
           timeoutMs: 60_000,
         },
+        http: HTTP_DEFAULTS,
       },
     });
   });
@@ -65,6 +80,7 @@ describe('parseConfig', () => {
           geminiModel: 'gemini-3.5-flash-lite',
           timeoutMs: 60_000,
         },
+        http: HTTP_DEFAULTS,
       },
     });
   });
@@ -122,6 +138,7 @@ describe('parseConfig', () => {
       expect(Object.keys(result.config).sort()).toEqual([
         'databaseUrl',
         'host',
+        'http',
         'ingest',
         'llm',
         'logLevel',
@@ -200,6 +217,67 @@ describe('model provider configuration', () => {
       ),
     );
     expect(output).not.toContain('PLANTED');
+  });
+});
+
+describe('HTTP API configuration', () => {
+  it('reads the role tokens, CORS allowlist, proxy trust and limits', () => {
+    const result = parseConfig({
+      ...VALID_ENV,
+      API_ENGINEER_TOKEN: ENGINEER_TOKEN,
+      API_APPROVER_TOKEN: APPROVER_TOKEN,
+      CORS_ORIGINS: 'https://review.example.com, http://localhost:5173',
+      TRUST_PROXY: '1',
+      RATE_LIMIT_PER_MINUTE: '600',
+      UPLOAD_RATE_LIMIT_PER_MINUTE: '5',
+      REQUEST_TIMEOUT_MS: '15000',
+      JSON_BODY_LIMIT_BYTES: '65536',
+    });
+    expect(result.ok && result.config.http).toEqual({
+      engineerToken: ENGINEER_TOKEN,
+      approverToken: APPROVER_TOKEN,
+      corsOrigins: ['https://review.example.com', 'http://localhost:5173'],
+      trustProxy: 1,
+      rateLimitPerMinute: 600,
+      uploadRateLimitPerMinute: 5,
+      requestTimeoutMs: 15_000,
+      bodyLimitBytes: 65_536,
+    });
+    expect(result.ok && Object.isFrozen(result.config.http)).toBe(true);
+  });
+
+  it.each([
+    ['API_ENGINEER_TOKEN', 'short'],
+    ['API_APPROVER_TOKEN', `${'a'.repeat(40)} with spaces`],
+    ['CORS_ORIGINS', '*'],
+    ['CORS_ORIGINS', 'https://review.example.com/path'],
+    ['TRUST_PROXY', 'yes'],
+    ['TRUST_PROXY', '0'],
+    ['RATE_LIMIT_PER_MINUTE', '0'],
+    ['UPLOAD_RATE_LIMIT_PER_MINUTE', 'many'],
+    ['REQUEST_TIMEOUT_MS', '10'],
+    ['JSON_BODY_LIMIT_BYTES', '999999999'],
+  ])('refuses %s=%j', (key, value) => {
+    expect(
+      expectIssues(parseConfig({ ...VALID_ENV, [key]: value })).map((issue) => [
+        issue.key,
+        issue.problem,
+      ]),
+    ).toEqual([[key, 'invalid']]);
+  });
+
+  it('refuses one token for both roles, without printing it', () => {
+    const issues = expectIssues(
+      parseConfig({
+        ...VALID_ENV,
+        API_ENGINEER_TOKEN: ENGINEER_TOKEN,
+        API_APPROVER_TOKEN: ENGINEER_TOKEN,
+      }),
+    );
+    expect(issues.map((issue) => [issue.key, issue.problem])).toEqual([
+      ['API_APPROVER_TOKEN', 'invalid'],
+    ]);
+    expect(formatConfigIssues(issues)).not.toContain(ENGINEER_TOKEN);
   });
 });
 

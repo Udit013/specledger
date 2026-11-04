@@ -220,6 +220,9 @@ importers:
       '@specledger/eval':
         specifier: workspace:*
         version: link:../../packages/eval
+      '@specledger/exporters':
+        specifier: workspace:*
+        version: link:../../packages/exporters
       '@specledger/ingest':
         specifier: workspace:*
         version: link:../../packages/ingest
