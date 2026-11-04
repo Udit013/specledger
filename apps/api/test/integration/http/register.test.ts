@@ -25,7 +25,16 @@ interface Conflict {
   id: string;
   fieldName: string;
   status: string;
-  candidates: { fieldId: string; documentType: string; value: string; unit: string }[];
+  candidates: {
+    fieldId: string;
+    documentId: string;
+    documentType: string;
+    value: string;
+    unit: string;
+    quote: string;
+    page: number;
+  }[];
+  suggestion: { fieldId: string | null; rules: string[] };
 }
 
 function suite() {
@@ -126,6 +135,13 @@ describe('conflict resolution feeding reconciliation and publish', () => {
       '250 ft',
       '260 ft',
     ]);
+    // Each candidate carries its evidence, and the rules alone cannot choose between equals.
+    for (const candidate of conflict?.candidates ?? []) {
+      expect(candidate.quote).toContain(candidate.value);
+      expect(candidate.page).toBeGreaterThanOrEqual(1);
+    }
+    expect(conflict?.suggestion.fieldId).toBeNull();
+    expect(conflict?.suggestion.rules).toContain('EQUAL_RANK_CONFLICT');
 
     // Validation, then the resolution itself.
     const noReason = await s.call('POST', `/conflicts/${conflict?.id ?? ''}/resolve`, 'engineer', {
@@ -205,6 +221,11 @@ describe('conflict resolution feeding reconciliation and publish', () => {
     await processQueued(s.ctx.testDb, provider);
     const reopened = await s.conflicts();
     expect(reopened.map((c) => c.fieldName)).toContain('rated_head');
+    // Without the decision, the rules would take the later revision: that is the suggestion.
+    const head = reopened.find((c) => c.fieldName === 'rated_head');
+    const revB = head?.candidates.find((c) => c.documentId === later);
+    expect(head?.suggestion).toMatchObject({ fieldId: revB?.fieldId });
+    expect(head?.suggestion.rules).toContain('LATER_REVISION');
     const blocked = await s.call('POST', '/register/publish', 'approver');
     expect(blocked.statusCode).toBe(409);
     expect(later).toBeTruthy();

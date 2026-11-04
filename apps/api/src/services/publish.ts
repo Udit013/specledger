@@ -1,16 +1,15 @@
-import { normalizeValue, reconcile } from '@specledger/core';
+import { reconcile } from '@specledger/core';
 import type {
   EquipmentRecord,
-  FieldDefinition,
   PublishBlocker,
-  ReconcileCandidate,
   RegisterItemValues,
   RegisterVersionRecord,
 } from '@specledger/core';
-import type { Database, ReconcileSourceRow, Repositories } from '@specledger/db';
+import type { Database, Repositories } from '@specledger/db';
 
 import { ApiError } from '../http/errors.js';
-import { decisionsFrom, definitionsFor, lineageOf } from './decisions.js';
+import { acceptedByReviewer, reconcileCandidates } from './candidates.js';
+import { decisionsFrom, definitionsFor } from './decisions.js';
 
 export interface PublishInput {
   readonly actor: string;
@@ -27,33 +26,6 @@ interface Item {
   readonly values: RegisterItemValues;
 }
 
-// Reviewed fields as reconciliation candidates: only accepted and edited ones count, a human
-// having vouched for them, and each competes if its value reads for the field. Rejected fields are
-// left out; pending ones block the publish before this runs.
-function reviewedCandidates(
-  rows: readonly ReconcileSourceRow[],
-  tag: string,
-  definitions: ReadonlyMap<string, FieldDefinition>,
-): ReconcileCandidate[] {
-  return rows.flatMap((row) => {
-    const definition = definitions.get(row.name);
-    if (definition === undefined) return [];
-    if (row.reviewStatus !== 'accepted' && row.reviewStatus !== 'edited') return [];
-    const value = normalizeValue(row.value, row.unit, definition);
-    return [
-      {
-        id: row.fieldId,
-        fieldName: row.name,
-        lineage: lineageOf(tag, row.documentType),
-        sourceType: row.documentType,
-        revision: row.revision,
-        verification: value === null ? 'unverified' : 'verified',
-        value,
-      },
-    ];
-  });
-}
-
 // One equipment's register item: per field, the selected reviewed value as stored, or the human
 // decision's value. A conflict, or a decision a later revision calls into question, is a blocker.
 async function itemFor(tx: Repositories, equipment: EquipmentRecord) {
@@ -61,7 +33,9 @@ async function itemFor(tx: Repositories, equipment: EquipmentRecord) {
   const rows = await tx.fields.listLatestForEquipment(equipment.id);
   const resolved = await tx.conflicts.listDecisions(equipment.id);
   const reconciled = reconcile({
-    candidates: reviewedCandidates(rows, equipment.tag, definitions),
+    // Only accepted and edited fields count, a human having vouched for them; rejected ones are
+    // left out, and pending ones block the publish before this runs.
+    candidates: reconcileCandidates(rows, equipment.tag, definitions, acceptedByReviewer),
     decisions: decisionsFrom(resolved, definitions),
   });
   if (!reconciled.ok) throw new Error(`reconciliation rejected ${reconciled.error.code}`);

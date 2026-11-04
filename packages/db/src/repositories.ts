@@ -95,6 +95,8 @@ const reconcileSourceRowSchema = z.strictObject({
   name: z.string(),
   value: z.string(),
   unit: z.string(),
+  quote: z.string(),
+  page: z.number().int().min(1),
   verificationStatus: verificationStatusSchema,
   reviewStatus: reviewStatusSchema,
   documentId: z.uuid(),
@@ -109,6 +111,9 @@ export interface ReconcileSourceRow {
   readonly name: string;
   readonly value: string;
   readonly unit: string;
+  // The evidence: the quoted text and its page.
+  readonly quote: string;
+  readonly page: number;
   readonly verificationStatus: VerificationStatus;
   readonly reviewStatus: ReviewStatus;
   readonly documentId: string;
@@ -536,6 +541,8 @@ export function createRepositories(db: Executor) {
             name: fields.name,
             value: fields.value,
             unit: fields.unit,
+            quote: fields.quote,
+            page: fields.page,
             verificationStatus: fields.verificationStatus,
             reviewStatus: fields.reviewStatus,
             documentId: documents.id,

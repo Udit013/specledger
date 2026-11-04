@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 import { candidateSchema } from './candidate.js';
 import { equipmentClassSchema, fieldNameSchema, TEXT_LIMITS } from './equipment.js';
+import { reconcileRuleSchema } from './reconcile.js';
 import {
   conflictStatusSchema,
   documentTypeSchema,
@@ -176,9 +177,21 @@ export const conflictCandidateSchema = z.strictObject({
   revision: z.string().nullable(),
   value: z.string(),
   unit: z.string(),
+  // The evidence: the quoted text and the page it is on.
+  quote: z.string(),
+  page: z.number().int().min(1),
   verificationStatus: verificationStatusSchema,
   reviewStatus: reviewStatusSchema,
 });
+
+// What the reconciliation rules alone would do with the current candidates, ignoring any human
+// decision: the field they would select (null when they cannot choose) and the rules they applied,
+// in order. A hint for the reviewer, never applied automatically.
+export const conflictSuggestionSchema = z.strictObject({
+  fieldId: uuid.nullable(),
+  rules: z.array(reconcileRuleSchema),
+});
+export type ConflictSuggestion = z.infer<typeof conflictSuggestionSchema>;
 
 export const conflictSchema = z.strictObject({
   id: uuid,
@@ -188,6 +201,7 @@ export const conflictSchema = z.strictObject({
   createdAt: isoTime,
   // The latest field of each document of the equipment for this field.
   candidates: z.array(conflictCandidateSchema),
+  suggestion: conflictSuggestionSchema,
   resolution: z
     .strictObject({
       reason: z.string(),

@@ -94,6 +94,13 @@ function findQuote(quote: string, page: NormalizedText, pageText: string): Span 
   return { start, end: lastStart + Math.max(1, last.length) };
 }
 
+// Where a quote occurs in the original page text, as UTF-16 offsets, or null. Both are normalized
+// as the verifier normalizes them, so a quote that differs from the page only in whitespace,
+// quote and dash variants or NFKC forms is found, and the span covers the original characters.
+export function locateQuote(quote: string, pageText: string): Span | null {
+  return findQuote(normalizeWithMap(quote).normalized, normalizeWithMap(pageText), pageText);
+}
+
 interface NumberToken {
   readonly text: string;
   readonly end: number;

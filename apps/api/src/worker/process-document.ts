@@ -1,23 +1,18 @@
 import {
   equipmentClassSchema,
   FIELD_DEFINITIONS,
-  normalizeValue,
   reconcile,
   TEXT_LIMITS,
   verifyCandidate,
 } from '@specledger/core';
-import type {
-  Candidate,
-  FieldDefinition,
-  ReconcileCandidate,
-  VerificationResult,
-} from '@specledger/core';
-import type { Database, ReconcileSourceRow, Repositories } from '@specledger/db';
+import type { Candidate, FieldDefinition, VerificationResult } from '@specledger/core';
+import type { Database, Repositories } from '@specledger/db';
 import { PROMPT_VERSION } from '@specledger/llm';
 import type { ExtractionResponse, LlmLogger, LlmProvider } from '@specledger/llm';
 import { z } from 'zod';
 
-import { decisionsFrom, lineageOf } from '../services/decisions.js';
+import { reconcileCandidates, verifiedByVerifier } from '../services/candidates.js';
+import { decisionsFrom } from '../services/decisions.js';
 import { JobError, jobErrorFromLlm } from './job-error.js';
 import type { JobHandler } from './worker.js';
 
@@ -80,35 +75,6 @@ const totalTokens = ({ usage }: ExtractionResponse) =>
   usage.inputTokens === null || usage.outputTokens === null
     ? null
     : usage.inputTokens + usage.outputTokens;
-
-// Stored fields as reconciliation candidates. A lineage is one series of revisions: here, the
-// documents of one type for one tag. A stored field counts as verified only if its canonical
-// value can still be derived; otherwise it is carried, never selected.
-function toCandidates(
-  rows: readonly ReconcileSourceRow[],
-  tag: string,
-  definitions: ReadonlyMap<string, FieldDefinition>,
-): ReconcileCandidate[] {
-  return rows.flatMap((row) => {
-    const definition = definitions.get(row.name);
-    if (definition === undefined) return [];
-    const value =
-      row.verificationStatus === 'verified'
-        ? normalizeValue(row.value, row.unit, definition)
-        : null;
-    return [
-      {
-        id: row.fieldId,
-        fieldName: row.name,
-        lineage: lineageOf(tag, row.documentType),
-        sourceType: row.documentType,
-        revision: row.revision,
-        verification: value === null ? 'unverified' : 'verified',
-        value,
-      },
-    ];
-  });
-}
 
 // process_document: load the document's pages, extract candidates with the LlmProvider, verify
 // each one (core), then in one transaction lock the equipment row, write the extraction run (once
@@ -252,7 +218,12 @@ async function persist(tx: Repositories, input: PersistInput) {
     input.definitions,
   );
   const reconciled = reconcile({
-    candidates: toCandidates(rows, payload.equipmentTag, input.definitions),
+    candidates: reconcileCandidates(
+      rows,
+      payload.equipmentTag,
+      input.definitions,
+      verifiedByVerifier,
+    ),
     decisions,
   });
   if (!reconciled.ok) {

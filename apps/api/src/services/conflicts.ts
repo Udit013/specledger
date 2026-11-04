@@ -1,9 +1,16 @@
-import { normalizeValue } from '@specledger/core';
-import type { ConflictView, DecisionBasis, ResolveConflictBody } from '@specledger/core';
+import { normalizeValue, reconcile } from '@specledger/core';
+import type {
+  ConflictSuggestion,
+  ConflictView,
+  DecisionBasis,
+  EquipmentClass,
+  ResolveConflictBody,
+} from '@specledger/core';
 import type { ConflictWithTag, Database, ReconcileSourceRow, Repositories } from '@specledger/db';
 
 import { ApiError, notFound } from '../http/errors.js';
-import { definitionOf, invalidValue, lineageOf } from './decisions.js';
+import { reconcileCandidates, verifiedByVerifier } from './candidates.js';
+import { definitionOf, definitionsFor, invalidValue, lineageOf } from './decisions.js';
 
 // The latest field of each document of the equipment for the conflict's field, by field id.
 async function candidatesOf(
@@ -14,12 +21,43 @@ async function candidatesOf(
   return rows.filter((row) => row.name === conflict.fieldName);
 }
 
-// A conflict with the latest field of each document of its equipment for the field.
+// What the rules alone would do with these candidates, with no human decision: the field they
+// select, if any, and the rules they applied in order.
+function suggestionFor(
+  conflict: ConflictWithTag,
+  candidates: readonly ReconcileSourceRow[],
+  equipmentClass: EquipmentClass | undefined,
+): ConflictSuggestion {
+  if (equipmentClass === undefined) return { fieldId: null, rules: [] };
+  const reconciled = reconcile({
+    candidates: reconcileCandidates(
+      candidates,
+      conflict.equipmentTag,
+      definitionsFor(equipmentClass),
+      verifiedByVerifier,
+    ),
+    decisions: [],
+  });
+  if (!reconciled.ok) return { fieldId: null, rules: [] };
+  const outcome = reconciled.value.fields.find((field) => field.fieldName === conflict.fieldName);
+  const rules = [
+    ...new Set(
+      reconciled.value.log
+        .filter((entry) => entry.fieldName === conflict.fieldName)
+        .map((entry) => entry.rule),
+    ),
+  ];
+  return { fieldId: outcome?.status === 'selected' ? outcome.selectedCandidateId : null, rules };
+}
+
+// A conflict with the latest field of each document of its equipment for the field, their
+// evidence, and the rules' suggestion.
 export async function conflictView(
   database: Database,
   conflict: ConflictWithTag,
 ): Promise<ConflictView> {
   const candidates = await candidatesOf(database, conflict);
+  const equipment = await database.equipment.getById(conflict.equipmentId);
   const { resolvedAt, resolvedBy, resolution, decidedValue, decidedUnit } = conflict;
   return {
     id: conflict.id,
@@ -34,9 +72,12 @@ export async function conflictView(
       revision: row.revision,
       value: row.value,
       unit: row.unit,
+      quote: row.quote,
+      page: row.page,
       verificationStatus: row.verificationStatus,
       reviewStatus: row.reviewStatus,
     })),
+    suggestion: suggestionFor(conflict, candidates, equipment?.equipmentClass),
     resolution:
       conflict.status === 'resolved' &&
       resolvedAt !== null &&
