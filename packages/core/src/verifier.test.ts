@@ -4,7 +4,7 @@ import { candidate, PUMP_PAGE, pumpField } from '../test/verifier-fixtures.js';
 import type { Candidate } from './candidate.js';
 import type { FieldDefinition } from './equipment.js';
 import { normalizeWithMap } from './normalize.js';
-import { MIN_QUOTE_LENGTH, verifyCandidate } from './verifier.js';
+import { MIN_QUOTE_LENGTH, normalizeValue, verifyCandidate } from './verifier.js';
 import type { VerificationHints } from './verifier.js';
 
 const verify = (c: Candidate, page = PUMP_PAGE, hints: VerificationHints = {}) =>
@@ -377,5 +377,38 @@ describe('verifyCandidate: quote span', () => {
       start: 0,
       end: FLOW_QUOTE.length,
     });
+  });
+});
+
+describe('normalizeValue', () => {
+  it('gives the canonical value the verifier computes', () => {
+    for (const c of [
+      candidate('rated_flow', '287.0', 'm³/h', FLOW_QUOTE),
+      candidate('rated_flow', '1264', 'US gpm', FLOW_QUOTE),
+      candidate('rated_speed', '2900 to 3600', 'rpm', 'Rated speed: 2900 to 3600 rpm'),
+      candidate('design_temperature', '80', '°C', 'Design temperature: 80 °C (176 °F)'),
+    ]) {
+      const field = pumpField(c.fieldName);
+      expect(normalizeValue(c.value, c.unit, field)).toEqual(
+        verifyCandidate(c, PUMP_PAGE, field).normalizedValue,
+      );
+    }
+  });
+
+  it('is null for a value or unit that cannot be normalized for the field', () => {
+    expect(normalizeValue('about 287', 'm3/h', pumpField('rated_flow'))).toBeNull();
+    expect(normalizeValue('1,250', 'gpm', pumpField('rated_flow'))).toBeNull();
+    expect(normalizeValue('287', 'm3/day', pumpField('rated_flow'))).toBeNull();
+    expect(normalizeValue('45', 'm', pumpField('rated_flow'))).toBeNull();
+  });
+
+  it('applies the decimal-mark hint', () => {
+    expect(normalizeValue('1,250', 'm', pumpField('rated_head'), { decimalMark: 'comma' })).toEqual(
+      {
+        kind: 'scalar',
+        value: 1.25,
+        unit: 'm',
+      },
+    );
   });
 });

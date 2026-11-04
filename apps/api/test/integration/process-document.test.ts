@@ -285,6 +285,48 @@ describe('process_document reconciliation', () => {
     expect(await openConflicts(tag)).toEqual(['rated_head']);
   });
 
+  // Two documents of one tag processed at once. Each transaction waits (up to 300 ms) at a barrier
+  // just before reconciliation reads the stored fields, so without the equipment row lock both
+  // would read before either commits, each miss the other document, and open no conflict. With the
+  // lock the second transaction waits at the lock instead, so it reads after the first commits.
+  it('opens the conflict when the two documents are processed at the same time', async () => {
+    for (let round = 0; round < 3; round += 1) {
+      const tag = uniqueTag('P-106');
+      // The equipment exists already, as it does for every document after a tag's first: creating
+      // it would itself serialize the two transactions on the unique tag and hide a missing lock.
+      await testDb.database.equipment.getOrCreate({ tag, equipmentClass: 'centrifugal_pump' });
+      const jobs = [await upload('p-106-datasheet', tag), await upload('p-106-brochure', tag)];
+      let arrived = 0;
+      let openBarrier: () => void = () => undefined;
+      const barrier = new Promise<void>((resolve) => {
+        openBarrier = resolve;
+      });
+      const meetAtBarrier = async () => {
+        arrived += 1;
+        if (arrived === 2) openBarrier();
+        await Promise.race([barrier, new Promise((resolve) => setTimeout(resolve, 300))]);
+      };
+      const store: PipelineStore = {
+        documents: testDb.database.documents,
+        transaction: (work) =>
+          testDb.database.transaction((tx) =>
+            work({
+              ...tx,
+              fields: {
+                ...tx.fields,
+                listLatestForEquipment: async (equipmentId) => {
+                  await meetAtBarrier();
+                  return tx.fields.listLatestForEquipment(equipmentId);
+                },
+              },
+            }),
+          ),
+      };
+      await Promise.all(jobs.map((job) => run(handlerFor(provider, store), job)));
+      expect(await openConflicts(tag)).toEqual(['rated_head']);
+    }
+  });
+
   it('takes the later revision instead of opening a conflict', async () => {
     const tag = uniqueTag('P-106');
     const first = await upload('p-106-datasheet', tag, { revision: 'Rev A' });

@@ -8,7 +8,7 @@ it and an approver publishes an immutable register version.
 
 ## Status
 
-Phases 0 to 6 of the plan are in place:
+Phases 0 to 7 of the plan are in place:
 
 - Foundation and quality gates: the monorepo, strict TypeScript, lint and dependency-boundary
   rules, CI, a local Postgres container, validated configuration, a redacting logger and Git
@@ -41,9 +41,14 @@ Phases 0 to 6 of the plan are in place:
   then source rank, then merge or conflict at equal rank), respects human decisions, and explains
   every outcome in a decision log.
 
-There is no job queue, API route or user interface yet, and nothing calls the model layer, the
-verifier or reconciliation outside tests and the manual smoke script; conflicts and decisions are
-not persisted yet (Phase 7).
+- Queue and worker (Phase 7): a Postgres job queue with leases, heartbeats, fencing, retries with
+  jittered backoff and a dead letter; a worker process; and the `process_document` job, which
+  extracts, verifies, reconciles and persists a document's fields, conflicts and audit events in
+  one transaction. An upload enqueues its job in the same transaction as the document.
+
+There is no HTTP API or user interface yet (Phases 8 and 9): documents are uploaded and jobs
+requeued through the service functions only, and human conflict decisions are not stored in a
+structured form yet, so reconciliation runs without them.
 
 ## Quick start
 
@@ -78,7 +83,10 @@ pnpm hooks:install
 ```
 
 Integration tests need the local database (`pnpm db:up`) and `DATABASE_URL`. Each test file
-creates its own schema, migrates it and drops it afterwards, so files run in parallel:
+creates its own schema, migrates it and drops it afterwards, so files run in parallel. One test
+checks that nothing is ever created in the `public` schema, so do not run the worker against the
+database the tests use (the worker migrates `public`); give the worker its own database. The
+tests run with:
 
 ```sh
 DATABASE_URL=postgres://specledger:specledger_local_only@127.0.0.1:5432/specledger pnpm test:integration
@@ -105,6 +113,14 @@ Gemini API key in `.env`; with `RECORD=1` it also saves the answer under `fixtur
 
 ```sh
 pnpm llm:smoke
+```
+
+The worker process claims jobs from the queue and runs them. It applies migrations at start-up,
+extracts with recorded responses by default (`LLM_PROVIDER=replay`), and stops gracefully on
+SIGTERM or SIGINT:
+
+```sh
+pnpm worker
 ```
 
 Other scripts: `pnpm test`, `pnpm format`, `pnpm format:check`, `pnpm boundaries`.
@@ -217,6 +233,46 @@ Known gaps at this stage:
   lineage it was based on. Every step is a decision log entry (rule id, candidate ids, outcome,
   winners). Input is put in canonical order first, so the result is the same for any input order,
   and reconciling a result again returns it unchanged.
+
+- **Queue and worker** (`packages/db/src/queue.ts`, `apps/api/src/worker/`). The queue is the
+  `jobs` table. `claim(now, workerId, visibilityMs)` is one `UPDATE` whose row comes from a
+  `SELECT ... FOR UPDATE SKIP LOCKED LIMIT 1` over jobs that are queued and due or whose lease
+  expired with attempts left; it increments `attempts` and leases the job until
+  `now + visibilityMs`. Every timestamp is a parameter from an injected clock, never `NOW()`.
+  `heartbeat`, `complete`, `fail` and `release` change a job only while `status = 'running' AND
+locked_by = workerId` (fencing), so a worker whose lease was taken over cannot touch the job.
+  A failed attempt is retried at `now + backoffDelayMs(...)` (full jitter, base and cap, injected
+  random source) while attempts remain, then the job is `dead`; permanent errors are `failed`;
+  `requeue` brings a dead job back. The worker polls, keeps at most `concurrency` jobs in flight,
+  renews each lease every `heartbeatMs`, aborts a handler whose lease was lost, and on shutdown
+  stops claiming, waits `graceMs`, then aborts and releases what is left. `process_document`
+  calls the model outside any transaction, verifies every candidate, then in one transaction
+  locks the equipment row, writes the extraction run (unique per job, so a re-run writes
+  nothing), one field per name with its audit event, reconciles the latest fields of every
+  document of the tag, and opens each conflict once (a partial unique index allows one open
+  conflict per field). Job errors carry a fixed code and message; `last_error` never holds an
+  exception's own text.
+
+## Queue and worker limitations
+
+- Fencing is by worker id, as specified. A worker that pauses for longer than its lease (a long
+  garbage-collection pause, a suspended machine) can claim its own still-running job again; it
+  detects that and keeps the running attempt rather than starting a second, but the extra claim
+  still counts as an attempt. A fencing token per attempt would remove that.
+- The handler keeps one field per name per extraction (the first verified candidate in the
+  model's order, else the first one) and records how many it dropped in the field's audit event;
+  the dropped candidates themselves are not stored.
+- Equipment tag, class and the synthetic flag come from the uploader in the job payload; nothing
+  checks them against the document's content.
+- Reconciliation runs without human decisions: resolved conflicts are left untouched and open
+  ones are never closed automatically, but structured decisions (value and the evidence they were
+  based on) arrive with the resolve endpoint in Phase 8.
+- Opening a conflict is audited with the `extract` action and actor `system:worker`; there is no
+  separate action for it.
+- `dead` jobs can be requeued, `failed` (permanent) ones cannot, as specified.
+- The worker's tuning (concurrency 2, 60 s lease, 15 s heartbeat, 20 s grace, backoff 5 s to
+  5 min) is fixed in `apps/api/src/worker/main.ts`, not configuration.
+- Polling is a fixed interval, not LISTEN/NOTIFY, so an idle queue is queried once a second.
 
 ## Reconciliation limitations
 

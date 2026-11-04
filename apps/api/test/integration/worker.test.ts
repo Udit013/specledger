@@ -140,6 +140,24 @@ describe('worker loop', () => {
     expect((await get(job.id)).status).toBe('queued');
   });
 
+  it('keeps polling after the queue is briefly unreachable', async () => {
+    let failures = 2;
+    const flaky = {
+      ...testDb.database.jobs,
+      claim: (...args: Parameters<typeof testDb.database.jobs.claim>) => {
+        if (failures > 0) {
+          failures -= 1;
+          return Promise.reject(new Error('connection terminated unexpectedly'));
+        }
+        return testDb.database.jobs.claim(...args);
+      },
+    };
+    const job = await enqueue();
+    worker({ test_job: () => Promise.resolve() }, { queue: flaky }).start();
+    expect(await statusOf(job.id)).toMatchObject({ status: 'succeeded' });
+    expect(failures).toBe(0);
+  });
+
   it('rejects options that cannot work', () => {
     expect(() => worker({}, { heartbeatMs: 5_000, visibilityMs: 5_000 })).toThrow(RangeError);
     expect(() => worker({}, { concurrency: 0 })).toThrow(RangeError);
@@ -231,17 +249,58 @@ describe('leases', () => {
     const finished = new Promise<void>((resolve) => {
       finish = resolve;
     });
+    let runs = 0;
     const job = await enqueue();
-    worker({ test_job: () => finished }, { visibilityMs: 300, heartbeatMs: 20 }).start();
+    worker(
+      {
+        test_job: () => {
+          runs += 1;
+          return finished;
+        },
+      },
+      { visibilityMs: 300, heartbeatMs: 20 },
+    ).start();
     await waitForStatus(job.id, 'running');
-    now += 1_000; // past the first lease
-    await waitFor(
-      () => get(job.id),
-      (j) => (j.lockedUntil?.getTime() ?? 0) >= now + 300,
-    );
-    expect(await testDb.database.jobs.claim(clock(), 'rival', 300)).toBeNull();
+    // Time moves on in steps shorter than the lease, and every step is covered by a heartbeat, so
+    // the job outlives its first lease many times over without ever becoming claimable.
+    for (let step = 0; step < 5; step += 1) {
+      now += 200;
+      await waitFor(
+        () => get(job.id),
+        (j) => (j.lockedUntil?.getTime() ?? 0) >= now + 300,
+      );
+      expect(await testDb.database.jobs.claim(clock(), 'rival', 300)).toBeNull();
+    }
     finish();
     expect(await statusOf(job.id)).toMatchObject({ status: 'succeeded', attempts: 1 });
+    expect(runs).toBe(1);
+  });
+
+  it('does not start a second copy of a job it is still running after a pause longer than the lease', async () => {
+    let finish: () => void = () => undefined;
+    const finished = new Promise<void>((resolve) => {
+      finish = resolve;
+    });
+    let runs = 0;
+    const job = await enqueue();
+    worker(
+      {
+        test_job: () => {
+          runs += 1;
+          return finished;
+        },
+      },
+      { visibilityMs: 300, heartbeatMs: 250, concurrency: 2 },
+    ).start();
+    await waitForStatus(job.id, 'running');
+    now += 10_000; // one jump past the lease, before any heartbeat: this worker re-claims its own job
+    await waitFor(
+      () => get(job.id),
+      (j) => j.attempts === 2,
+    );
+    finish();
+    expect(await statusOf(job.id)).toMatchObject({ status: 'succeeded' });
+    expect(runs).toBe(1);
   });
 
   it('aborts the handler and leaves the job alone when another worker takes it over', async () => {

@@ -17,7 +17,8 @@
     "lint": "eslint .",
     "test": "vitest run --dir src",
     "start": "node --env-file-if-exists=../../.env dist/main.js",
-    "llm:smoke": "node --env-file-if-exists=../../.env dist/scripts/llm-smoke.js"
+    "llm:smoke": "node --env-file-if-exists=../../.env dist/scripts/llm-smoke.js",
+    "worker": "node --env-file-if-exists=../../.env dist/worker/main.js"
   },
   "dependencies": {
     "@specledger/core": "workspace:*",

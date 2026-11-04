@@ -24,7 +24,8 @@
     "format:check": "prettier --check .",
     "db:up": "docker compose up --detach --wait postgres",
     "hooks:install": "sh scripts/install-git-hooks.sh",
-    "llm:smoke": "turbo run build --filter=@specledger/api... && pnpm --filter @specledger/api llm:smoke"
+    "llm:smoke": "turbo run build --filter=@specledger/api... && pnpm --filter @specledger/api llm:smoke",
+    "worker": "turbo run build --filter=@specledger/api... && pnpm --filter @specledger/api worker"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

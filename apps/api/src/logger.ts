@@ -28,6 +28,8 @@ export const REDACT_PATHS: readonly string[] = [
   '*.secret',
   'databaseUrl',
   '*.databaseUrl',
+  'geminiApiKey',
+  '*.geminiApiKey',
   // document content
   'text',
   '*.text',

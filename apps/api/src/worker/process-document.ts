@@ -1,10 +1,23 @@
-import { equipmentClassSchema, TEXT_LIMITS } from '@specledger/core';
-import type { Candidate, VerificationResult } from '@specledger/core';
-import type { Database } from '@specledger/db';
-import type { LlmLogger, LlmProvider } from '@specledger/llm';
+import {
+  equipmentClassSchema,
+  FIELD_DEFINITIONS,
+  normalizeValue,
+  reconcile,
+  TEXT_LIMITS,
+  verifyCandidate,
+} from '@specledger/core';
+import type {
+  Candidate,
+  FieldDefinition,
+  ReconcileCandidate,
+  VerificationResult,
+} from '@specledger/core';
+import type { Database, ReconcileSourceRow, Repositories } from '@specledger/db';
+import { PROMPT_VERSION } from '@specledger/llm';
+import type { ExtractionResponse, LlmLogger, LlmProvider } from '@specledger/llm';
 import { z } from 'zod';
 
-import { notImplemented } from './not-implemented.js';
+import { JobError, jobErrorFromLlm } from './job-error.js';
 import type { JobHandler } from './worker.js';
 
 export const PROCESS_DOCUMENT = 'process_document';
@@ -46,7 +59,54 @@ export interface PickedField extends VerifiedCandidate {
 // A run stores one field per name. Per field: the first verified candidate in the model's order,
 // otherwise the first candidate; the rest are counted, not lost silently. Sorted by field name.
 export function pickFields(candidates: readonly VerifiedCandidate[]): PickedField[] {
-  return notImplemented('pickFields', candidates);
+  const byName = new Map<string, VerifiedCandidate[]>();
+  for (const entry of candidates) {
+    const name = entry.candidate.fieldName;
+    byName.set(name, [...(byName.get(name) ?? []), entry]);
+  }
+  return [...byName.entries()]
+    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+    .flatMap(([, group]) => {
+      const chosen = group.find((entry) => entry.verdict.status === 'verified') ?? group[0];
+      return chosen === undefined ? [] : [{ ...chosen, dropped: group.length - 1 }];
+    });
+}
+
+const aborted = () =>
+  new JobError('ABORTED', true, 'The job was cancelled before its results were written.');
+
+const totalTokens = ({ usage }: ExtractionResponse) =>
+  usage.inputTokens === null || usage.outputTokens === null
+    ? null
+    : usage.inputTokens + usage.outputTokens;
+
+// Stored fields as reconciliation candidates. A lineage is one series of revisions: here, the
+// documents of one type for one tag. A stored field counts as verified only if its canonical
+// value can still be derived; otherwise it is carried, never selected.
+function toCandidates(
+  rows: readonly ReconcileSourceRow[],
+  tag: string,
+  definitions: ReadonlyMap<string, FieldDefinition>,
+): ReconcileCandidate[] {
+  return rows.flatMap((row) => {
+    const definition = definitions.get(row.name);
+    if (definition === undefined) return [];
+    const value =
+      row.verificationStatus === 'verified'
+        ? normalizeValue(row.value, row.unit, definition)
+        : null;
+    return [
+      {
+        id: row.fieldId,
+        fieldName: row.name,
+        lineage: `${tag}:${row.documentType}`,
+        sourceType: row.documentType,
+        revision: row.revision,
+        verification: value === null ? 'unverified' : 'verified',
+        value,
+      },
+    ];
+  });
 }
 
 // process_document: load the document's pages, extract candidates with the LlmProvider, verify
@@ -57,5 +117,158 @@ export function pickFields(candidates: readonly VerifiedCandidate[]): PickedFiel
 // an invalid payload, a missing document or an equipment tag of another class are permanent; LLM
 // failures are classified by jobErrorFromLlm.
 export function createProcessDocumentHandler(deps: ProcessDocumentDeps): JobHandler {
-  return notImplemented('createProcessDocumentHandler', deps);
+  return async (job, { signal }) => {
+    const parsed = processDocumentPayloadSchema.safeParse(job.payload);
+    if (!parsed.success)
+      throw new JobError('INVALID_PAYLOAD', false, 'The job payload is invalid.');
+    const payload = parsed.data;
+    const document = await deps.store.documents.getById(payload.documentId);
+    if (document === null) {
+      throw new JobError('DOCUMENT_NOT_FOUND', false, 'The document to process does not exist.');
+    }
+    const pages = await deps.store.documents.listPages(document.id);
+    const fieldList = FIELD_DEFINITIONS[payload.equipmentClass];
+    const definitions = new Map(fieldList.map((field) => [field.name, field]));
+
+    // The model call is outside the transaction: a slow model never holds database locks.
+    const started = performance.now();
+    const extracted = await deps.provider.extract(
+      {
+        equipmentClass: payload.equipmentClass,
+        fields: [...fieldList],
+        pages: pages.map((page) => ({ pageNumber: page.pageNumber, text: page.content })),
+        promptVersion: PROMPT_VERSION,
+        synthetic: payload.synthetic,
+      },
+      { signal, timeoutMs: deps.llmTimeoutMs, requestId: job.correlationId },
+    );
+    const latencyMs = Math.round(performance.now() - started);
+    if (!extracted.ok) throw jobErrorFromLlm(extracted.error);
+    if (signal.aborted) throw aborted();
+
+    const pageText = new Map(pages.map((page) => [page.pageNumber, page.content]));
+    const verified = extracted.value.candidates.flatMap((candidate) => {
+      const definition = definitions.get(candidate.fieldName);
+      if (definition === undefined) return [];
+      const text = pageText.get(candidate.page) ?? '';
+      return [{ candidate, verdict: verifyCandidate(candidate, text, definition) }];
+    });
+
+    const outcome = await deps.store.transaction((tx) =>
+      persist(tx, {
+        job,
+        payload,
+        documentId: document.id,
+        extracted: extracted.value,
+        latencyMs,
+        verified,
+        definitions,
+        signal,
+      }),
+    );
+    deps.logger.info(
+      { jobId: job.id, correlationId: job.correlationId, documentId: document.id, ...outcome },
+      'process_document finished',
+    );
+  };
+}
+
+interface PersistInput {
+  readonly job: { readonly id: string };
+  readonly payload: ProcessDocumentPayload;
+  readonly documentId: string;
+  readonly extracted: ExtractionResponse;
+  readonly latencyMs: number;
+  readonly verified: readonly VerifiedCandidate[];
+  readonly definitions: ReadonlyMap<string, FieldDefinition>;
+  readonly signal: AbortSignal;
+}
+
+// Everything the job writes, in the caller's transaction: all of it commits, or none of it does.
+async function persist(tx: Repositories, input: PersistInput) {
+  const { payload } = input;
+  const { equipment } = await tx.equipment.getOrCreate({
+    tag: payload.equipmentTag,
+    equipmentClass: payload.equipmentClass,
+  });
+  if (equipment.equipmentClass !== payload.equipmentClass) {
+    throw new JobError(
+      'EQUIPMENT_CLASS_MISMATCH',
+      false,
+      'The equipment tag is registered with another equipment class.',
+    );
+  }
+  // One transaction at a time per piece of equipment, so reconciliation sees every committed
+  // document of the tag and two documents processed at once cannot each miss the other.
+  await tx.equipment.lockForUpdate(equipment.id);
+
+  const { run, created } = await tx.extractionRuns.insertForJob({
+    jobId: input.job.id,
+    documentId: input.documentId,
+    model: input.extracted.modelId,
+    promptVersion: input.extracted.promptVersion,
+    tokens: totalTokens(input.extracted),
+    latencyMs: input.latencyMs,
+  });
+  // The job already committed its results on an earlier attempt: nothing more to write.
+  if (!created) return { alreadyPersisted: true, fields: 0, conflictsOpened: 0 };
+
+  const picked = pickFields(input.verified);
+  for (const { candidate, verdict, dropped } of picked) {
+    const field = await tx.fields.insert({
+      extractionRunId: run.id,
+      equipmentId: equipment.id,
+      name: candidate.fieldName,
+      value: candidate.value,
+      unit: candidate.unit,
+      quote: candidate.quote,
+      page: candidate.page,
+      verificationStatus: verdict.status,
+      verificationReasons: verdict.reasons,
+    });
+    await tx.reviewEvents.append({
+      subject: { kind: 'field', fieldId: field.id },
+      actor: WORKER_ACTOR,
+      action: 'extract',
+      before: null,
+      after: {
+        value: candidate.value,
+        unit: candidate.unit,
+        page: candidate.page,
+        verificationStatus: verdict.status,
+        verificationReasons: verdict.reasons,
+        droppedCandidates: dropped,
+      },
+      reason: null,
+    });
+  }
+
+  const rows = await tx.fields.listLatestForEquipment(equipment.id);
+  const reconciled = reconcile({
+    candidates: toCandidates(rows, payload.equipmentTag, input.definitions),
+    decisions: [],
+  });
+  if (!reconciled.ok) {
+    throw new JobError('RECONCILE_FAILED', false, 'Reconciliation rejected the stored fields.');
+  }
+  let conflictsOpened = 0;
+  for (const conflict of reconciled.value.conflicts) {
+    const opened = await tx.conflicts.openIfAbsent({
+      equipmentId: equipment.id,
+      fieldName: conflict.fieldName,
+    });
+    if (!opened.created) continue;
+    conflictsOpened += 1;
+    await tx.reviewEvents.append({
+      subject: { kind: 'conflict', conflictId: opened.conflict.id },
+      actor: WORKER_ACTOR,
+      action: 'extract',
+      before: null,
+      after: { status: 'open', candidateIds: conflict.candidateIds },
+      reason: null,
+    });
+  }
+  // A handler must not write after its signal fires: throwing here rolls everything back.
+  if (input.signal.aborted) throw aborted();
+  return { alreadyPersisted: false, fields: picked.length, conflictsOpened };
 }

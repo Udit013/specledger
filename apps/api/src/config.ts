@@ -1,8 +1,13 @@
 import { DEFAULT_INGEST_LIMITS, INGEST_LIMIT_BOUNDS } from '@specledger/ingest';
 import type { IngestLimits } from '@specledger/ingest';
+import { DEFAULT_GEMINI_MODEL } from '@specledger/llm';
 import { z } from 'zod';
 
 const LOG_LEVELS = ['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'] as const;
+
+// replay answers from fixtures/recordings and is the default (demo mode: free, deterministic, no
+// network); gemini calls the Gemini free tier and fails over to replay.
+export const LLM_PROVIDERS = ['replay', 'gemini'] as const;
 
 // Upload limits (INGEST_*) take the ingest package's defaults and bounds, so a value outside the
 // bounds stops start-up instead of disabling a limit.
@@ -28,6 +33,13 @@ const envSchema = z.object({
   INGEST_PARSE_TIMEOUT_MS: ingestLimit('parseTimeoutMs'),
   INGEST_PARSE_MEMORY_MB: ingestLimit('parseMemoryMb'),
   INGEST_MIN_TEXT_CHARS: ingestLimit('minTextChars'),
+  LLM_PROVIDER: z.enum(LLM_PROVIDERS).default('replay'),
+  GEMINI_API_KEY: z.string().min(1).optional(),
+  GEMINI_MODEL: z
+    .string()
+    .regex(/^[a-z0-9][a-z0-9.-]{0,63}$/)
+    .default(DEFAULT_GEMINI_MODEL),
+  LLM_TIMEOUT_MS: z.coerce.number().int().min(1_000).max(300_000).default(60_000),
 });
 
 export type ConfigKey = keyof typeof envSchema.shape;
@@ -47,6 +59,10 @@ const EXPECTED: Record<ConfigKey, string> = {
   INGEST_PARSE_TIMEOUT_MS: ingestExpected('parseTimeoutMs'),
   INGEST_PARSE_MEMORY_MB: ingestExpected('parseMemoryMb'),
   INGEST_MIN_TEXT_CHARS: ingestExpected('minTextChars'),
+  LLM_PROVIDER: `one of ${LLM_PROVIDERS.join(', ')}`,
+  GEMINI_API_KEY: 'a Gemini API key (required when LLM_PROVIDER is gemini)',
+  GEMINI_MODEL: 'a model id such as gemini-3.5-flash-lite',
+  LLM_TIMEOUT_MS: 'an integer between 1000 and 300000',
 };
 
 export interface Config {
@@ -56,6 +72,13 @@ export interface Config {
   readonly logLevel: (typeof LOG_LEVELS)[number];
   readonly databaseUrl: string;
   readonly ingest: IngestLimits;
+  readonly llm: {
+    readonly provider: (typeof LLM_PROVIDERS)[number];
+    // Never logged; config is never logged as a whole.
+    readonly geminiApiKey: string | null;
+    readonly geminiModel: string;
+    readonly timeoutMs: number;
+  };
 }
 
 export interface ConfigIssue {
@@ -82,6 +105,16 @@ export function parseConfig(env: Readonly<Record<string, string | undefined>>): 
   }
 
   const parsed = envSchema.safeParse(known);
+  if (
+    parsed.success &&
+    parsed.data.LLM_PROVIDER === 'gemini' &&
+    parsed.data.GEMINI_API_KEY === undefined
+  ) {
+    return {
+      ok: false,
+      issues: [{ key: 'GEMINI_API_KEY', problem: 'missing', expected: EXPECTED.GEMINI_API_KEY }],
+    };
+  }
   if (parsed.success) {
     const values = parsed.data;
     return {
@@ -98,6 +131,12 @@ export function parseConfig(env: Readonly<Record<string, string | undefined>>): 
           parseTimeoutMs: values.INGEST_PARSE_TIMEOUT_MS,
           parseMemoryMb: values.INGEST_PARSE_MEMORY_MB,
           minTextChars: values.INGEST_MIN_TEXT_CHARS,
+        }),
+        llm: Object.freeze({
+          provider: values.LLM_PROVIDER,
+          geminiApiKey: values.GEMINI_API_KEY ?? null,
+          geminiModel: values.GEMINI_MODEL,
+          timeoutMs: values.LLM_TIMEOUT_MS,
         }),
       }),
     };

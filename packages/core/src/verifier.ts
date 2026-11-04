@@ -201,6 +201,21 @@ function normalize(value: ParsedNumber, unit: UnitDefinition, field: FieldDefini
   return normalized;
 }
 
+// The canonical value of a stated value and unit for a field, exactly as the verifier computes it:
+// null when the value does not parse under the hints, the unit is unknown, or the unit measures
+// another quantity. Reconciliation uses it to re-derive canonical values from stored fields.
+export function normalizeValue(
+  value: string,
+  unit: string,
+  field: FieldDefinition,
+  hints: VerificationHints = {},
+): NormalizedValue | null {
+  const parsed = parseNumber(normalizeWithMap(value).normalized, hints);
+  const stated = parseUnit(unit);
+  if (!parsed.ok || !stated.ok || stated.value.dimension !== field.dimension) return null;
+  return normalize(parsed.value, stated.value, field);
+}
+
 function check(
   candidate: Candidate,
   pageText: string,

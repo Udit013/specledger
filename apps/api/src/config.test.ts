@@ -39,6 +39,12 @@ describe('parseConfig', () => {
           parseMemoryMb: 128,
           minTextChars: 40,
         },
+        llm: {
+          provider: 'replay',
+          geminiApiKey: null,
+          geminiModel: 'gemini-3.5-flash-lite',
+          timeoutMs: 60_000,
+        },
       },
     });
   });
@@ -53,6 +59,12 @@ describe('parseConfig', () => {
         logLevel: 'info',
         databaseUrl: 'postgresql://localhost/specledger',
         ingest: DEFAULT_INGEST_LIMITS,
+        llm: {
+          provider: 'replay',
+          geminiApiKey: null,
+          geminiModel: 'gemini-3.5-flash-lite',
+          timeoutMs: 60_000,
+        },
       },
     });
   });
@@ -111,6 +123,7 @@ describe('parseConfig', () => {
         'databaseUrl',
         'host',
         'ingest',
+        'llm',
         'logLevel',
         'nodeEnv',
         'port',
@@ -135,6 +148,58 @@ describe('parseConfig', () => {
     expect(expectIssues(parseConfig({ ...VALID_ENV, [key]: value }))).toEqual([
       { key, problem: 'invalid', expected },
     ]);
+  });
+});
+
+describe('model provider configuration', () => {
+  it('reads the Gemini settings when the provider is gemini', () => {
+    const result = parseConfig({
+      ...VALID_ENV,
+      LLM_PROVIDER: 'gemini',
+      GEMINI_API_KEY: 'test-key-not-real',
+      GEMINI_MODEL: 'gemini-3.1-flash-lite',
+      LLM_TIMEOUT_MS: '20000',
+    });
+    expect(result.ok && result.config.llm).toEqual({
+      provider: 'gemini',
+      geminiApiKey: 'test-key-not-real',
+      geminiModel: 'gemini-3.1-flash-lite',
+      timeoutMs: 20_000,
+    });
+    expect(result.ok && Object.isFrozen(result.config.llm)).toBe(true);
+  });
+
+  it('requires a key for gemini, reporting it by name only', () => {
+    const result = parseConfig({ ...VALID_ENV, LLM_PROVIDER: 'gemini' });
+    expect(expectIssues(result)).toEqual([
+      {
+        key: 'GEMINI_API_KEY',
+        problem: 'missing',
+        expected: 'a Gemini API key (required when LLM_PROVIDER is gemini)',
+      },
+    ]);
+  });
+
+  it.each([
+    ['LLM_PROVIDER', 'openai'],
+    ['GEMINI_MODEL', 'Gemini 3 Pro!'],
+    ['LLM_TIMEOUT_MS', '50'],
+  ])('refuses %s=%s', (key, value) => {
+    expect(
+      expectIssues(parseConfig({ ...VALID_ENV, [key]: value })).map((issue) => [
+        issue.key,
+        issue.problem,
+      ]),
+    ).toEqual([[key, 'invalid']]);
+  });
+
+  it('never prints a supplied key', () => {
+    const output = formatConfigIssues(
+      expectIssues(
+        parseConfig({ ...VALID_ENV, LLM_PROVIDER: 'nope', GEMINI_API_KEY: 'PLANTED-gemini-key' }),
+      ),
+    );
+    expect(output).not.toContain('PLANTED');
   });
 });
 
