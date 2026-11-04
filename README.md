@@ -8,7 +8,7 @@ it and an approver publishes an immutable register version.
 
 ## Status
 
-Phases 0 to 3 of the plan are in place:
+Phases 0 to 4 of the plan are in place:
 
 - Foundation and quality gates: the monorepo, strict TypeScript, lint and dependency-boundary
   rules, CI, a local Postgres container, validated configuration, a redacting logger and Git
@@ -26,9 +26,13 @@ Phases 0 to 3 of the plan are in place:
   terminable worker thread with memory and time limits, typed rejection codes, and storage of the
   document, its bytes and its page text in one transaction with deduplication by sha256. These are
   service functions; there is no HTTP endpoint yet.
+- Model layer: an `LlmProvider` interface with Gemini (free tier, synthetic documents only),
+  Replay, Recording and Failover implementations, a prompt builder that keeps document text in
+  delimited data blocks, and schema-validated output with bounded correction retries. Tests run
+  with every network socket blocked.
 
-There is no model extraction, verification, reconciliation, job queue, API route or user interface
-yet.
+There is no verification, reconciliation, job queue, API route or user interface yet, and nothing
+calls the model layer outside its tests and the manual smoke script.
 
 ## Quick start
 
@@ -85,6 +89,13 @@ pnpm fixtures:generate
 pnpm fixtures:validate
 ```
 
+One real model call, on one synthetic document, for a manual check (not run by tests or CI; needs a
+Gemini API key in `.env`; with `RECORD=1` it also saves the answer under `fixtures/recordings/`):
+
+```sh
+pnpm llm:smoke
+```
+
 Other scripts: `pnpm test`, `pnpm format`, `pnpm format:check`, `pnpm boundaries`.
 
 ## Repository layout
@@ -123,6 +134,18 @@ To be written in full. So far:
   are written in one transaction, and a duplicate upload is detected by the unique sha256
   constraint (insert on conflict do nothing, then select). `apps/api/src/ingestion.ts` wires the
   two together with limits from configuration.
+- **Model layer** (`packages/llm`). The model is untrusted: providers return schema-valid
+  candidates or a typed `LlmError`, and nothing more is trusted (the verifier is Phase 5).
+  `extractWithClient` validates the request, builds chunked prompts (`buildPrompts`), calls a raw
+  model client once per chunk, validates each answer against a schema limited to the requested
+  fields, and retries an invalid answer with a message listing the schema problems and nothing
+  from the document. The Gemini provider uses the Vercel AI SDK's structured output with SDK
+  retries disabled, maps HTTP failures to error codes, and refuses requests not flagged synthetic.
+  Replay answers from `fixtures/recordings/<key>.json`, where the key is the sha256 of the
+  canonical JSON of the model id and the request (which includes `PROMPT_VERSION`). Failover moves
+  to the next provider only on `RATE_LIMITED`, `TIMEOUT`, `UNAVAILABLE` and `MODEL_RETIRED`, and
+  rests a failed provider for a cooldown. `withLogging` logs ids, model, latency, outcome and
+  token counts, never text.
 
 ## Limitations
 
@@ -161,6 +184,22 @@ Known gaps at this stage:
   pre-push hook covers it.
 - Git hooks are local to a clone and can be bypassed with `--no-verify`; the CI check is the
   safety net.
+
+## Model layer limitations
+
+- The only committed recording is handcrafted (the p-108 injection response). Real responses for
+  the corpus have not been recorded yet; that is a deliberate later step within the free-tier rate
+  limits. Until then Replay answers only that one request.
+- The default model id (`gemini-3.5-flash-lite`) was checked against Google's model list in
+  November 2026, but no real call has been made from this repository. Models are retired; a
+  retired id returns `MODEL_RETIRED`.
+- The synthetic-only rule is enforced by a flag on the request, set by the caller. Nothing can
+  tell from page text whether a document is synthetic; the flag must only be set for corpus
+  documents.
+- Failover cooldowns live in memory per process and are not shared between processes.
+- Prompt-injection defense here is limited to delimiting the data and instructing the model; a
+  model may still obey embedded text. The defense is the verifier (Phase 5), which requires each
+  value to be supported by a quote on the page.
 
 ## License
 

@@ -16,5 +16,11 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "test": "vitest run --dir src"
+  },
+  "dependencies": {
+    "@ai-sdk/google": "4.0.100",
+    "@specledger/core": "workspace:*",
+    "ai": "7.0.144",
+    "zod": "4.6.7"
   }
 }

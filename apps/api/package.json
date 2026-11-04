@@ -16,11 +16,14 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "test": "vitest run --dir src",
-    "start": "node --env-file-if-exists=../../.env dist/main.js"
+    "start": "node --env-file-if-exists=../../.env dist/main.js",
+    "llm:smoke": "node --env-file-if-exists=../../.env dist/scripts/llm-smoke.js"
   },
   "dependencies": {
+    "@specledger/core": "workspace:*",
     "@specledger/db": "workspace:*",
     "@specledger/ingest": "workspace:*",
+    "@specledger/llm": "workspace:*",
     "pino": "10.4.0",
     "zod": "4.6.7"
   },
