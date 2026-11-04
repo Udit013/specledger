@@ -8,7 +8,7 @@ it and an approver publishes an immutable register version.
 
 ## Status
 
-Phases 0 to 4 of the plan are in place:
+Phases 0 to 6 of the plan are in place:
 
 - Foundation and quality gates: the monorepo, strict TypeScript, lint and dependency-boundary
   rules, CI, a local Postgres container, validated configuration, a redacting logger and Git
@@ -36,9 +36,14 @@ Phases 0 to 4 of the plan are in place:
   `verifyCandidate`, which accepts a value only when its quote is on the page, the value is in
   the quote, the unit is known and of the right kind, dual-unit statements agree and the value is
   plausible. Written test-first; property tests run with a fixed seed.
+- Reconciliation (Phase 6): `reconcile` chooses each field's value for one piece of equipment
+  from its verified candidates across documents and revisions (later revision within a lineage,
+  then source rank, then merge or conflict at equal rank), respects human decisions, and explains
+  every outcome in a decision log.
 
-There is no reconciliation, job queue, API route or user interface yet, and nothing calls the
-model layer or the verifier outside tests and the manual smoke script.
+There is no job queue, API route or user interface yet, and nothing calls the model layer, the
+verifier or reconciliation outside tests and the manual smoke script; conflicts and decisions are
+not persisted yet (Phase 7).
 
 ## Quick start
 
@@ -201,6 +206,32 @@ Known gaps at this stage:
   0.5 percent by the verifier's own conversion, and the canonical value is in the field's
   plausible range. It reports every failing reason, returns `INTERNAL` instead of throwing on
   unexpected input, and maps the quote back to page offsets for highlighting.
+
+- **Reconciliation** (`packages/core`). Per field: unverified candidates are carried but never
+  compete; within a lineage (a series of revisions of one document, assigned by the caller) the
+  latest revision supersedes the rest (`compareRevisions`: letters before numbers, unknown labels
+  lowest and equal to each other); across lineages the highest source rank wins (datasheet,
+  manual, brochure); what is left merges when every pair agrees within 0.5 percent in canonical
+  units, and is otherwise an open conflict that is never resolved automatically. A human decision
+  stands, and is marked `NEEDS_RE_REVIEW`, never overwritten, when a later revision arrives in a
+  lineage it was based on. Every step is a decision log entry (rule id, candidate ids, outcome,
+  winners). Input is put in canonical order first, so the result is the same for any input order,
+  and reconciling a result again returns it unchanged.
+
+## Reconciliation limitations
+
+- Lineage is assigned by the caller. Two documents put in one lineage are compared by revision
+  even if they are unrelated, and two revisions put in different lineages are compared by source
+  rank and may conflict. The pipeline (Phase 7) has to assign it consistently, for example tag and
+  document type.
+- Letter revisions are ordered before numbered ones (`Rev Z` before `Rev 0`), which is the common
+  convention but not universal; labels outside the accepted forms (`Issue 3`, `Rev 2B`) are
+  unknown and rank lowest.
+- A human decision is re-reviewed only for a later revision in a lineage it was based on. New
+  evidence from a lineage it did not consider, even a datasheet when the decision was made between
+  brochures, leaves it standing.
+- Merging uses pairwise agreement, so three values each within 0.5 percent of their neighbours
+  but not of each other conflict rather than merge.
 
 ## Verifier limitations
 

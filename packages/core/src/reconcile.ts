@@ -1,7 +1,8 @@
 import { z } from 'zod';
 
-import { notImplemented } from './not-implemented.js';
+import { err, ok } from './result.js';
 import type { Result } from './result.js';
+import { compareRevisions, parseRevision } from './revision.js';
 import type { DocumentType, VerificationStatus } from './status.js';
 import type { NormalizedValue } from './verifier.js';
 
@@ -159,6 +160,183 @@ export interface ReconcileError {
   readonly subject: string;
 }
 
+type Entry = DecisionLogEntry;
+type Candidate = ReconcileCandidate;
+
+const byText = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
+const sortedIds = (candidates: readonly Candidate[]) => candidates.map((c) => c.id).sort(byText);
+
+const entry = (
+  rule: ReconcileRule,
+  fieldName: string,
+  candidates: readonly Candidate[],
+  outcome: LogOutcome,
+  winners: readonly Candidate[] = [],
+): Entry => ({
+  rule,
+  fieldName,
+  candidateIds: sortedIds(candidates),
+  outcome,
+  winnerIds: sortedIds(winners),
+});
+
+function groupBy<T>(items: readonly T[], key: (item: T) => string): Map<string, T[]> {
+  const groups = new Map<string, T[]>();
+  for (const item of items) groups.set(key(item), [...(groups.get(key(item)) ?? []), item]);
+  return groups;
+}
+
+const agree = (a: number, b: number) =>
+  Math.abs(a - b) <= RECONCILE_TOLERANCE * Math.max(Math.abs(a), Math.abs(b));
+
+function valuesAgree(a: NormalizedValue, b: NormalizedValue): boolean {
+  if (a.unit !== b.unit) return false;
+  if (a.kind === 'scalar') return b.kind === 'scalar' && agree(a.value, b.value);
+  return b.kind === 'range' && agree(a.low, b.low) && agree(a.high, b.high);
+}
+
+// Step 3: within each lineage, only the latest revision survives.
+function latestRevisions(competing: readonly Candidate[], fieldName: string, log: Entry[]) {
+  const survivors: Candidate[] = [];
+  for (const lineage of groupBy(competing, (c) => c.lineage).values()) {
+    const latest = lineage.reduce((best, c) =>
+      compareRevisions(c.revision, best.revision) > 0 ? c : best,
+    );
+    const top = lineage.filter((c) => compareRevisions(c.revision, latest.revision) === 0);
+    const superseded = lineage.filter((c) => compareRevisions(c.revision, latest.revision) < 0);
+    if (superseded.length > 0) {
+      log.push(entry('LATER_REVISION', fieldName, superseded, 'superseded', top));
+    }
+    survivors.push(...top);
+  }
+  return survivors;
+}
+
+// Step 4: across lineages, only the highest source rank survives.
+function highestRank(survivors: readonly Candidate[], fieldName: string, log: Entry[]) {
+  const best = Math.max(...survivors.map((c) => SOURCE_RANK[c.sourceType]));
+  const top = survivors.filter((c) => SOURCE_RANK[c.sourceType] === best);
+  const superseded = survivors.filter((c) => SOURCE_RANK[c.sourceType] < best);
+  if (superseded.length > 0) {
+    log.push(entry('HIGHER_SOURCE_RANK', fieldName, superseded, 'superseded', top));
+  }
+  return top;
+}
+
+// Step 5: what is left has equal rank; it is selected, merged or a conflict.
+function select(
+  top: readonly Candidate[],
+  fieldName: string,
+  unverifiedCandidateIds: readonly string[],
+  log: Entry[],
+): FieldOutcome {
+  const values = top.map((c) => c.value).filter((v): v is NormalizedValue => v !== null);
+  const allAgree = values.every((a) => values.every((b) => valuesAgree(a, b)));
+  const evidence = [...top].sort((a, b) => byText(a.id, b.id));
+  const chosen = evidence[0];
+  // Verified candidates always have a value (validate checks it), so a missing one is only a
+  // safeguard; either way, anything short of full agreement is a conflict, never a guess.
+  if (chosen?.value == null || values.length !== top.length || !allAgree) {
+    log.push(entry('EQUAL_RANK_CONFLICT', fieldName, top, 'conflict'));
+    return { status: 'conflict', fieldName, candidateIds: sortedIds(top), unverifiedCandidateIds };
+  }
+  if (top.length === 1) log.push(entry('ONLY_CANDIDATE', fieldName, top, 'selected', [chosen]));
+  else log.push(entry('EQUAL_VALUES_MERGED', fieldName, top, 'merged', [chosen]));
+  return {
+    status: 'selected',
+    fieldName,
+    selectedCandidateId: chosen.id,
+    value: chosen.value,
+    evidenceCandidateIds: sortedIds(top),
+    unverifiedCandidateIds,
+  };
+}
+
+// Step 6: a human decision stands; a later revision in one of its basis lineages marks it for
+// re-review, and nothing is overwritten.
+function respectDecision(
+  decision: HumanDecision,
+  competing: readonly Candidate[],
+  unverifiedCandidateIds: readonly string[],
+  log: Entry[],
+): FieldOutcome {
+  const basisIds = new Set(decision.basedOn.map((basis) => basis.candidateId));
+  const basisByLineage = groupBy(decision.basedOn, (basis) => basis.lineage);
+  const newer = competing.filter((c) => {
+    const basis = basisByLineage.get(c.lineage);
+    return (
+      !basisIds.has(c.id) &&
+      basis !== undefined &&
+      basis.every((b) => compareRevisions(c.revision, b.revision) > 0)
+    );
+  });
+  const { fieldName } = decision;
+  if (newer.length > 0) {
+    log.push(entry('NEEDS_RE_REVIEW', fieldName, newer, 'needs_re_review'));
+    return {
+      status: 'needs_re_review',
+      fieldName,
+      decision,
+      newCandidateIds: sortedIds(newer),
+      unverifiedCandidateIds,
+    };
+  }
+  log.push({
+    rule: 'HUMAN_DECISION_KEPT',
+    fieldName,
+    candidateIds: [...basisIds].sort(byText),
+    outcome: 'kept',
+    winnerIds: decision.candidateId === null ? [] : [decision.candidateId],
+  });
+  return { status: 'decided', fieldName, decision, newCandidateIds: [], unverifiedCandidateIds };
+}
+
+function reconcileField(
+  fieldName: string,
+  candidates: readonly Candidate[],
+  decision: HumanDecision | undefined,
+  log: Entry[],
+): FieldOutcome {
+  // Steps 1 and 2: unverified candidates are carried, never compete; unknown revisions are noted.
+  const unverified = candidates.filter((c) => c.verification !== 'verified');
+  const competing = candidates.filter((c) => c.verification === 'verified');
+  const unverifiedCandidateIds = sortedIds(unverified);
+  if (unverified.length > 0)
+    log.push(entry('UNVERIFIED_EXCLUDED', fieldName, unverified, 'excluded'));
+  const unknown = competing.filter((c) => parseRevision(c.revision) === null);
+  if (unknown.length > 0) log.push(entry('UNKNOWN_REVISION', fieldName, unknown, 'ranked_lowest'));
+
+  if (decision !== undefined)
+    return respectDecision(decision, competing, unverifiedCandidateIds, log);
+  if (competing.length === 0) {
+    log.push(entry('NO_VERIFIED_CANDIDATE', fieldName, [], 'unresolved'));
+    return { status: 'unresolved', fieldName, unverifiedCandidateIds };
+  }
+  const top = highestRank(latestRevisions(competing, fieldName, log), fieldName, log);
+  return select(top, fieldName, unverifiedCandidateIds, log);
+}
+
+function validate(input: ReconcileInput): ReconcileError | null {
+  const ids = input.candidates.map((c) => c.id).sort(byText);
+  const repeated = ids.find((id, index) => ids[index + 1] === id);
+  if (repeated !== undefined) return { code: 'DUPLICATE_CANDIDATE_ID', subject: repeated };
+  const fields = input.decisions.map((d) => d.fieldName).sort(byText);
+  const twice = fields.find((field, index) => fields[index + 1] === field);
+  if (twice !== undefined) return { code: 'DUPLICATE_DECISION', subject: twice };
+  const invalid = input.candidates
+    .filter((c) => c.verification === 'verified' && c.value === null)
+    .map((c) => c.id)
+    .sort(byText)[0];
+  return invalid === undefined ? null : { code: 'INVALID_CANDIDATE', subject: invalid };
+}
+
+const RULE_INDEX = new Map(RECONCILE_RULES.map((rule, index) => [rule, index]));
+
+const compareEntries = (a: Entry, b: Entry) =>
+  byText(a.fieldName, b.fieldName) ||
+  (RULE_INDEX.get(a.rule) ?? 0) - (RULE_INDEX.get(b.rule) ?? 0) ||
+  byText(a.candidateIds.join('\u0000'), b.candidateIds.join('\u0000'));
+
 // Chooses the value of every field for one piece of equipment from its candidates across
 // documents and revisions, and explains every outcome in the log. Per field, in order:
 //
@@ -180,5 +358,33 @@ export interface ReconcileError {
 // Deterministic, independent of input order, and idempotent. Input errors (a repeated candidate id,
 // two decisions for one field, a verified candidate without a value) are returned, not thrown.
 export function reconcile(input: ReconcileInput): Result<ReconcileResult, ReconcileError> {
-  return notImplemented('reconcile', input);
+  const problem = validate(input);
+  if (problem !== null) return err(problem);
+
+  // Canonical order first: every later step reads sorted input, so the output cannot depend on
+  // the order the caller passed things in.
+  const candidates = [...input.candidates].sort((a, b) => byText(a.id, b.id));
+  const decisions = [...input.decisions]
+    .map((d) => ({
+      ...d,
+      basedOn: [...d.basedOn].sort((a, b) => byText(a.candidateId, b.candidateId)),
+    }))
+    .sort((a, b) => byText(a.fieldName, b.fieldName));
+  const decisionFor = new Map(decisions.map((d) => [d.fieldName, d]));
+  const byField = groupBy(candidates, (c) => c.fieldName);
+  const fieldNames = [...new Set([...byField.keys(), ...decisionFor.keys()])].sort(byText);
+
+  const log: Entry[] = [];
+  const fields = fieldNames.map((name) =>
+    reconcileField(name, byField.get(name) ?? [], decisionFor.get(name), log),
+  );
+  return ok({
+    candidates,
+    decisions,
+    fields,
+    conflicts: fields.flatMap((f) =>
+      f.status === 'conflict' ? [{ fieldName: f.fieldName, candidateIds: f.candidateIds }] : [],
+    ),
+    log: log.sort(compareEntries),
+  });
 }

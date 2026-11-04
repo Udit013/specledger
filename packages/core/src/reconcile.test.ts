@@ -236,6 +236,14 @@ describe('rule: equal rank merges agreeing values and conflicts otherwise', () =
     expect(outcome(result)).toMatchObject({ status: 'conflict', candidateIds: ['a', 'b', 'c'] });
   });
 
+  it('never merges equal numbers in different units', () => {
+    const result = run([
+      cand('a', { lineage: 'ds-1', value: scalar(10, 'm') }),
+      cand('b', { lineage: 'ds-2', value: scalar(10, 'W') }),
+    ]);
+    expect(outcome(result)).toMatchObject({ status: 'conflict', candidateIds: ['a', 'b'] });
+  });
+
   it('merges ranges bound by bound, and never merges a range with a scalar', () => {
     const ranges = run([
       cand('a', { fieldName: 'rated_speed', lineage: 'ds-1', value: range(2900, 3600) }),
