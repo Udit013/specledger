@@ -39,15 +39,15 @@ describe('runEvaluation on constructed documents', () => {
 
   it('counts the pipeline (verifier on) by hand', () => {
     const { overall } = report.pipeline;
-    // Accepted: A flow, B flow, B NPSH (unsupported). Correct accepted: 2.
-    expect([overall.precision.numerator, overall.precision.denominator]).toEqual([2, 3]);
+    // Accepted: A flow and B flow, both correct.
+    expect([overall.precision.numerator, overall.precision.denominator]).toEqual([2, 2]);
     // Truth present: A flow, head, efficiency; B flow, head = 5.
     expect([overall.recall.numerator, overall.recall.denominator]).toEqual([2, 5]);
     expect([overall.unsupportedRate.numerator, overall.unsupportedRate.denominator]).toEqual([
-      1, 3,
+      0, 2,
     ]);
-    // Wrong candidates: A head, B NPSH, B power; caught: head and power.
-    expect([overall.catchRate.numerator, overall.catchRate.denominator]).toEqual([2, 3]);
+    // Wrong candidates: A head, B NPSH, B power; all caught (NPSH by rule (g)).
+    expect([overall.catchRate.numerator, overall.catchRate.denominator]).toEqual([3, 3]);
     // Correct candidates: A flow, A efficiency, B flow; rejected: efficiency.
     expect([overall.falseRejectRate.numerator, overall.falseRejectRate.denominator]).toEqual([
       1, 3,
@@ -60,11 +60,20 @@ describe('runEvaluation on constructed documents', () => {
     expect([overall.precision.numerator, overall.precision.denominator]).toEqual([3, 6]);
     expect(report.prevented).toEqual({
       naiveWrongAccepted: 3,
-      pipelineWrongAccepted: 1,
-      prevented: 2,
+      pipelineWrongAccepted: 0,
+      prevented: 3,
       naiveUnsupportedAccepted: 2,
-      pipelineUnsupportedAccepted: 1,
+      pipelineUnsupportedAccepted: 0,
     });
+  });
+
+  it('adds document-clustered intervals, never narrower than the field-level ones', () => {
+    const plain = report.pipeline.overall.precision;
+    const clustered = report.pipeline.clustered.precision;
+    expect(clustered).not.toBeNull();
+    expect(clustered?.low).toBeLessThanOrEqual(plain.low ?? 0);
+    expect(clustered?.high).toBeGreaterThanOrEqual(plain.high ?? 1);
+    expect(clustered?.effectiveN).toBeLessThanOrEqual(plain.denominator);
   });
 
   it('reports per field, sorted by name', () => {
@@ -87,15 +96,15 @@ describe('runEvaluation on constructed documents', () => {
 
   it('checks reconciliation against what the rules select from the ground truth', () => {
     // Truth selects flow 520 gpm (Rev B supersedes Rev A), head 45 m and efficiency 78 % (only
-    // Rev A has it). The pipeline selects flow 520 gpm and an NPSH the truth does not have, and
-    // has no verified head or efficiency.
+    // Rev A has it). The pipeline selects flow 520 gpm only: it has no verified head or
+    // efficiency.
     expect(report.reconciliation).toMatchObject({
       equipment: 1,
       expected: { numerator: 1, denominator: 3, rate: 0.333333 },
       conflicts: 0,
       missing: 2,
       wrong: 0,
-      unexpected: 1,
+      unexpected: 0,
     });
   });
 

@@ -14,6 +14,9 @@ export const VERIFICATION_REASONS = [
   'UNIT_MISMATCH',
   'OUT_OF_RANGE',
   'AMBIGUOUS_NUMBER_FORMAT',
+  // The value is not stated under a label of its own field (Phase 11 audit): "NPSH required
+  // 14 ft" does not support a rated head of 14 ft.
+  'LABEL_MISMATCH',
   'INTERNAL',
 ] as const;
 export const verificationReasonSchema = z.enum(VERIFICATION_REASONS);

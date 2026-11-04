@@ -190,6 +190,13 @@ describe('fields', () => {
     ).toEqual({ code: CHECK, constraint: 'fields_verification_reasons_valid' });
   });
 
+  it('accepts LABEL_MISMATCH, the reason added by migration 0005', async () => {
+    await insertField({
+      verification_status: 'unverified',
+      verification_reasons: ['LABEL_MISMATCH'],
+    });
+  });
+
   it('refuses a verified field that carries reasons', async () => {
     expect(await pgFailure(insertField({ verification_reasons: ['OUT_OF_RANGE'] }))).toEqual({
       code: CHECK,

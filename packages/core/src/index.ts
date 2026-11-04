@@ -3,6 +3,7 @@ export const PACKAGE_NAME = '@specledger/core';
 export * from './api.js';
 export * from './candidate.js';
 export * from './equipment.js';
+export * from './labels.js';
 export * from './normalize.js';
 export * from './numbers.js';
 export * from './page-text.js';

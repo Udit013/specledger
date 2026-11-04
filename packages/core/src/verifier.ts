@@ -1,6 +1,7 @@
 import type { Candidate } from './candidate.js';
 import { CANONICAL_UNITS, FIELD_KINDS } from './equipment.js';
 import type { FieldDefinition } from './equipment.js';
+import { labelOwnerBefore } from './labels.js';
 import { normalizeWithMap } from './normalize.js';
 import type { NormalizedText } from './normalize.js';
 import { parseNumber } from './numbers.js';
@@ -48,6 +49,7 @@ const RULE_ORDER: readonly VerificationReason[] = [
   'UNIT_UNKNOWN',
   'UNIT_MISMATCH',
   'OUT_OF_RANGE',
+  'LABEL_MISMATCH',
 ];
 
 const INTERNAL: VerificationResult = Object.freeze({
@@ -288,6 +290,25 @@ function check(
     if (!isPlausible(normalizedValue, field)) reasons.add('OUT_OF_RANGE');
   }
 
+  // (g): the value is stated under its own field's label. Of the occurrences of the value in the
+  // candidate's unit, at least one must have, as the nearest label before it, a label of this
+  // field. Otherwise the quote proves a number of the right kind, but for another quantity: a
+  // head read from the NPSH line, or a rated flow read from the maximum flow.
+  if (unit.ok && unit.value.dimension === field.dimension) {
+    const lower = quote.toLowerCase();
+    const supporting = matches.filter(
+      (token) => unitAfter(quote, token.end)?.symbol === unit.value.symbol,
+    );
+    if (
+      supporting.length > 0 &&
+      !supporting.some(
+        (token) => labelOwnerBefore(lower, token.end - token.text.length) === field.name,
+      )
+    ) {
+      reasons.add('LABEL_MISMATCH');
+    }
+  }
+
   const ordered = RULE_ORDER.filter((reason) => reasons.has(reason));
   return {
     status: ordered.length === 0 ? 'verified' : 'unverified',
@@ -317,6 +338,9 @@ function check(
 // (f) OUT_OF_RANGE         the normalized value (both bounds of a range) is outside the field's
 //                          plausible range, bounds included as valid. Checked only when the value
 //                          could be normalized.
+// (g) LABEL_MISMATCH       no occurrence of the value in the candidate's unit is stated under a
+//                          label of the field (the nearest label before it names another quantity,
+//                          or there is none). See labels.ts.
 //
 // INTERNAL, alone, for anything inconsistent or unexpected: a candidate for a different field, a
 // range for a field whose kind is "scalar", input that is not what the types promise, or any

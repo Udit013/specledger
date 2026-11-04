@@ -40,8 +40,8 @@ describe('checkGate', () => {
       corpusSha256: 'c'.repeat(64),
       setSha256: 's'.repeat(64),
       split: 'dev',
-      precision: 0.666667,
-      unsupportedRate: 0.333333,
+      precision: 1,
+      unsupportedRate: 0,
     });
   });
 
@@ -50,20 +50,19 @@ describe('checkGate', () => {
   });
 
   it('fails when precision drops, by any amount', () => {
-    const result = checkGate(regressed({ precision: 0.666666 }), baseline);
+    const result = checkGate(regressed({ precision: 0.999999 }), baseline);
     expect(result.pass).toBe(false);
-    expect(result.violations).toEqual(['precision fell from 0.666667 to 0.666666']);
+    expect(result.violations).toEqual(['precision fell from 1 to 0.999999']);
   });
 
   it('fails when the unsupported-value rate rises, by any amount', () => {
-    const result = checkGate(regressed({ unsupportedRate: 0.333334 }), baseline);
-    expect(result.violations).toEqual(['unsupported-value rate rose from 0.333333 to 0.333334']);
+    const result = checkGate(regressed({ unsupportedRate: 0.000001 }), baseline);
+    expect(result.violations).toEqual(['unsupported-value rate rose from 0 to 0.000001']);
   });
 
-  it('passes an improvement', () => {
-    expect(checkGate(regressed({ precision: 0.9, unsupportedRate: 0.1 }), baseline).pass).toBe(
-      true,
-    );
+  it('passes an improvement over the baseline', () => {
+    const weaker = { ...baseline, precision: 0.5, unsupportedRate: 0.5 };
+    expect(checkGate(report, weaker)).toEqual({ pass: true, violations: [] });
   });
 
   it('fails when precision cannot be computed any more', () => {

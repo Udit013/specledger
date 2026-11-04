@@ -39,7 +39,7 @@ describe('renderMarkdown', () => {
   });
 
   it('gives the counts behind each rate and the limits of synthetic data', () => {
-    expect(md).toContain('2 / 3');
+    expect(md).toContain('2 / 2');
     expect(md).toContain('2 documents evaluated');
     expect(md).toMatch(/synthetic/i);
     expect(md).toContain('p-901-scan');

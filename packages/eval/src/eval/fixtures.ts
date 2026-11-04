@@ -87,9 +87,9 @@ const cand = (fieldName: string, value: string, unit: string, quote: string) => 
 
 // Rev A: flow correct; head wrong value with the true quote (caught: VALUE_NOT_IN_QUOTE);
 //        efficiency correct but paraphrased (falsely rejected: QUOTE_NOT_FOUND).
-// Rev B: flow correct; head missing; NPSH hallucinated from another line of the page with a unit
-//        of the right kind (verified, so accepted: unsupported), and power hallucinated with a
-//        fabricated quote (caught: QUOTE_NOT_FOUND).
+// Rev B: flow correct; head missing; NPSH hallucinated from the head line, a unit of the right
+//        kind under another field's label (caught: LABEL_MISMATCH; before rule (g) it verified),
+//        and power hallucinated with a fabricated quote (caught: QUOTE_NOT_FOUND).
 export const SET: ExtractionSet = {
   schemaVersion: 1,
   origin: 'simulated',

@@ -36,6 +36,13 @@
       "when": 1793764488147,
       "tag": "0004_register_publish_and_decisions",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793811517997,
+      "tag": "0005_verification_label_mismatch",
+      "breakpoints": true
     }
   ]
 }

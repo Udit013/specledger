@@ -171,20 +171,30 @@ describe('injection (p-108)', () => {
   });
 });
 
-describe('brochure maximum next to the rated value (p-106): a known limit', () => {
+describe('brochure maximum next to the rated value (p-106)', () => {
   const page = [
     'Process Pump Series - Product Brochure',
     'Rated flow: 1997 gpm',
     'Maximum flow: 2596 gpm',
   ].join('\n');
 
-  // The verifier proves that a quote and a number are on the page; it cannot tell that the quote is
-  // about a different quantity. A real quote of the maximum flow, offered as the rated flow, is
-  // verified. Reconciliation (Phase 6, datasheet over brochure) and review are what catch it.
-  it('verifies a real quote about the maximum, offered as the rated value', () => {
+  // Until rule (g), the verifier could only prove that a quote and a number were on the page, and a
+  // real quote of the maximum flow, offered as the rated flow, was verified. The label before the
+  // value now has to be one of the field's own.
+  it('rejects a real quote about the maximum, offered as the rated value', () => {
     expect(
       verifyCandidate(
         candidate('rated_flow', '2596', 'gpm', 'Maximum flow: 2596 gpm'),
+        page,
+        pumpField('rated_flow'),
+      ).reasons,
+    ).toEqual(['LABEL_MISMATCH']);
+  });
+
+  it('still verifies the rated value from the same brochure', () => {
+    expect(
+      verifyCandidate(
+        candidate('rated_flow', '1997', 'gpm', 'Rated flow: 1997 gpm'),
         page,
         pumpField('rated_flow'),
       ).status,

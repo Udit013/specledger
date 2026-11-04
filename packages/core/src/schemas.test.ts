@@ -65,11 +65,13 @@ describe('status enums', () => {
     expect(verificationReasonSchema.parse(reason)).toBe(reason);
   });
 
-  it('lists exactly the eight reason codes from the plan', () => {
+  // The plan's eight reason codes, and LABEL_MISMATCH, added by the Phase 11 audit.
+  it('lists exactly the plan reason codes and LABEL_MISMATCH', () => {
     expect([...VERIFICATION_REASONS].sort()).toEqual(
       [
         'AMBIGUOUS_NUMBER_FORMAT',
         'INTERNAL',
+        'LABEL_MISMATCH',
         'OUT_OF_RANGE',
         'QUOTE_NOT_FOUND',
         'QUOTE_TOO_SHORT',

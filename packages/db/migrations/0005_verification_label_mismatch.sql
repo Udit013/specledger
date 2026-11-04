@@ -1,0 +1,2 @@
+ALTER TABLE "fields" DROP CONSTRAINT "fields_verification_reasons_valid";--> statement-breakpoint
+ALTER TABLE "fields" ADD CONSTRAINT "fields_verification_reasons_valid" CHECK ("fields"."verification_reasons" <@ array['QUOTE_NOT_FOUND', 'QUOTE_TOO_SHORT', 'VALUE_NOT_IN_QUOTE', 'UNIT_UNKNOWN', 'UNIT_MISMATCH', 'OUT_OF_RANGE', 'AMBIGUOUS_NUMBER_FORMAT', 'LABEL_MISMATCH', 'INTERNAL']::text[]);

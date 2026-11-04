@@ -79,14 +79,19 @@ describe('verifyCandidate: (a) QUOTE_TOO_SHORT', () => {
   const powerLine = 'Rated power: 45.0 kW at 2900 rpm';
   const ending = (length: number) => powerLine.slice(0, powerLine.indexOf(' at')).slice(-length);
 
+  // These tails cut the label off ("wer: 45.0 kW"), so rule (g) reports LABEL_MISMATCH too: the
+  // verifier returns every failing reason.
   it('rejects a quote one character under the minimum', () => {
     expect(reasons(candidate('rated_power', '45.0', 'kW', ending(MIN_QUOTE_LENGTH - 1)))).toEqual([
       'QUOTE_TOO_SHORT',
+      'LABEL_MISMATCH',
     ]);
   });
 
-  it('accepts a quote of exactly the minimum length', () => {
-    expect(reasons(candidate('rated_power', '45.0', 'kW', ending(MIN_QUOTE_LENGTH)))).toEqual([]);
+  it('does not report QUOTE_TOO_SHORT at exactly the minimum length', () => {
+    expect(reasons(candidate('rated_power', '45.0', 'kW', ending(MIN_QUOTE_LENGTH)))).toEqual([
+      'LABEL_MISMATCH',
+    ]);
   });
 
   it('measures the normalized quote, so padding with whitespace does not help', () => {
