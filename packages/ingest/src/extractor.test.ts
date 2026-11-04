@@ -231,7 +231,9 @@ describe('extracted text', () => {
       }
     }
     expect(quotes).toBeGreaterThan(200);
-  }, 30_000);
+    // Parses the whole corpus in worker threads; on a small CI runner shared with every other
+    // package's tests this took 15 to 30 s, so the budget is generous. The assertions are unchanged.
+  }, 120_000);
 });
 
 describe('worker isolation', () => {
@@ -287,7 +289,9 @@ describe('worker isolation', () => {
       clearInterval(sampler);
     }
     expect((peak - before) / (1024 * 1024)).toBeLessThan(256);
-  }, 30_000);
+    // A decompression bomb in a worker thread, sampled for memory: the time it takes depends on a
+    // shared CI runner's load, not on the guard, so the budget is generous.
+  }, 120_000);
 
   it('reports a crashing parser as CORRUPT without its error text', async () => {
     const extractor = createWorkerExtractor({ workerUrl: workers.write('throw', throwingWorker) });
