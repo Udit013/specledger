@@ -22,9 +22,12 @@ import {
   text,
   timestamp,
   unique,
+  uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
 import type { AnyPgColumn } from 'drizzle-orm/pg-core';
+
+import { JOB_STATUSES, JOB_TYPE_PATTERN, MAX_JOB_ATTEMPTS } from './queue-types.js';
 
 // Allowed values come from @specledger/core, so the database and the domain share one vocabulary.
 // Changing a list in core without generating a migration makes the drift check fail.
@@ -106,6 +109,51 @@ export const documentPages = pgTable(
   ],
 );
 
+// The job queue (Phase 7). Every timestamp is written from the caller's clock, never NOW(), so the
+// queue's behaviour over time is testable with an injected clock.
+export const jobs = pgTable(
+  'jobs',
+  {
+    id: id(),
+    type: text('type').notNull(),
+    payload: jsonb('payload').notNull(),
+    idempotencyKey: text('idempotency_key').notNull(),
+    status: text('status').notNull(),
+    attempts: integer('attempts').notNull(),
+    maxAttempts: integer('max_attempts').notNull(),
+    runAt: timestamp('run_at', { withTimezone: true }).notNull(),
+    lockedUntil: timestamp('locked_until', { withTimezone: true }),
+    lockedBy: text('locked_by'),
+    // A fixed error code and message chosen by the worker, never an exception's text, which can
+    // carry document content or query parameters.
+    lastError: text('last_error'),
+    correlationId: uuid('correlation_id').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull(),
+  },
+  (t) => [
+    unique('jobs_idempotency_key_key').on(t.idempotencyKey),
+    // The claim query reads queued jobs by run_at and expired leases by locked_until.
+    index('jobs_status_run_at_idx').on(t.status, t.runAt),
+    check('jobs_type_format', sql`${t.type} ~ ${sql.raw(`'${JOB_TYPE_PATTERN}'`)}`),
+    check('jobs_status_valid', oneOf(t.status, JOB_STATUSES)),
+    check('jobs_idempotency_key_length', lengthBetween(t.idempotencyKey, 1, 200)),
+    check('jobs_payload_object', sql`jsonb_typeof(${t.payload}) = 'object'`),
+    check(
+      'jobs_max_attempts_range',
+      sql`${t.maxAttempts} between 1 and ${sql.raw(String(MAX_JOB_ATTEMPTS))}`,
+    ),
+    check('jobs_attempts_range', sql`${t.attempts} between 0 and ${t.maxAttempts}`),
+    // A lease exists exactly while the job is running.
+    check(
+      'jobs_lease_matches_status',
+      sql`(${t.status} = 'running') = (${t.lockedBy} is not null and ${t.lockedUntil} is not null)`,
+    ),
+    check('jobs_locked_by_length', lengthBetween(t.lockedBy, 1, 200)),
+    check('jobs_last_error_length', lengthBetween(t.lastError, 1, 500)),
+  ],
+);
+
 export const extractionRuns = pgTable(
   'extraction_runs',
   {
@@ -113,6 +161,9 @@ export const extractionRuns = pgTable(
     documentId: uuid('document_id')
       .notNull()
       .references(() => documents.id, { onDelete: 'restrict' }),
+    // The job that produced the run. Unique, so a job re-run after its commit (a worker that died
+    // before marking the job complete) finds its run instead of writing a second one.
+    jobId: uuid('job_id').references(() => jobs.id, { onDelete: 'restrict' }),
     model: text('model').notNull(),
     promptVersion: text('prompt_version').notNull(),
     tokens: integer('tokens'),
@@ -121,6 +172,7 @@ export const extractionRuns = pgTable(
   },
   (t) => [
     index('extraction_runs_document_id_idx').on(t.documentId),
+    unique('extraction_runs_job_id_key').on(t.jobId),
     check('extraction_runs_model_not_empty', sql`char_length(${t.model}) > 0`),
     check('extraction_runs_prompt_version_not_empty', sql`char_length(${t.promptVersion}) > 0`),
     check('extraction_runs_tokens_nonnegative', sql`${t.tokens} >= 0`),
@@ -211,6 +263,11 @@ export const conflicts = pgTable(
   },
   (t) => [
     index('conflicts_equipment_id_idx').on(t.equipmentId),
+    // At most one open conflict per field of a piece of equipment, so re-running reconciliation
+    // never opens a second one. Resolved conflicts are history and may repeat.
+    uniqueIndex('conflicts_open_equipment_field_key')
+      .on(t.equipmentId, t.fieldName)
+      .where(sql`status = 'open'`),
     check('conflicts_status_valid', oneOf(t.status, CONFLICT_STATUSES)),
     check('conflicts_field_name_format', isFieldName(t.fieldName)),
     check('conflicts_resolution_not_empty', sql`char_length(${t.resolution}) >= 1`),

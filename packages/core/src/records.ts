@@ -47,6 +47,8 @@ export type EquipmentRecord = z.infer<typeof equipmentRecordSchema>;
 export const extractionRunRecordSchema = z.strictObject({
   id,
   documentId: id,
+  // The queue job that produced the run; null for runs written outside the queue.
+  jobId: id.nullable(),
   model: z.string().min(1),
   promptVersion: z.string().min(1),
   tokens: z.number().int().nonnegative().nullable(),

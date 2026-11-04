@@ -168,6 +168,41 @@ describe('ingestDocument', () => {
     expect(tables.documents[0]?.originalFilename).toBe('../../etc/passwd');
   });
 
+  it('runs onCreated in the same transaction, for new documents only', async () => {
+    const { store, tables } = memoryStore();
+    const seen: string[] = [];
+    const deps = {
+      store,
+      extractor: fixedExtractor(),
+      limits: DEFAULT_INGEST_LIMITS,
+      onCreated: (_tx: IngestTransaction, document: DocumentRecord) => {
+        seen.push(document.id);
+        return Promise.resolve();
+      },
+    };
+    const first = await ingestDocument(deps, { bytes: pdf, meta: META });
+    await ingestDocument(deps, { bytes: pdf, meta: META });
+    if (!first.ok) throw new Error(first.error.code);
+    expect(seen).toEqual([first.value.document.id]);
+    expect(tables.documents).toHaveLength(1);
+  });
+
+  it('rolls the document back when onCreated fails', async () => {
+    const { store, tables } = memoryStore();
+    await expect(
+      ingestDocument(
+        {
+          store,
+          extractor: fixedExtractor(),
+          limits: DEFAULT_INGEST_LIMITS,
+          onCreated: () => Promise.reject(new Error('enqueue failed')),
+        },
+        { bytes: pdf, meta: META },
+      ),
+    ).rejects.toThrow('enqueue failed');
+    expect(tables).toEqual({ documents: [], blobs: new Map(), pages: [] });
+  });
+
   describe('with a parser that never returns', () => {
     const workers = fakeWorkers();
     afterAll(() => {

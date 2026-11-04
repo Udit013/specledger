@@ -8,7 +8,10 @@ import { afterAll, beforeAll } from 'vitest';
 // A migrated schema of its own for one test file, through the db package's public API only.
 export interface TestDatabase {
   readonly database: Database;
-  query(text: string, params?: readonly unknown[]): Promise<pg.QueryResult>;
+  query(
+    text: string,
+    params?: readonly unknown[],
+  ): Promise<pg.QueryResult<Record<string, unknown>>>;
 }
 
 export function withTestDatabase(): TestDatabase {
@@ -42,7 +45,7 @@ export function withTestDatabase(): TestDatabase {
     },
     query: (text, params) => {
       if (admin === undefined) throw new Error('withTestDatabase is used before beforeAll');
-      return admin.query(text, params ? [...params] : undefined);
+      return admin.query<Record<string, unknown>>(text, params ? [...params] : undefined);
     },
   };
 }

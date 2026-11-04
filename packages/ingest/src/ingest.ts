@@ -35,14 +35,20 @@ export interface IngestTransaction {
   };
 }
 
-export interface IngestStore {
-  transaction<T>(work: (tx: IngestTransaction) => Promise<T>): Promise<T>;
+// Generic over the transaction type, so a caller whose transaction offers more than ingestion
+// needs (the database's job queue, say) can use it in onCreated.
+export interface IngestStore<Tx extends IngestTransaction = IngestTransaction> {
+  transaction<T>(work: (tx: Tx) => Promise<T>): Promise<T>;
 }
 
-export interface IngestDeps {
-  readonly store: IngestStore;
+export interface IngestDeps<Tx extends IngestTransaction = IngestTransaction> {
+  readonly store: IngestStore<Tx>;
   readonly extractor: PageExtractor;
   readonly limits: IngestLimits;
+  // Runs inside the same transaction, after a new document, its bytes and its pages are written,
+  // so whatever it writes (a processing job) commits or rolls back with them. Not called for a
+  // duplicate.
+  readonly onCreated?: (tx: Tx, document: DocumentRecord) => Promise<void>;
 }
 
 export interface IngestInput {
@@ -63,8 +69,8 @@ export const sha256Hex = (bytes: Uint8Array): string =>
 // Validates, extracts and stores one upload. The document row, its bytes and its pages are written
 // in one transaction, so a failure part way leaves nothing behind. Expected rejections are
 // returned; database failures propagate as thrown errors.
-export async function ingestDocument(
-  deps: IngestDeps,
+export async function ingestDocument<Tx extends IngestTransaction>(
+  deps: IngestDeps<Tx>,
   input: IngestInput,
 ): Promise<Result<IngestedDocument, IngestError>> {
   const upload = validateUpload(input.bytes, input.meta, deps.limits);
@@ -90,6 +96,7 @@ export async function ingestDocument(
       document.id,
       pages.map((page) => ({ pageNumber: page.pageNumber, content: page.text })),
     );
+    await deps.onCreated?.(tx, document);
     return { document, duplicate: false };
   });
   return ok(stored);

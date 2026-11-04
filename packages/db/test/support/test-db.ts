@@ -15,6 +15,14 @@ export interface TestDb {
   readonly database: Database;
   // Raw SQL against the test schema, for asserting what the database itself allows or refuses.
   query(text: string, params?: readonly unknown[]): Promise<pg.QueryResult<Row>>;
+  // A dedicated connection from the same pool (search_path set), for holding a transaction open.
+  // The caller releases it.
+  client(): Promise<pg.PoolClient>;
+}
+
+export interface TestDbOptions {
+  // Pool size; concurrency tests need more than the default.
+  readonly maxConnections?: number;
 }
 
 function databaseUrl(): string {
@@ -27,7 +35,7 @@ function databaseUrl(): string {
 
 // Gives the calling test file its own schema: created and migrated before the file's tests run,
 // dropped afterwards. Files therefore run in parallel against one Postgres without sharing rows.
-export function withTestDb(): TestDb {
+export function withTestDb(options: TestDbOptions = {}): TestDb {
   const schema = `test_${randomUUID().replaceAll('-', '')}`;
   let state: { pool: pg.Pool; database: Database } | undefined;
   // Kept apart from `state` so cleanup still runs when setup fails halfway, e.g. in a migration.
@@ -38,7 +46,11 @@ export function withTestDb(): TestDb {
     const connectionString = databaseUrl();
     admin = new pg.Pool({ connectionString, max: 1 });
     await admin.query(`create schema "${schema}"`);
-    const connection = connect({ connectionString, schema, maxConnections: 4 });
+    const connection = connect({
+      connectionString,
+      schema,
+      maxConnections: options.maxConnections ?? 4,
+    });
     pool = connection.pool;
     await runMigrations(connection);
     state = { pool: connection.pool, database: databaseFor(connection) };
@@ -63,6 +75,7 @@ export function withTestDb(): TestDb {
       return current().database;
     },
     query: (text, params) => current().pool.query<Row>(text, params ? [...params] : undefined),
+    client: () => current().pool.connect(),
   };
 }
 
