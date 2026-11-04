@@ -67,12 +67,75 @@ export function wilson(successes: number, trials: number, z = Z_95): Interval | 
   }
   if (successes > trials) throw new Error('wilson: more successes than trials');
   if (trials === 0) return null;
-  const p = successes / trials;
+  return wilsonAt(successes / trials, trials, z);
+}
+
+export interface ClusteredInterval {
+  readonly low: number;
+  readonly high: number;
+  // How many independent observations the documents are worth for this rate.
+  readonly effectiveN: number;
+}
+
+function wilsonAt(p: number, n: number, z = Z_95): Interval {
   const z2 = z * z;
-  const denominator = 1 + z2 / trials;
-  const centre = (p + z2 / (2 * trials)) / denominator;
-  const half = (z * Math.sqrt((p * (1 - p)) / trials + z2 / (4 * trials * trials))) / denominator;
+  const denominator = 1 + z2 / n;
+  const centre = (p + z2 / (2 * n)) / denominator;
+  const half = (z * Math.sqrt((p * (1 - p)) / n + z2 / (4 * n * n))) / denominator;
   return { low: Math.max(0, centre - half), high: Math.min(1, centre + half) };
+}
+
+// A Wilson interval that accounts for fields of one document not being independent. The rate is
+// a ratio estimate over documents (successes and trials summed per document); its variance is
+// the usual linearization, k/(k-1) · Σ(yᵢ - p·xᵢ)² / (Σxᵢ)² over the k documents with trials. The
+// effective sample size p(1-p)/variance is capped at the number of trials, so the adjustment can
+// only widen the interval, and the Wilson interval is taken at it. At a rate of 0 or 1 the
+// variance is zero and says nothing; each document then counts as one observation. With one
+// document there is no between-document variance either, and it counts as one.
+export function clusteredInterval(
+  clusters: readonly { readonly successes: number; readonly trials: number }[],
+): ClusteredInterval | null {
+  const used = clusters.filter((c) => c.trials > 0);
+  const trials = used.reduce((sum, c) => sum + c.trials, 0);
+  if (trials === 0) return null;
+  const successes = used.reduce((sum, c) => sum + c.successes, 0);
+  const p = successes / trials;
+  const k = used.length;
+  let effectiveN: number;
+  if (p === 0 || p === 1 || k < 2) {
+    effectiveN = k;
+  } else {
+    const residuals = used.reduce((sum, c) => sum + (c.successes - p * c.trials) ** 2, 0);
+    const variance = ((k / (k - 1)) * residuals) / (trials * trials);
+    effectiveN = variance === 0 ? trials : Math.min(trials, (p * (1 - p)) / variance);
+  }
+  const interval = wilsonAt(p, effectiveN);
+  return { low: round(interval.low), high: round(interval.high), effectiveN: round(effectiveN) };
+}
+
+export const RATE_NAMES = [
+  'precision',
+  'recall',
+  'unsupportedRate',
+  'catchRate',
+  'falseRejectRate',
+] as const;
+export type RateName = (typeof RATE_NAMES)[number];
+
+// The clustered interval of every rate, with each document's fields as one cluster.
+export function clusteredRates(
+  byDocument: readonly (readonly FieldOutcome[])[],
+  mode: 'pipeline' | 'naive',
+): Record<RateName, ClusteredInterval | null> {
+  const perDocument = byDocument.map((outcomes) => metricsFor(outcomes, mode));
+  return Object.fromEntries(
+    RATE_NAMES.map((name) => [
+      name,
+      clusteredInterval(
+        perDocument.map((m) => ({ successes: m[name].numerator, trials: m[name].denominator })),
+      ),
+    ]),
+  ) as Record<RateName, ClusteredInterval | null>;
 }
 
 export function proportion(numerator: number, denominator: number): Proportion {

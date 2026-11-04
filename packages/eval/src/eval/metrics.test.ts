@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { metricsFor, proportion, wilson } from './metrics.js';
+import { clusteredInterval, metricsFor, proportion, wilson } from './metrics.js';
 import type { FieldOutcome } from './metrics.js';
 
 describe('wilson', () => {
@@ -120,5 +120,94 @@ describe('metricsFor (naive: every picked candidate is accepted)', () => {
   it('catches nothing and rejects nothing', () => {
     expect([m.catchRate.numerator, m.catchRate.denominator]).toEqual([0, 4]);
     expect([m.falseRejectRate.numerator, m.falseRejectRate.denominator]).toEqual([0, 2]);
+  });
+});
+
+describe('clusteredInterval (fields grouped by document)', () => {
+  // Reference values computed independently: ratio-estimator variance over documents, effective n
+  // = p(1 - p) / variance capped at the number of fields, then the Wilson interval at that n.
+  it.each([
+    [
+      'documents that disagree halve the information',
+      [
+        [2, 2],
+        [0, 2],
+        [1, 2],
+      ],
+      0.125334,
+      0.874666,
+      3,
+    ],
+    [
+      'identical documents keep it, capped at the field count',
+      [
+        [1, 2],
+        [1, 2],
+        [1, 2],
+      ],
+      0.187616,
+      0.812384,
+      6,
+    ],
+    [
+      'a rate of 1 counts one observation per document',
+      [
+        [5, 5],
+        [3, 3],
+        [4, 4],
+      ],
+      0.438503,
+      1,
+      3,
+    ],
+    [
+      'uneven documents',
+      [
+        [3, 4],
+        [2, 4],
+        [4, 4],
+        [1, 4],
+      ],
+      0.320193,
+      0.855021,
+      9,
+    ],
+  ] as const)('%s', (_case, clusters, low, high, effectiveN) => {
+    const interval = clusteredInterval(
+      clusters.map(([successes, trials]) => ({ successes, trials })),
+    );
+    expect(interval?.low).toBeCloseTo(low, 6);
+    expect(interval?.high).toBeCloseTo(high, 6);
+    expect(interval?.effectiveN).toBeCloseTo(effectiveN, 6);
+  });
+
+  it('is never narrower than the field-level Wilson interval', () => {
+    const clusters = [
+      [3, 4],
+      [2, 4],
+      [4, 4],
+      [1, 4],
+    ].map(([successes = 0, trials = 0]) => ({ successes, trials }));
+    const clustered = clusteredInterval(clusters);
+    const plain = wilson(10, 16);
+    expect(clustered?.low).toBeLessThanOrEqual(plain?.low ?? 0);
+    expect(clustered?.high).toBeGreaterThanOrEqual(plain?.high ?? 1);
+  });
+
+  it('ignores documents with no trials, and has no interval without any', () => {
+    expect(clusteredInterval([{ successes: 0, trials: 0 }])).toBeNull();
+    expect(clusteredInterval([])).toBeNull();
+    expect(
+      clusteredInterval([
+        { successes: 2, trials: 2 },
+        { successes: 0, trials: 0 },
+        { successes: 0, trials: 2 },
+        { successes: 1, trials: 2 },
+      ])?.effectiveN,
+    ).toBeCloseTo(3, 6);
+  });
+
+  it('needs at least two documents to estimate a between-document variance', () => {
+    expect(clusteredInterval([{ successes: 3, trials: 4 }])).toMatchObject({ effectiveN: 1 });
   });
 });

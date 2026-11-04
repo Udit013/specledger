@@ -28,10 +28,10 @@
     "overall": {
       "precision": {
         "numerator": 128,
-        "denominator": 129,
-        "rate": 0.992248,
-        "low": 0.957397,
-        "high": 0.99863
+        "denominator": 128,
+        "rate": 1,
+        "low": 0.970863,
+        "high": 1
       },
       "recall": {
         "numerator": 128,
@@ -42,17 +42,17 @@
       },
       "unsupportedRate": {
         "numerator": 0,
-        "denominator": 129,
+        "denominator": 128,
         "rate": 0,
         "low": 0,
-        "high": 0.028918
+        "high": 0.029137
       },
       "catchRate": {
-        "numerator": 31,
+        "numerator": 32,
         "denominator": 32,
-        "rate": 0.96875,
-        "low": 0.842557,
-        "high": 0.994462
+        "rate": 1,
+        "low": 0.892821,
+        "high": 1
       },
       "falseRejectRate": {
         "numerator": 14,
@@ -64,9 +64,9 @@
       "counts": {
         "fields": 188,
         "truthPresent": 170,
-        "accepted": 129,
+        "accepted": 128,
         "correctAccepted": 128,
-        "wrongAccepted": 1,
+        "wrongAccepted": 0,
         "unsupportedAccepted": 0,
         "candidates": 174,
         "wrongCandidates": 32,
@@ -413,10 +413,10 @@
       "rated_head": {
         "precision": {
           "numerator": 10,
-          "denominator": 11,
-          "rate": 0.909091,
-          "low": 0.622642,
-          "high": 0.983768
+          "denominator": 10,
+          "rate": 1,
+          "low": 0.722467,
+          "high": 1
         },
         "recall": {
           "numerator": 10,
@@ -427,17 +427,17 @@
         },
         "unsupportedRate": {
           "numerator": 0,
-          "denominator": 11,
+          "denominator": 10,
           "rate": 0,
           "low": 0,
-          "high": 0.258833
+          "high": 0.277533
         },
         "catchRate": {
-          "numerator": 3,
+          "numerator": 4,
           "denominator": 4,
-          "rate": 0.75,
-          "low": 0.300642,
-          "high": 0.954413
+          "rate": 1,
+          "low": 0.510109,
+          "high": 1
         },
         "falseRejectRate": {
           "numerator": 3,
@@ -449,9 +449,9 @@
         "counts": {
           "fields": 16,
           "truthPresent": 15,
-          "accepted": 11,
+          "accepted": 10,
           "correctAccepted": 10,
-          "wrongAccepted": 1,
+          "wrongAccepted": 0,
           "unsupportedAccepted": 0,
           "candidates": 17,
           "wrongCandidates": 4,
@@ -601,6 +601,33 @@
           "wrongCandidates": 2,
           "correctCandidates": 6
         }
+      }
+    },
+    "clustered": {
+      "precision": {
+        "low": 0.871271,
+        "high": 1,
+        "effectiveN": 26
+      },
+      "recall": {
+        "low": 0.682995,
+        "high": 0.811709,
+        "effectiveN": 170
+      },
+      "unsupportedRate": {
+        "low": 0,
+        "high": 0.128729,
+        "effectiveN": 26
+      },
+      "catchRate": {
+        "low": 0.838875,
+        "high": 1,
+        "effectiveN": 20
+      },
+      "falseRejectRate": {
+        "low": 0.05964,
+        "high": 0.158689,
+        "effectiveN": 142
       }
     }
   },
@@ -1182,12 +1209,39 @@
           "correctCandidates": 6
         }
       }
+    },
+    "clustered": {
+      "precision": {
+        "low": 0.743487,
+        "high": 0.861722,
+        "effectiveN": 168
+      },
+      "recall": {
+        "low": 0.730924,
+        "high": 0.854864,
+        "effectiveN": 158.338812
+      },
+      "unsupportedRate": {
+        "low": 0.012778,
+        "high": 0.06777,
+        "effectiveN": 168
+      },
+      "catchRate": {
+        "low": 0,
+        "high": 0.161125,
+        "effectiveN": 20
+      },
+      "falseRejectRate": {
+        "low": 0,
+        "high": 0.128729,
+        "effectiveN": 26
+      }
     }
   },
   "prevented": {
     "naiveWrongAccepted": 32,
-    "pipelineWrongAccepted": 1,
-    "prevented": 31,
+    "pipelineWrongAccepted": 0,
+    "prevented": 32,
     "naiveUnsupportedAccepted": 5,
     "pipelineUnsupportedAccepted": 0
   },
@@ -1207,7 +1261,7 @@
   },
   "limits": [
     "The corpus is synthetic: generated datasheets with designed difficult cases, not vendor documents. Rates describe this corpus and say nothing about real documents.",
-    "A document counts once per field of its equipment class; fields within a document are not independent, so the intervals are optimistic.",
+    "Fields of one document are not independent. The field-level Wilson intervals treat them as if they were and are too narrow; the document-clustered intervals widen them by the observed between-document variance, and at a rate of 0 or 1 count each document once.",
     "Correct means within 0.5 percent of the ground truth after SI conversion, with a quote that is the expected one or contains the expected value.",
     "The pipeline measured is extraction, the verifier, the per-field pick and reconciliation; human review is not simulated."
   ]

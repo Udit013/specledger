@@ -16,8 +16,8 @@ import type {
 import type { DesignedCase, GroundTruth, Split } from '../corpus/truth.js';
 import { isCorrect } from './correctness.js';
 import type { ExtractionSet } from './extraction-set.js';
-import { metricsFor, proportion } from './metrics.js';
-import type { FieldOutcome, Metrics, Proportion } from './metrics.js';
+import { clusteredRates, metricsFor, proportion } from './metrics.js';
+import type { ClusteredInterval, FieldOutcome, Metrics, Proportion, RateName } from './metrics.js';
 
 export interface EvalDocument {
   readonly id: string;
@@ -52,14 +52,8 @@ export interface EvaluationReport {
     readonly evaluated: number;
     readonly skipped: readonly { readonly id: string; readonly reason: SkipReason }[];
   };
-  readonly pipeline: {
-    readonly overall: Metrics;
-    readonly perField: Readonly<Record<string, Metrics>>;
-  };
-  readonly naive: {
-    readonly overall: Metrics;
-    readonly perField: Readonly<Record<string, Metrics>>;
-  };
+  readonly pipeline: Measured;
+  readonly naive: Measured;
   readonly prevented: {
     readonly naiveWrongAccepted: number;
     readonly pipelineWrongAccepted: number;
@@ -82,6 +76,14 @@ export interface EvaluationReport {
   readonly limits: readonly string[];
 }
 
+// One mode's results: field-level metrics with Wilson intervals, the same rates per field name,
+// and document-clustered intervals for the overall rates (fields of one document are correlated).
+export interface Measured {
+  readonly overall: Metrics;
+  readonly perField: Readonly<Record<string, Metrics>>;
+  readonly clustered: Readonly<Record<RateName, ClusteredInterval | null>>;
+}
+
 export interface EvaluationInput {
   readonly documents: readonly EvalDocument[];
   readonly set: ExtractionSet;
@@ -92,7 +94,7 @@ export interface EvaluationInput {
 
 const LIMITS = [
   'The corpus is synthetic: generated datasheets with designed difficult cases, not vendor documents. Rates describe this corpus and say nothing about real documents.',
-  'A document counts once per field of its equipment class; fields within a document are not independent, so the intervals are optimistic.',
+  'Fields of one document are not independent. The field-level Wilson intervals treat them as if they were and are too narrow; the document-clustered intervals widen them by the observed between-document variance, and at a rate of 0 or 1 count each document once.',
   'Correct means within 0.5 percent of the ground truth after SI conversion, with a quote that is the expected one or contains the expected value.',
   'The pipeline measured is extraction, the verifier, the per-field pick and reconciliation; human review is not simulated.',
 ];
@@ -282,8 +284,22 @@ export function runEvaluation(input: EvaluationInput): EvaluationReport {
       holdout: input.split === 'holdout',
     },
     documents: { inSplit: documents.length, evaluated: results.length, skipped },
-    pipeline: { overall: pipeline, perField: perField(results, 'pipeline') },
-    naive: { overall: naive, perField: perField(results, 'naive') },
+    pipeline: {
+      overall: pipeline,
+      perField: perField(results, 'pipeline'),
+      clustered: clusteredRates(
+        results.map((r) => r.pipeline),
+        'pipeline',
+      ),
+    },
+    naive: {
+      overall: naive,
+      perField: perField(results, 'naive'),
+      clustered: clusteredRates(
+        results.map((r) => r.naive),
+        'naive',
+      ),
+    },
     prevented: {
       naiveWrongAccepted: naive.counts.wrongAccepted,
       pipelineWrongAccepted: pipeline.counts.wrongAccepted,

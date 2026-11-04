@@ -338,15 +338,15 @@ this section and the report disagree. Do not edit between the markers.
 - Extraction set: `6e27be66b126915c2ba91a1d582f745f75ee37bbe0091170ec519a837a7cfc55`, dated 2026-11-04
 - 26 documents evaluated of 27 in the split; 188 document fields, 170 with a value in the ground truth, 174 candidates
 
-| Rate (95 % Wilson interval) | Pipeline | Count | Naive baseline | Count |
-| --- | --- | --- | --- | --- |
-| Precision | 99.2 % (95.7 to 99.9) | 128 / 129 | 81.0 % (74.3 to 86.2) | 136 / 168 |
-| Recall | 75.3 % (68.3 to 81.2) | 128 / 170 | 80.0 % (73.4 to 85.3) | 136 / 170 |
-| Unsupported-value rate | 0.0 % (0.0 to 2.9) | 0 / 129 | 3.0 % (1.3 to 6.8) | 5 / 168 |
-| Verifier catch rate | 96.9 % (84.3 to 99.4) | 31 / 32 | 0.0 % (0.0 to 10.7) | 0 / 32 |
-| False-reject rate | 9.9 % (6.0 to 15.9) | 14 / 142 | 0.0 % (0.0 to 2.6) | 0 / 142 |
+| Rate | Pipeline (95 % Wilson, fields) | Pipeline, document-clustered 95 % | Count | Naive baseline | Count |
+| --- | --- | --- | --- | --- | --- |
+| Precision | 100.0 % (97.1 to 100.0) | 87.1 to 100.0 (n ≈ 26.0) | 128 / 128 | 81.0 % (74.3 to 86.2) | 136 / 168 |
+| Recall | 75.3 % (68.3 to 81.2) | 68.3 to 81.2 (n ≈ 170.0) | 128 / 170 | 80.0 % (73.4 to 85.3) | 136 / 170 |
+| Unsupported-value rate | 0.0 % (0.0 to 2.9) | 0.0 to 12.9 (n ≈ 26.0) | 0 / 128 | 3.0 % (1.3 to 6.8) | 5 / 168 |
+| Verifier catch rate | 100.0 % (89.3 to 100.0) | 83.9 to 100.0 (n ≈ 20.0) | 32 / 32 | 0.0 % (0.0 to 10.7) | 0 / 32 |
+| False-reject rate | 9.9 % (6.0 to 15.9) | 6.0 to 15.9 (n ≈ 142.0) | 14 / 142 | 0.0 % (0.0 to 2.6) | 0 / 142 |
 
-The verifier prevented 31 wrong values (naive baseline 32, pipeline 1). Full report: [evaluation/report.md](evaluation/report.md).
+The verifier prevented 32 wrong values (naive baseline 32, pipeline 0). Full report: [evaluation/report.md](evaluation/report.md).
 <!-- evaluation-results:end -->
 <!-- prettier-ignore-end -->
 
@@ -369,12 +369,20 @@ pnpm eval:gate          # compares with evaluation/baseline.json
 ## Evaluation limitations
 
 - The extraction set is simulated (above); a real-model report needs a recording run.
-- The corpus is small and synthetic: 26 dev documents with a text layer, one class of designed
-  difficulty per document at most a few times. The Wilson intervals are wide, and they assume
-  independent fields, which fields of one document are not.
+- The corpus is small and synthetic: 26 dev documents with a text layer, each designed difficulty
+  a few times at most. The field-level Wilson intervals assume independent fields, which fields of
+  one document are not; the report also gives a document-clustered interval (effective sample
+  size from the between-document variance), which is the one to quote. At a rate of 100 percent
+  it treats each document as one observation, and is wide accordingly.
+- After the audit changed the verifier, pipeline precision on the simulated dev set is 100 percent
+  (128 / 128). That says the verifier rejects every mistake **this error model** makes on **this
+  corpus**; the error model and the label rule were written by the same person, so this is the
+  most optimistic reading possible, not evidence about a real model. The holdout report predates
+  the change and is superseded (`evaluation/holdout/SUPERSEDED.md`).
 - The error model was written by the same person as the verifier, so it may favour mistakes the
   verifier was built to catch. The decoy case (a value taken from another field's line with a unit
-  of the same quantity) is one the verifier does not catch, and the report shows it.
+  of the same quantity) got through until the audit added rule (g); that rule was designed after
+  seeing the case, so the simulated numbers now flatter it.
 - The gate checks overall precision and the unsupported-value rate only; recall and per-field
   rates can fall without failing CI.
 
@@ -511,9 +519,15 @@ handling, and axe checks on the list, review and publish screens.
 
 ## Verifier limitations
 
-- The verifier proves that a quote and its number are on the page, not that the quote is about the
-  field: a real "Maximum flow: 2596 gpm" offered as the rated flow is verified. Reconciliation and
-  human review are the controls for that.
+- Rule (g), `LABEL_MISMATCH`, added by the audit, requires the value to be stated under one of its
+  field's labels (`packages/core/src/labels.ts`): the label nearest before the value, the longest
+  one where labels overlap, must belong to the field. "NPSH required 14 ft" no longer supports a
+  rated head, and "Maximum flow: 2596 gpm" no longer supports a rated flow. The label lists are
+  hand-written English; a datasheet that names a quantity in words the lists lack (another
+  language, a vendor's own abbreviation) is rejected, which costs recall and fails safe into
+  review. A quote that puts the label after the value (`260 ft (head)`) is rejected too. Labels
+  prove which quantity a line is about, not that the line is the right one: a rated value stated
+  twice with different numbers still needs reconciliation and review.
 - A unit binds only to the number written immediately before it. Layouts that put the unit
   elsewhere, such as a table header (`Flow (m³/h): 287`), a unit in brackets (`500 (gpm)`), a
   word in between (`500 nominal gpm`) or a shared unit (`400/690 V`), do not verify. That costs

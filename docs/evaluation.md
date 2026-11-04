@@ -137,7 +137,9 @@ set and fails if it differs.
 What the simulated numbers show: how the verifier and reconciliation treat these kinds of mistake.
 What they do not show: how often a real model makes them, so nothing here is model accuracy. The
 error model was written alongside the verifier, so it may lean towards mistakes the verifier was
-built to catch; the decoy case is one it does not catch, and the report shows that.
+built to catch. The decoy case (a value from another field's line with a unit of the same
+quantity) was the one it did not catch; the audit's rule (g), `LABEL_MISMATCH`, now catches it, and
+that fix was designed after seeing the case, which is exactly the risk described here.
 
 ## Correct, accepted, and the metrics
 
@@ -168,6 +170,23 @@ half   = z · √( p(1−p)/n + z²/4n² ) / (1 + z²/n)
 It stays inside [0, 1] and behaves for small n and rates near 0 or 1, which a few dozen documents
 produce. It treats fields as independent, which fields of one document are not, so the intervals
 are, if anything, too narrow.
+
+**Document-clustered intervals.** Fields of one document share a layout, a revision and an
+extraction, so they are not independent, and the field-level Wilson interval is too narrow. The
+report adds, for each overall rate, an interval that treats each document as a cluster. With
+`yᵢ` successes and `xᵢ` trials in document `i`, over the `k` documents with trials:
+
+```
+p        = Σyᵢ / Σxᵢ
+variance = k/(k−1) · Σ(yᵢ − p·xᵢ)² / (Σxᵢ)²          (ratio-estimator linearization)
+n_eff    = min(Σxᵢ, p(1−p) / variance)                 (never more than the trials)
+interval = Wilson at p with n_eff
+```
+
+At p = 0 or 1 the variance is zero and carries no information, so each document counts as one
+observation (`n_eff = k`); with one document, likewise. This is the interval to quote. It is a
+large-sample correction with few clusters, so it is approximate, but it can only widen the
+field-level interval, never narrow it.
 
 **Naive baseline.** The same extraction with the verifier switched off: the model's first
 candidate per field is accepted and nothing is rejected. The difference in wrong values accepted
@@ -223,9 +242,11 @@ This makes real calls and is never run by tests or CI. It needs a Gemini API key
 
 The holdout split was evaluated once, with the simulated set, after the verifier, the
 reconciliation rules and the error model were final: [evaluation/holdout/report.md](../evaluation/holdout/report.md).
-It was committed on its own, and nothing was changed after it. Any later change to those three
-invalidates it: the holdout would then have been seen before tuning, and a fresh holdout would be
-needed for an unbiased number.
+It was committed on its own. The audit that followed changed the verifier (rule (g),
+`LABEL_MISMATCH`), so that report is **superseded**
+([evaluation/holdout/SUPERSEDED.md](../evaluation/holdout/SUPERSEDED.md)): the holdout had been
+seen, re-running it would no longer be unbiased, and it was not re-run. An unbiased number for the
+current pipeline needs a fresh holdout split, evaluated once.
 
 A new prompt version invalidates the recordings: Replay keys include the prompt, and the report
 names the prompt version it measured.

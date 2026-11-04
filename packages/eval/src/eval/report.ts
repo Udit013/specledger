@@ -1,4 +1,4 @@
-import type { Metrics, Proportion } from './metrics.js';
+import type { ClusteredInterval, Metrics, Proportion } from './metrics.js';
 import type { EvaluationReport } from './runner.js';
 
 export const README_START = '<!-- evaluation-results:start -->';
@@ -14,6 +14,10 @@ const percent = (p: Proportion) =>
     ? 'n/a'
     : `${(p.rate * 100).toFixed(1)} % (${(p.low * 100).toFixed(1)} to ${(p.high * 100).toFixed(1)})`;
 const counted = (p: Proportion) => `${String(p.numerator)} / ${String(p.denominator)}`;
+const clusteredText = (c: ClusteredInterval | null) =>
+  c === null
+    ? 'n/a'
+    : `${(c.low * 100).toFixed(1)} to ${(c.high * 100).toFixed(1)} (n ≈ ${c.effectiveN.toFixed(1)})`;
 
 const RATES: readonly [keyof Omit<Metrics, 'counts'>, string][] = [
   ['precision', 'Precision'],
@@ -26,11 +30,11 @@ const RATES: readonly [keyof Omit<Metrics, 'counts'>, string][] = [
 function overallTable(report: EvaluationReport): string[] {
   const rows = RATES.map(
     ([key, name]) =>
-      `| ${name} | ${percent(report.pipeline.overall[key])} | ${counted(report.pipeline.overall[key])} | ${percent(report.naive.overall[key])} | ${counted(report.naive.overall[key])} |`,
+      `| ${name} | ${percent(report.pipeline.overall[key])} | ${clusteredText(report.pipeline.clustered[key])} | ${counted(report.pipeline.overall[key])} | ${percent(report.naive.overall[key])} | ${counted(report.naive.overall[key])} |`,
   );
   return [
-    '| Rate (95 % Wilson interval) | Pipeline | Count | Naive baseline | Count |',
-    '| --- | --- | --- | --- | --- |',
+    '| Rate | Pipeline (95 % Wilson, fields) | Pipeline, document-clustered 95 % | Count | Naive baseline | Count |',
+    '| --- | --- | --- | --- | --- | --- |',
     ...rows,
   ];
 }
