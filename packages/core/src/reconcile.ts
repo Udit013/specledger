@@ -189,7 +189,9 @@ function groupBy<T>(items: readonly T[], key: (item: T) => string): Map<string, 
 const agree = (a: number, b: number) =>
   Math.abs(a - b) <= RECONCILE_TOLERANCE * Math.max(Math.abs(a), Math.abs(b));
 
-function valuesAgree(a: NormalizedValue, b: NormalizedValue): boolean {
+// Two canonical values agree when they share a unit and every bound is within RECONCILE_TOLERANCE
+// (0.5 percent) of the other. Also the evaluation's definition of a correct value.
+export function valuesAgree(a: NormalizedValue, b: NormalizedValue): boolean {
   if (a.unit !== b.unit) return false;
   if (a.kind === 'scalar') return b.kind === 'scalar' && agree(a.value, b.value);
   return b.kind === 'range' && agree(a.low, b.low) && agree(a.high, b.high);

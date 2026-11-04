@@ -1,8 +1,9 @@
-import type { Candidate, VerificationResult } from '@specledger/core';
 import { describe, expect, it } from 'vitest';
 
-import { pickFields } from './process-document.js';
-import type { VerifiedCandidate } from './process-document.js';
+import type { Candidate } from './candidate.js';
+import { pickFields } from './pick.js';
+import type { VerifiedCandidate } from './pick.js';
+import type { VerificationResult } from './verifier.js';
 
 const verdict = (verified: boolean): VerificationResult => ({
   status: verified ? 'verified' : 'unverified',

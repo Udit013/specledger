@@ -6,6 +6,7 @@ export * from './equipment.js';
 export * from './normalize.js';
 export * from './numbers.js';
 export * from './page-text.js';
+export * from './pick.js';
 export * from './reconcile.js';
 export * from './records.js';
 export * from './result.js';
