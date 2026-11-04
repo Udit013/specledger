@@ -2,12 +2,14 @@ import {
   conflictRecordSchema,
   documentPageSchema,
   documentRecordSchema,
+  documentTypeSchema,
   equipmentRecordSchema,
   extractionRunRecordSchema,
   fieldRecordSchema,
   registerItemRecordSchema,
   registerVersionRecordSchema,
   reviewEventRecordSchema,
+  verificationStatusSchema,
 } from '@specledger/core';
 import type {
   ConflictRecord,
@@ -28,12 +30,15 @@ import type {
   VerificationReason,
   VerificationStatus,
 } from '@specledger/core';
-import { and, asc, eq, isNull } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import type { PgDatabase, PgQueryResultHKT } from 'drizzle-orm/pg-core';
-import type { z } from 'zod';
+import { z } from 'zod';
 
-import { notImplemented } from './not-implemented.js';
 import { createQueue } from './queue.js';
+import { toDomain } from './rows.js';
+
+// Kept here too, where callers have imported it from.
+export { StoredRowInvalidError } from './rows.js';
 import type * as schema from './schema.js';
 import {
   conflicts,
@@ -50,29 +55,6 @@ import {
 
 // Works for both the pool-backed database and an open transaction.
 type Executor = PgDatabase<PgQueryResultHKT, typeof schema>;
-
-export class StoredRowInvalidError extends Error {
-  readonly entity: string;
-  constructor(entity: string, issuePaths: readonly string[]) {
-    // Paths only: row values may be document text and never belong in an error message.
-    super(`stored ${entity} row failed validation at: ${issuePaths.join(', ') || '(root)'}`);
-    this.name = 'StoredRowInvalidError';
-    this.entity = entity;
-  }
-}
-
-// Every row entering the domain is parsed with the core schema, so a row that breaks a domain
-// invariant is reported instead of travelling further.
-function toDomain<T>(entity: string, schemaOf: z.ZodType<T>, value: unknown): T {
-  const parsed = schemaOf.safeParse(value);
-  if (!parsed.success) {
-    throw new StoredRowInvalidError(
-      entity,
-      parsed.error.issues.map((issue) => issue.path.join('.')),
-    );
-  }
-  return parsed.data;
-}
 
 function single<T>(rows: readonly T[]): T {
   const [row] = rows;
@@ -101,6 +83,17 @@ export interface NewField {
   readonly verificationReasons: readonly VerificationReason[];
   readonly reviewStatus?: ReviewStatus;
 }
+
+const reconcileSourceRowSchema = z.strictObject({
+  fieldId: z.uuid(),
+  name: z.string(),
+  value: z.string(),
+  unit: z.string(),
+  verificationStatus: verificationStatusSchema,
+  documentId: z.uuid(),
+  documentType: documentTypeSchema,
+  revision: z.string().nullable(),
+});
 
 // One stored field as reconciliation reads it: from the latest extraction run of each document of
 // a piece of equipment, with the document's type and revision.
@@ -239,16 +232,38 @@ export function createRepositories(db: Executor) {
       },
       // Insert unless the tag exists (on conflict do nothing, then select). created is false when
       // it existed; its class is returned as stored, for the caller to compare.
-      getOrCreate(input: {
+      async getOrCreate(input: {
         tag: string;
         equipmentClass: EquipmentClass;
       }): Promise<{ equipment: EquipmentRecord; created: boolean }> {
-        return notImplemented('equipment.getOrCreate', db, input);
+        const [inserted] = await db
+          .insert(equipment)
+          .values(input)
+          .onConflictDoNothing({ target: equipment.tag })
+          .returning();
+        if (inserted !== undefined) {
+          return {
+            equipment: toDomain('equipment', equipmentRecordSchema, inserted),
+            created: true,
+          };
+        }
+        const [existing] = await db.select().from(equipment).where(eq(equipment.tag, input.tag));
+        if (existing === undefined) {
+          throw new Error('equipment conflicted on its tag but was not found');
+        }
+        return {
+          equipment: toDomain('equipment', equipmentRecordSchema, existing),
+          created: false,
+        };
       },
       // Takes the row lock (SELECT ... FOR UPDATE) for the rest of the transaction, so writes and
       // reconciliation for one piece of equipment run one transaction at a time.
-      lockForUpdate(id: string): Promise<void> {
-        return notImplemented('equipment.lockForUpdate', db, id);
+      async lockForUpdate(id: string): Promise<void> {
+        await db
+          .select({ id: equipment.id })
+          .from(equipment)
+          .where(eq(equipment.id, id))
+          .for('update');
       },
       async getByTag(tag: string): Promise<EquipmentRecord | null> {
         const [row] = await db.select().from(equipment).where(eq(equipment.tag, tag));
@@ -269,7 +284,7 @@ export function createRepositories(db: Executor) {
       },
       // The run of a queue job, inserted once: on conflict on job_id do nothing, then select.
       // created is false when the job already wrote its run (a re-run after a lost completion).
-      insertForJob(input: {
+      async insertForJob(input: {
         jobId: string;
         documentId: string;
         model: string;
@@ -277,7 +292,26 @@ export function createRepositories(db: Executor) {
         tokens: number | null;
         latencyMs: number | null;
       }): Promise<{ run: ExtractionRunRecord; created: boolean }> {
-        return notImplemented('extractionRuns.insertForJob', db, input);
+        const [inserted] = await db
+          .insert(extractionRuns)
+          .values(input)
+          .onConflictDoNothing({ target: extractionRuns.jobId })
+          .returning();
+        if (inserted !== undefined) {
+          return {
+            run: toDomain('extraction_run', extractionRunRecordSchema, inserted),
+            created: true,
+          };
+        }
+        const [existing] = await db
+          .select()
+          .from(extractionRuns)
+          .where(eq(extractionRuns.jobId, input.jobId));
+        if (existing === undefined) throw new Error('run conflicted on its job but was not found');
+        return {
+          run: toDomain('extraction_run', extractionRunRecordSchema, existing),
+          created: false,
+        };
       },
       async getById(id: string): Promise<ExtractionRunRecord | null> {
         const [row] = await db.select().from(extractionRuns).where(eq(extractionRuns.id, id));
@@ -303,8 +337,37 @@ export function createRepositories(db: Executor) {
       },
       // The fields of the equipment from the latest extraction run of each of its documents
       // (latest by created_at, then id), sorted by field id.
-      listLatestForEquipment(equipmentId: string): Promise<ReconcileSourceRow[]> {
-        return notImplemented('fields.listLatestForEquipment', db, equipmentId);
+      async listLatestForEquipment(equipmentId: string): Promise<ReconcileSourceRow[]> {
+        // The latest run of each document that has fields for this equipment.
+        const latestRuns = db
+          .selectDistinctOn([extractionRuns.documentId], { id: extractionRuns.id })
+          .from(extractionRuns)
+          .innerJoin(fields, eq(fields.extractionRunId, extractionRuns.id))
+          .where(eq(fields.equipmentId, equipmentId))
+          .orderBy(
+            extractionRuns.documentId,
+            desc(extractionRuns.createdAt),
+            desc(extractionRuns.id),
+          );
+        const rows = await db
+          .select({
+            fieldId: fields.id,
+            name: fields.name,
+            value: fields.value,
+            unit: fields.unit,
+            verificationStatus: fields.verificationStatus,
+            documentId: documents.id,
+            documentType: documents.documentType,
+            revision: documents.revision,
+          })
+          .from(fields)
+          .innerJoin(extractionRuns, eq(extractionRuns.id, fields.extractionRunId))
+          .innerJoin(documents, eq(documents.id, extractionRuns.documentId))
+          .where(
+            and(eq(fields.equipmentId, equipmentId), inArray(fields.extractionRunId, latestRuns)),
+          )
+          .orderBy(asc(fields.id));
+        return rows.map((row) => toDomain('reconcile_source', reconcileSourceRowSchema, row));
       },
     },
 
@@ -319,14 +382,41 @@ export function createRepositories(db: Executor) {
       },
       // Opens a conflict unless one is already open for the field (the partial unique index on
       // open conflicts decides). created is false when it was already open.
-      openIfAbsent(input: {
+      async openIfAbsent(input: {
         equipmentId: string;
         fieldName: string;
       }): Promise<{ conflict: ConflictRecord; created: boolean }> {
-        return notImplemented('conflicts.openIfAbsent', db, input);
+        const [inserted] = await db
+          .insert(conflicts)
+          .values(input)
+          .onConflictDoNothing({
+            target: [conflicts.equipmentId, conflicts.fieldName],
+            where: sql`status = 'open'`,
+          })
+          .returning();
+        if (inserted !== undefined) {
+          return { conflict: toDomain('conflict', conflictRecordSchema, inserted), created: true };
+        }
+        const [existing] = await db
+          .select()
+          .from(conflicts)
+          .where(
+            and(
+              eq(conflicts.equipmentId, input.equipmentId),
+              eq(conflicts.fieldName, input.fieldName),
+              eq(conflicts.status, 'open'),
+            ),
+          );
+        if (existing === undefined) throw new Error('conflict was open but was not found');
+        return { conflict: toDomain('conflict', conflictRecordSchema, existing), created: false };
       },
-      listOpen(equipmentId: string): Promise<ConflictRecord[]> {
-        return notImplemented('conflicts.listOpen', db, equipmentId);
+      async listOpen(equipmentId: string): Promise<ConflictRecord[]> {
+        const rows = await db
+          .select()
+          .from(conflicts)
+          .where(and(eq(conflicts.equipmentId, equipmentId), eq(conflicts.status, 'open')))
+          .orderBy(asc(conflicts.fieldName), asc(conflicts.id));
+        return rows.map((row) => toDomain('conflict', conflictRecordSchema, row));
       },
     },
 

@@ -7,7 +7,7 @@ export type { Database, DatabaseOptions } from './database.js';
 export { JOB_STATUSES, jobRecordSchema, MAX_JOB_ATTEMPTS } from './queue-types.js';
 export type { FailOutcome, JobFailure, JobRecord, JobStatus, NewJob } from './queue-types.js';
 export type { Queue } from './queue.js';
-export { StoredRowInvalidError } from './repositories.js';
+export { StoredRowInvalidError } from './rows.js';
 export type {
   NewDocument,
   NewField,

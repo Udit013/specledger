@@ -1,5 +1,3 @@
-import { notImplemented } from './not-implemented.js';
-
 export interface BackoffPolicy {
   // Delay ceiling before the first retry; doubled for each further attempt.
   readonly baseMs: number;
@@ -17,5 +15,15 @@ export function backoffDelayMs(
   policy: BackoffPolicy,
   random: () => number,
 ): number {
-  return notImplemented('backoffDelayMs', attempt, policy, random);
+  if (!Number.isInteger(attempt) || attempt < 1) {
+    throw new RangeError('attempt must be a positive integer');
+  }
+  if (!(policy.baseMs > 0) || !(policy.capMs >= policy.baseMs)) {
+    throw new RangeError('backoff needs 0 < baseMs <= capMs');
+  }
+  // 2^(attempt - 1) overflows to Infinity for very large attempts; the cap absorbs it.
+  const ceiling = Math.min(policy.capMs, policy.baseMs * 2 ** (attempt - 1));
+  const r = random();
+  const jitter = Number.isFinite(r) ? Math.min(Math.max(r, 0), 1 - Number.EPSILON) : 0;
+  return Math.floor(jitter * ceiling);
 }
