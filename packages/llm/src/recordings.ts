@@ -6,6 +6,8 @@ import { err } from '@specledger/core';
 import { z } from 'zod';
 
 import { llmError } from './errors.js';
+import type { LlmError } from './errors.js';
+import { describeIssues } from './model-client.js';
 import { canonicalJson, replayKey } from './replay-key.js';
 import { extractionRequestSchema, extractionResponseSchema } from './types.js';
 import type { ExtractionRequest, ExtractionResponse, LlmProvider } from './types.js';
@@ -30,6 +32,17 @@ export const HOW_TO_RECORD =
 
 export const recordingPath = (dir: string, key: string) => join(dir, `${key}.json`);
 
+// The key is computed from the request, so it is validated first: a malformed request (a NaN in a
+// field range, say) is a BAD_REQUEST result, not an exception out of the key computation.
+function invalidRequest(request: ExtractionRequest): LlmError | null {
+  const parsed = extractionRequestSchema.safeParse(request);
+  return parsed.success
+    ? null
+    : llmError('BAD_REQUEST', 'The extraction request is invalid.', {
+        issues: describeIssues(parsed.error),
+      });
+}
+
 // Stable formatting, so re-recording the same answer leaves the file byte-identical.
 export const serializeRecording = (recording: Recording): string =>
   `${JSON.stringify(JSON.parse(canonicalJson(recording)), null, 2)}\n`;
@@ -46,6 +59,8 @@ export function createReplayProvider(options: ReplayOptions): LlmProvider {
     name: 'replay',
     modelId: options.modelId,
     async extract(request) {
+      const invalid = invalidRequest(request);
+      if (invalid !== null) return err(invalid);
       const key = replayKey(request, options.modelId);
       let text: string;
       try {
@@ -115,6 +130,8 @@ export function createRecordingProvider(options: RecordingOptions): LlmProvider 
       if (options.env.RECORD !== '1') {
         return err(llmError('BAD_REQUEST', 'Recording is disabled; set RECORD=1 to record.'));
       }
+      const invalid = invalidRequest(request);
+      if (invalid !== null) return err(invalid);
       if (!request.synthetic) {
         return err(llmError('BAD_REQUEST', 'Only synthetic documents may be recorded.'));
       }

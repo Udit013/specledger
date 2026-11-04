@@ -16,6 +16,12 @@ export interface FailoverOptions {
 
 // Tries providers in order. It moves on only for fail-over-able errors (see errors.ts), and then
 // rests that provider for cooldownMs; any other error is returned at once.
+//
+// timeoutMs applies to each provider attempt, so with n providers a call can take up to
+// n x timeoutMs. That is deliberate: a deadline shared across attempts would leave nothing for the
+// next provider after a TIMEOUT, which is one of the cases failover exists for. A caller that needs
+// an overall bound passes a signal (for example AbortSignal.timeout); it is shared by every
+// attempt, and once it fires no further provider is tried (ABORTED).
 export function createFailoverProvider(options: FailoverOptions): LlmProvider {
   if (options.providers.length === 0) {
     throw new Error('FailoverProvider needs at least one provider');

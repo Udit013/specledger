@@ -116,6 +116,38 @@ describe('ReplayProvider', () => {
   });
 });
 
+describe('invalid requests', () => {
+  // A NaN cannot be put into canonical JSON; before validation this threw out of the key.
+  const malformed = () => {
+    const request = pumpRequest();
+    return {
+      ...request,
+      fields: request.fields.map((field, index) =>
+        index === 0 ? { ...field, plausibleRange: { min: Number.NaN, max: 1 } } : field,
+      ),
+    };
+  };
+
+  it('are a BAD_REQUEST result from Replay, not an exception', async () => {
+    const result = await createReplayProvider({ dir, modelId: 'gemini-x' }).extract(
+      malformed(),
+      OPTIONS,
+    );
+    expect(result).toMatchObject({ ok: false, error: { code: 'BAD_REQUEST' } });
+  });
+
+  it('are a BAD_REQUEST result from the recorder, which then calls nothing', async () => {
+    const inner = fakeProvider('gemini', [okResult('gemini-model')]);
+    const recorder = createRecordingProvider({ inner, dir, env: { RECORD: '1' } });
+    expect(await recorder.extract(malformed(), OPTIONS)).toMatchObject({
+      ok: false,
+      error: { code: 'BAD_REQUEST' },
+    });
+    expect(inner.calls).toBe(0);
+    expect(readdirSync(dir)).toEqual([]);
+  });
+});
+
 describe('RecordingProvider', () => {
   it.each<[string, Record<string, string>, boolean]>([
     ['RECORD is unset', {}, true],

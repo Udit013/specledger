@@ -197,6 +197,8 @@ Known gaps at this stage:
   tell from page text whether a document is synthetic; the flag must only be set for corpus
   documents.
 - Failover cooldowns live in memory per process and are not shared between processes.
+- `timeoutMs` bounds each provider attempt, so a failover call can take up to the number of
+  providers times `timeoutMs`; an overall deadline is set with the abort signal.
 - Prompt-injection defense here is limited to delimiting the data and instructing the model; a
   model may still obey embedded text. The defense is the verifier (Phase 5), which requires each
   value to be supported by a quote on the page.
