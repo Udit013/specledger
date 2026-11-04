@@ -35,6 +35,20 @@ describe('conflicts panel', () => {
     expect(section.textContent).toMatch(/The rules cannot choose/);
   });
 
+  it('says which candidate a reviewer rejected', async () => {
+    const state = fakeApi();
+    const conflict = state.conflicts[0];
+    const first = conflict?.candidates[0];
+    if (conflict === undefined || first === undefined) throw new Error('fixture');
+    state.conflicts[0] = {
+      ...conflict,
+      candidates: [{ ...first, reviewStatus: 'rejected' }, ...conflict.candidates.slice(1)],
+    };
+    renderApp({ hash: '#/conflicts' });
+    const section = await screen.findByRole('region', { name: 'P-106 rated_head' });
+    expect(within(section).getAllByText('Rejected in review')).toHaveLength(1);
+  });
+
   it('marks the candidate the rules would choose', async () => {
     const state = fakeApi();
     const conflict = state.conflicts[0];

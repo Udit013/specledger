@@ -131,6 +131,11 @@ function ConflictCard({ conflict }: { readonly conflict: ConflictView }) {
                     Suggested by the rules
                   </span>
                 ) : null}
+                {candidate.reviewStatus === 'rejected' ? (
+                  <span className="ml-2 rounded border border-red-700 px-1 text-xs">
+                    Rejected in review
+                  </span>
+                ) : null}
                 <blockquote className="mt-1 border-l-4 pl-2 font-mono text-xs">
                   {candidate.quote}
                 </blockquote>

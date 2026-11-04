@@ -1,9 +1,10 @@
+import { supersedes } from '@specledger/core';
 import type { FieldRecord, ReviewFieldBody, ReviewStatus } from '@specledger/core';
-import type { Database } from '@specledger/db';
+import type { Database, ReconcileSourceRow, Repositories } from '@specledger/db';
 
 import { ApiError, notFound } from '../http/errors.js';
 import { fieldView } from '../http/views.js';
-import { acceptableValue, definitionOf, invalidValue } from './decisions.js';
+import { acceptableValue, definitionOf, invalidValue, lineageOf } from './decisions.js';
 
 export interface ReviewInput {
   readonly fieldId: string;
@@ -29,11 +30,67 @@ const audited = (field: FieldRecord) => ({
   version: field.version,
 });
 
+// Rejecting the value of the document that takes precedence for a field (a later revision, or a
+// higher-ranked source) would let publishing fall back to a value it supersedes: the rejection says
+// the extraction is wrong, not that the document has no value, and the newer document may state
+// something else. When some remaining candidate is superseded by the rejected one and no human
+// decision covers the field, a conflict is opened, so publishing waits for a person to choose.
+// Runs under the equipment lock, as the worker and resolution do, so it sees every committed field.
+async function guardRejectedPrecedence(
+  tx: Repositories,
+  field: FieldRecord,
+  actor: string,
+  reason: string | null,
+): Promise<void> {
+  await tx.equipment.lockForUpdate(field.equipmentId);
+  const equipment = await tx.equipment.getById(field.equipmentId);
+  if (equipment === null) return;
+  const rows = (await tx.fields.listLatestForEquipment(field.equipmentId)).filter(
+    (row) => row.name === field.name,
+  );
+  const rejected = rows.find((row) => row.fieldId === field.id);
+  // A field of an older extraction run of its document no longer competes.
+  if (rejected === undefined) return;
+  const keyOf = (row: ReconcileSourceRow) => ({
+    lineage: lineageOf(equipment.tag, row.documentType),
+    sourceType: row.documentType,
+    revision: row.revision,
+  });
+  const superseded = rows.filter(
+    (row) =>
+      row.fieldId !== field.id &&
+      row.reviewStatus !== 'rejected' &&
+      supersedes(keyOf(rejected), keyOf(row)),
+  );
+  if (superseded.length === 0) return;
+  const decided = await tx.conflicts.listDecisions(field.equipmentId);
+  if (decided.some((decision) => decision.fieldName === field.name)) return;
+  const opened = await tx.conflicts.openIfAbsent({
+    equipmentId: field.equipmentId,
+    fieldName: field.name,
+  });
+  if (!opened.created) return;
+  await tx.reviewEvents.append({
+    subject: { kind: 'conflict', conflictId: opened.conflict.id },
+    actor,
+    action: 'reject',
+    before: null,
+    after: {
+      status: 'open',
+      reason: 'PRECEDENCE_REJECTED',
+      rejectedFieldId: field.id,
+      supersededFieldIds: superseded.map((row) => row.fieldId),
+    },
+    reason,
+  });
+}
+
 // Applies a review action with optimistic concurrency, writing the field and its audit event in one
 // transaction. accept and reject keep the value; edit replaces it, and the new value must be
 // readable for the field (a number and a unit of the field's quantity). Accepting an unverified
 // value requires a reason. A stale expectedVersion is a 409 VERSION_CONFLICT carrying the current
-// field; an unknown field is a 404.
+// field; an unknown field is a 404. A rejection that would let a superseded value through opens a
+// conflict (guardRejectedPrecedence).
 export function reviewField(database: Database, input: ReviewInput): Promise<FieldRecord> {
   const { body } = input;
   return database.transaction(async (tx) => {
@@ -74,6 +131,9 @@ export function reviewField(database: Database, input: ReviewInput): Promise<Fie
       after: audited(outcome.field),
       reason: body.reason ?? null,
     });
+    if (body.action === 'reject') {
+      await guardRejectedPrecedence(tx, outcome.field, input.actor, body.reason ?? null);
+    }
     return outcome.field;
   });
 }

@@ -189,6 +189,17 @@ function groupBy<T>(items: readonly T[], key: (item: T) => string): Map<string, 
 const agree = (a: number, b: number) =>
   Math.abs(a - b) <= RECONCILE_TOLERANCE * Math.max(Math.abs(a), Math.abs(b));
 
+// Whether candidate a takes precedence over candidate b by reconciliation's rules, values aside:
+// within one lineage a later revision supersedes an earlier one (an unknown revision ranks
+// lowest), and across lineages the higher source rank wins. Equal precedence is not superseding.
+export function supersedes(
+  a: Pick<ReconcileCandidate, 'lineage' | 'sourceType' | 'revision'>,
+  b: Pick<ReconcileCandidate, 'lineage' | 'sourceType' | 'revision'>,
+): boolean {
+  if (a.lineage === b.lineage) return compareRevisions(a.revision, b.revision) > 0;
+  return SOURCE_RANK[a.sourceType] > SOURCE_RANK[b.sourceType];
+}
+
 // Two canonical values agree when they share a unit and every bound is within RECONCILE_TOLERANCE
 // (0.5 percent) of the other. Also the evaluation's definition of a correct value.
 export function valuesAgree(a: NormalizedValue, b: NormalizedValue): boolean {
