@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import type { Query } from '@tanstack/react-query';
 import { useRef } from 'react';
 
+import { DOCUMENT_PAGE_SIZE } from '../api/client.js';
 import { useServices } from '../context.js';
 import { pollDelay } from '../lib/backoff.js';
 import { JOB_LABELS } from '../lib/labels.js';
@@ -63,53 +64,60 @@ export function DocumentList() {
       ) : documents.data.length === 0 ? (
         <p>No documents yet. Upload one with POST /documents, then it appears here.</p>
       ) : (
-        <table className="w-full table-fixed border-collapse text-sm">
-          <caption className="sr-only">Documents and their processing status</caption>
-          <thead>
-            <tr className="border-b text-left">
-              <th scope="col" className="w-2/5 py-1">
-                Document
-              </th>
-              <th scope="col">Type</th>
-              <th scope="col">Revision</th>
-              <th scope="col">Pages</th>
-              <th scope="col" className="w-40">
-                Processing
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {documents.data.map((d) => {
-              const label = JOB_LABELS[d.processing.status];
-              return (
-                <tr key={d.id} className="border-b">
-                  <td className="truncate py-1">
-                    <a
-                      href={hrefFor({ name: 'review', documentId: d.id })}
-                      className="text-blue-800 underline"
-                      aria-label={`Review ${d.originalFilename}`}
-                    >
-                      {d.originalFilename}
-                    </a>
-                  </td>
-                  <td>{d.documentType}</td>
-                  <td>{d.revision ?? '—'}</td>
-                  <td>{d.pageCount}</td>
-                  <td>
-                    <Status
-                      text={label.text}
-                      symbol={label.symbol}
-                      tone={TONES[d.processing.status]}
-                    />
-                    {d.processing.lastErrorCode === null ? null : (
-                      <span className="ml-1 text-xs">{d.processing.lastErrorCode}</span>
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+        <>
+          {documents.data.length >= DOCUMENT_PAGE_SIZE ? (
+            <p className="mb-2 text-sm">
+              Showing the newest {DOCUMENT_PAGE_SIZE} documents. Older ones are not listed here.
+            </p>
+          ) : null}
+          <table className="w-full table-fixed border-collapse text-sm">
+            <caption className="sr-only">Documents and their processing status</caption>
+            <thead>
+              <tr className="border-b text-left">
+                <th scope="col" className="w-2/5 py-1">
+                  Document
+                </th>
+                <th scope="col">Type</th>
+                <th scope="col">Revision</th>
+                <th scope="col">Pages</th>
+                <th scope="col" className="w-40">
+                  Processing
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {documents.data.map((d) => {
+                const label = JOB_LABELS[d.processing.status];
+                return (
+                  <tr key={d.id} className="border-b">
+                    <td className="truncate py-1">
+                      <a
+                        href={hrefFor({ name: 'review', documentId: d.id })}
+                        className="text-blue-800 underline"
+                        aria-label={`Review ${d.originalFilename}`}
+                      >
+                        {d.originalFilename}
+                      </a>
+                    </td>
+                    <td>{d.documentType}</td>
+                    <td>{d.revision ?? '—'}</td>
+                    <td>{d.pageCount}</td>
+                    <td>
+                      <Status
+                        text={label.text}
+                        symbol={label.symbol}
+                        tone={TONES[d.processing.status]}
+                      />
+                      {d.processing.lastErrorCode === null ? null : (
+                        <span className="ml-1 text-xs">{d.processing.lastErrorCode}</span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </>
       )}
     </section>
   );

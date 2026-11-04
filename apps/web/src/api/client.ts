@@ -69,6 +69,9 @@ export class ApiClientError extends Error {
   }
 }
 
+// The most documents the list asks for (the API's maximum page size).
+export const DOCUMENT_PAGE_SIZE = 100;
+
 type Role = 'engineer' | 'approver';
 
 export interface ApiClientOptions {
@@ -166,7 +169,8 @@ export function createApiClient(options: ApiClientOptions) {
 
   return {
     async listDocuments(): Promise<DocumentSummary[]> {
-      return (await request(documentListSchema, '/documents?limit=100')).documents;
+      return (await request(documentListSchema, `/documents?limit=${String(DOCUMENT_PAGE_SIZE)}`))
+        .documents;
     },
     getDocument(documentId: string): Promise<DocumentSummary> {
       return request(documentSummarySchema, `/documents/${id(documentId)}`);
