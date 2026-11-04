@@ -197,6 +197,11 @@ describe('record invariants', () => {
       equipmentId: ids.equipmentId,
       fieldName: 'rated_head',
       createdAt: new Date(0),
+      resolvedBy: null,
+      chosenFieldId: null,
+      decidedValue: null,
+      decidedUnit: null,
+      basedOn: null,
     };
     expect(
       conflictRecordSchema.safeParse({
@@ -214,6 +219,33 @@ describe('record invariants', () => {
         resolvedAt: null,
       }).success,
     ).toBe(true);
+  });
+
+  it('requires a resolved conflict to record its decision, and an open one to have none', () => {
+    const resolved = {
+      id: ids.id,
+      equipmentId: ids.equipmentId,
+      fieldName: 'rated_head',
+      status: 'resolved',
+      resolution: 'datasheet over brochure',
+      createdAt: new Date(0),
+      resolvedAt: new Date(1),
+      resolvedBy: 'role:engineer',
+      chosenFieldId: null,
+      decidedValue: '45',
+      decidedUnit: 'm',
+      basedOn: [{ candidateId: ids.id, lineage: 'P-1:datasheet', revision: 'Rev A' }],
+    };
+    expect(conflictRecordSchema.safeParse(resolved).success).toBe(true);
+    expect(conflictRecordSchema.safeParse({ ...resolved, decidedValue: null }).success).toBe(false);
+    expect(
+      conflictRecordSchema.safeParse({
+        ...resolved,
+        status: 'open',
+        resolution: null,
+        resolvedAt: null,
+      }).success,
+    ).toBe(false);
   });
 
   it('requires a published register version to name its approver', () => {

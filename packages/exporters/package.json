@@ -16,5 +16,9 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "test": "vitest run --dir src"
+  },
+  "dependencies": {
+    "@specledger/core": "workspace:*",
+    "zod": "4.6.7"
   }
 }

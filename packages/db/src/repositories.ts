@@ -9,9 +9,12 @@ import {
   registerItemRecordSchema,
   registerVersionRecordSchema,
   reviewEventRecordSchema,
+  reviewStatusSchema,
   verificationStatusSchema,
 } from '@specledger/core';
 import type {
+  ConflictStatus,
+  DecisionBasis,
   ConflictRecord,
   DocumentPage,
   DocumentRecord,
@@ -34,7 +37,9 @@ import { and, asc, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import type { PgDatabase, PgQueryResultHKT } from 'drizzle-orm/pg-core';
 import { z } from 'zod';
 
+import { notImplemented } from './not-implemented.js';
 import { createQueue } from './queue.js';
+import type { JobStatus } from './queue-types.js';
 import { toDomain } from './rows.js';
 
 // Kept here too, where callers have imported it from.
@@ -90,6 +95,7 @@ const reconcileSourceRowSchema = z.strictObject({
   value: z.string(),
   unit: z.string(),
   verificationStatus: verificationStatusSchema,
+  reviewStatus: reviewStatusSchema,
   documentId: z.uuid(),
   documentType: documentTypeSchema,
   revision: z.string().nullable(),
@@ -103,9 +109,62 @@ export interface ReconcileSourceRow {
   readonly value: string;
   readonly unit: string;
   readonly verificationStatus: VerificationStatus;
+  readonly reviewStatus: ReviewStatus;
   readonly documentId: string;
   readonly documentType: DocumentType;
   readonly revision: string | null;
+}
+
+// A document with the state of its processing job (null when it has none).
+export interface DocumentWithProcessing {
+  readonly document: DocumentRecord;
+  readonly job: {
+    readonly id: string;
+    readonly status: JobStatus;
+    readonly attempts: number;
+    readonly lastError: string | null;
+  } | null;
+}
+
+export type ReviewOutcome =
+  | { readonly kind: 'updated'; readonly field: FieldRecord }
+  | { readonly kind: 'stale'; readonly current: FieldRecord }
+  | { readonly kind: 'missing' };
+
+export interface ConflictWithTag extends ConflictRecord {
+  readonly equipmentTag: string;
+}
+
+export interface ResolveInput {
+  readonly id: string;
+  readonly resolvedBy: string;
+  readonly reason: string;
+  readonly resolvedAt: Date;
+  readonly chosenFieldId: string | null;
+  readonly decidedValue: string;
+  readonly decidedUnit: string;
+  readonly basedOn: readonly DecisionBasis[];
+}
+
+// What stands in the way of publishing, as stored data. Reconciliation of accepted values adds a
+// fourth kind, computed by the caller.
+export interface StoredPublishBlockers {
+  readonly jobsInProgress: readonly { readonly jobId: string; readonly documentId: string }[];
+  readonly pendingFields: readonly {
+    readonly fieldId: string;
+    readonly equipmentTag: string;
+    readonly fieldName: string;
+  }[];
+  readonly openConflicts: readonly {
+    readonly conflictId: string;
+    readonly equipmentTag: string;
+    readonly fieldName: string;
+  }[];
+}
+
+export interface PublishedVersion {
+  readonly version: RegisterVersionRecord;
+  readonly items: readonly RegisterItemRecord[];
 }
 
 export interface NewReviewEvent {
@@ -207,6 +266,16 @@ export function createRepositories(db: Executor) {
       ): Promise<void> {
         if (pages.length === 0) return;
         await db.insert(documentPages).values(pages.map((page) => ({ documentId, ...page })));
+      },
+      // Newest first (created_at, then id), with the state of each document's processing job.
+      list(options: { limit: number; offset: number }): Promise<DocumentWithProcessing[]> {
+        return notImplemented('documents.list', db, options);
+      },
+      getWithProcessing(id: string): Promise<DocumentWithProcessing | null> {
+        return notImplemented('documents.getWithProcessing', db, id);
+      },
+      getPage(documentId: string, pageNumber: number): Promise<DocumentPage | null> {
+        return notImplemented('documents.getPage', db, documentId, pageNumber);
       },
       async listPages(documentId: string): Promise<DocumentPage[]> {
         const rows = await db
@@ -335,6 +404,22 @@ export function createRepositories(db: Executor) {
         const [row] = await db.select().from(fields).where(eq(fields.id, id));
         return row === undefined ? null : toDomain('field', fieldRecordSchema, row);
       },
+      // The fields of the document's latest extraction run, by name.
+      listLatestForDocument(documentId: string): Promise<FieldRecord[]> {
+        return notImplemented('fields.listLatestForDocument', db, documentId);
+      },
+      // Optimistic concurrency: UPDATE ... WHERE id = $1 AND version = $2, bumping the version.
+      // Zero rows means the field changed since it was read (stale, with its current state) or
+      // does not exist (missing).
+      review(input: {
+        id: string;
+        expectedVersion: number;
+        reviewStatus: ReviewStatus;
+        value?: string;
+        unit?: string;
+      }): Promise<ReviewOutcome> {
+        return notImplemented('fields.review', db, input);
+      },
       // The fields of the equipment from the latest extraction run of each of its documents
       // (latest by created_at, then id), sorted by field id.
       async listLatestForEquipment(equipmentId: string): Promise<ReconcileSourceRow[]> {
@@ -356,6 +441,7 @@ export function createRepositories(db: Executor) {
             value: fields.value,
             unit: fields.unit,
             verificationStatus: fields.verificationStatus,
+            reviewStatus: fields.reviewStatus,
             documentId: documents.id,
             documentType: documents.documentType,
             revision: documents.revision,
@@ -410,6 +496,21 @@ export function createRepositories(db: Executor) {
         if (existing === undefined) throw new Error('conflict was open but was not found');
         return { conflict: toDomain('conflict', conflictRecordSchema, existing), created: false };
       },
+      // With the equipment tag, oldest first; all conflicts, or those with the given status.
+      list(options: { status?: ConflictStatus }): Promise<ConflictWithTag[]> {
+        return notImplemented('conflicts.list', db, options);
+      },
+      getWithTag(id: string): Promise<ConflictWithTag | null> {
+        return notImplemented('conflicts.getWithTag', db, id);
+      },
+      // Records the decision on an open conflict. Null, changing nothing, if it is not open.
+      resolve(input: ResolveInput): Promise<ConflictRecord | null> {
+        return notImplemented('conflicts.resolve', db, input);
+      },
+      // The latest resolved conflict of each field of the equipment: its standing decisions.
+      listDecisions(equipmentId: string): Promise<ConflictRecord[]> {
+        return notImplemented('conflicts.listDecisions', db, equipmentId);
+      },
       async listOpen(equipmentId: string): Promise<ConflictRecord[]> {
         const rows = await db
           .select()
@@ -454,6 +555,20 @@ export function createRepositories(db: Executor) {
     },
 
     register: {
+      // Locks the counter row (SELECT ... FOR UPDATE) for the rest of the transaction, advances it
+      // and returns the new number, so concurrent publishes take consecutive numbers in turn.
+      takeNextNumber(): Promise<number> {
+        return notImplemented('register.takeNextNumber', db);
+      },
+      blockers(): Promise<StoredPublishBlockers> {
+        return notImplemented('register.blockers', db);
+      },
+      getPublished(number: number): Promise<PublishedVersion | null> {
+        return notImplemented('register.getPublished', db, number);
+      },
+      listEquipment(): Promise<EquipmentRecord[]> {
+        return notImplemented('register.listEquipment', db);
+      },
       async createDraftVersion(number: number): Promise<RegisterVersionRecord> {
         const row = single(await db.insert(registerVersions).values({ number }).returning());
         return toDomain('register_version', registerVersionRecordSchema, row);

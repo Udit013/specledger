@@ -257,9 +257,18 @@ export const conflicts = pgTable(
       .references(() => equipment.id, { onDelete: 'restrict' }),
     fieldName: text('field_name').notNull(),
     status: text('status').notNull().default('open'),
+    // The reviewer's reason for the resolution.
     resolution: text('resolution'),
     createdAt: createdAt(),
     resolvedAt: timestamp('resolved_at', { withTimezone: true }),
+    // The structured decision (Phase 8): who decided, the value and unit chosen (taken from
+    // chosen_field_id, or entered by the reviewer when that is null), and the candidates the
+    // decision was based on, which reconciliation uses to tell when it needs a second look.
+    resolvedBy: text('resolved_by'),
+    chosenFieldId: uuid('chosen_field_id').references(() => fields.id, { onDelete: 'restrict' }),
+    decidedValue: text('decided_value'),
+    decidedUnit: text('decided_unit'),
+    basedOn: jsonb('based_on'),
   },
   (t) => [
     index('conflicts_equipment_id_idx').on(t.equipmentId),
@@ -275,6 +284,30 @@ export const conflicts = pgTable(
       'conflicts_resolution_matches_status',
       sql`(${t.status} = 'resolved') = (${t.resolution} is not null and ${t.resolvedAt} is not null)`,
     ),
+    // Named to sort after the resolution checks above: Postgres checks constraints in name order.
+    check(
+      'conflicts_resolved_has_decision',
+      sql`(${t.status} = 'resolved') = (${t.resolvedBy} is not null and ${t.decidedValue} is not null
+        and ${t.decidedUnit} is not null and ${t.basedOn} is not null)`,
+    ),
+    check('conflicts_resolved_by_length', lengthBetween(t.resolvedBy, 1, TEXT_LIMITS.person)),
+    check('conflicts_decided_value_length', lengthBetween(t.decidedValue, 1, TEXT_LIMITS.value)),
+    check('conflicts_decided_unit_length', lengthBetween(t.decidedUnit, 1, TEXT_LIMITS.unit)),
+    check('conflicts_based_on_array', sql`jsonb_typeof(${t.basedOn}) = 'array'`),
+  ],
+);
+
+// One row, locked by every publish (SELECT ... FOR UPDATE), so concurrent publishes take
+// consecutive register version numbers one at a time instead of racing on MAX(number) + 1.
+export const registerCounter = pgTable(
+  'register_counter',
+  {
+    id: integer('id').primaryKey(),
+    lastNumber: integer('last_number').notNull(),
+  },
+  (t) => [
+    check('register_counter_single_row', sql`${t.id} = 1`),
+    check('register_counter_last_number_nonnegative', sql`${t.lastNumber} >= 0`),
   ],
 );
 

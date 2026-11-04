@@ -80,6 +80,15 @@ export const fieldRecordSchema = z
   );
 export type FieldRecord = z.infer<typeof fieldRecordSchema>;
 
+// A candidate a human decision was based on: the stored field, and the lineage and revision of
+// its document, kept so a later revision can be recognised as new evidence.
+export const decisionBasisSchema = z.strictObject({
+  candidateId: id,
+  lineage: z.string().min(1).max(200),
+  revision: z.string().min(1).max(32).nullable(),
+});
+export type DecisionBasis = z.infer<typeof decisionBasisSchema>;
+
 export const conflictRecordSchema = z
   .strictObject({
     id,
@@ -89,10 +98,24 @@ export const conflictRecordSchema = z
     resolution: z.string().min(1).nullable(),
     createdAt: timestamp,
     resolvedAt: timestamp.nullable(),
+    resolvedBy: z.string().min(1).max(TEXT_LIMITS.person).nullable(),
+    chosenFieldId: id.nullable(),
+    decidedValue: candidateSchema.shape.value.nullable(),
+    decidedUnit: candidateSchema.shape.unit.nullable(),
+    basedOn: z.array(decisionBasisSchema).nullable(),
   })
   .refine((c) => (c.status === 'resolved') === (c.resolution !== null && c.resolvedAt !== null), {
     message: 'a resolved conflict has a resolution and a resolvedAt; an open one has neither',
-  });
+  })
+  .refine(
+    (c) =>
+      (c.status === 'resolved') ===
+      (c.resolvedBy !== null &&
+        c.decidedValue !== null &&
+        c.decidedUnit !== null &&
+        c.basedOn !== null),
+    { message: 'a resolved conflict records its decision; an open one has none' },
+  );
 export type ConflictRecord = z.infer<typeof conflictRecordSchema>;
 
 export const reviewEventSubjectSchema = z.discriminatedUnion('kind', [

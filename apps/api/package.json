@@ -21,11 +21,16 @@
     "worker": "node --env-file-if-exists=../../.env dist/worker/main.js"
   },
   "dependencies": {
+    "@fastify/cors": "11.3.1",
+    "@fastify/helmet": "13.2.0",
+    "@fastify/multipart": "10.1.4",
+    "@fastify/rate-limit": "11.2.1",
     "@specledger/core": "workspace:*",
     "@specledger/db": "workspace:*",
     "@specledger/eval": "workspace:*",
     "@specledger/ingest": "workspace:*",
     "@specledger/llm": "workspace:*",
+    "fastify": "5.12.7",
     "pino": "10.4.0",
     "zod": "4.6.7"
   },

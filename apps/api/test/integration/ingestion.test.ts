@@ -10,6 +10,7 @@ import {
   sha256Hex,
 } from '@specledger/ingest';
 import type { IngestStore } from '@specledger/ingest';
+import { PROMPT_VERSION } from '@specledger/llm';
 import { describe, expect, it } from 'vitest';
 
 import { createIngestion } from '../../src/ingestion.js';
@@ -74,7 +75,7 @@ describe('ingestion against Postgres', () => {
     expect(result.value.job).toMatchObject({
       type: 'process_document',
       status: 'queued',
-      idempotencyKey: `process_document:${result.value.document.id}`,
+      idempotencyKey: `process_document:${result.value.document.sha256}:${PROMPT_VERSION}`,
       payload: {
         documentId: result.value.document.id,
         equipmentTag: 'P-106',

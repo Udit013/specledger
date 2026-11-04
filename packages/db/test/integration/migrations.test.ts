@@ -14,6 +14,7 @@ const EXPECTED_TABLES = [
   'extraction_runs',
   'fields',
   'jobs',
+  'register_counter',
   'register_items',
   'register_versions',
   'review_events',
@@ -38,7 +39,7 @@ describe('migrations', () => {
   it('apply cleanly into an empty schema', async () => {
     const { tables, applied } = await snapshot();
     expect(tables.map((row) => row.table_name)).toEqual(EXPECTED_TABLES);
-    expect(applied).toHaveLength(4);
+    expect(applied).toHaveLength(5);
   });
 
   it('install the immutability triggers', async () => {

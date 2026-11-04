@@ -29,6 +29,13 @@
       "when": 1793761905502,
       "tag": "0003_jobs_queue",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793764488147,
+      "tag": "0004_register_publish_and_decisions",
+      "breakpoints": true
     }
   ]
 }

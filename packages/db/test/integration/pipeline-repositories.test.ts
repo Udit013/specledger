@@ -119,7 +119,9 @@ describe('conflicts.openIfAbsent', () => {
     expect(await repos().conflicts.listOpen(equipment.id)).toEqual([first.conflict]);
 
     await testDb.query(
-      `update conflicts set status = 'resolved', resolution = 'datasheet value', resolved_at = now() where id = $1`,
+      `update conflicts set status = 'resolved', resolution = 'datasheet value', resolved_at = now(),
+         resolved_by = 'role:engineer', decided_value = '45', decided_unit = 'm', based_on = '[]'
+       where id = $1`,
       [first.conflict.id],
     );
     const reopened = await repos().conflicts.openIfAbsent(input);
@@ -183,6 +185,7 @@ describe('fields.listLatestForEquipment', () => {
         value: '45',
         unit: 'm',
         verificationStatus: 'verified',
+        reviewStatus: 'pending',
         documentId: docA.id,
         documentType: 'datasheet',
         revision: 'Rev B',
@@ -193,6 +196,7 @@ describe('fields.listLatestForEquipment', () => {
         value: '44',
         unit: 'm',
         verificationStatus: 'verified',
+        reviewStatus: 'pending',
         documentId: docB.id,
         documentType: 'brochure',
         revision: null,

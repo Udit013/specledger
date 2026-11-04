@@ -9,9 +9,15 @@ export type { FailOutcome, JobFailure, JobRecord, JobStatus, NewJob } from './qu
 export type { Queue } from './queue.js';
 export { StoredRowInvalidError } from './rows.js';
 export type {
+  ConflictWithTag,
+  DocumentWithProcessing,
   NewDocument,
   NewField,
   NewReviewEvent,
+  PublishedVersion,
   ReconcileSourceRow,
   Repositories,
+  ResolveInput,
+  ReviewOutcome,
+  StoredPublishBlockers,
 } from './repositories.js';
