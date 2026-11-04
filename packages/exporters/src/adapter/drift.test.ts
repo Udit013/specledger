@@ -34,7 +34,7 @@ describe('detectDrift', () => {
   });
 
   it('lists removed fields as incompatible', () => {
-    const { revision: _revision, ...rest } = VALID;
+    const rest = Object.fromEntries(Object.entries(VALID).filter(([key]) => key !== 'revision'));
     expect(detectDrift(SHAPE, rest)).toEqual({
       compatible: false,
       differences: [{ path: 'revision', kind: 'removed', expected: 'number', actual: null }],

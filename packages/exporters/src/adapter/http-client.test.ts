@@ -101,15 +101,15 @@ describe('upsertAsset against the mock', () => {
   it('gives up without waiting when Retry-After exceeds the cap', async () => {
     mock.inject({ kind: 'rate_limited', retryAfter: '60' });
     const result = await client().upsertAsset(PAYLOAD, KEY);
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       ok: false,
-      error: expect.objectContaining({
+      error: {
         code: 'RATE_LIMITED',
         retryable: true,
         attempts: 1,
         status: 429,
         retryAfterMs: 60_000,
-      }),
+      },
     });
     expect(waits).toEqual([]);
   });
@@ -134,15 +134,15 @@ describe('upsertAsset against the mock', () => {
   it('does not retry a 400 validation error, and reports the failing fields', async () => {
     mock.inject({ kind: 'validation' });
     const result = await client().upsertAsset(PAYLOAD, KEY);
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       ok: false,
-      error: expect.objectContaining({
+      error: {
         code: 'VALIDATION_FAILED',
         retryable: false,
         attempts: 1,
         status: 400,
         fields: ['attributes.0.unit'],
-      }),
+      },
     });
     expect(mock.requests()).toHaveLength(1);
     expect(waits).toEqual([]);
@@ -224,13 +224,13 @@ describe('upsertAsset against the mock', () => {
     async (mode, difference) => {
       mock.inject({ kind: 'drift', mode });
       const result = await client().upsertAsset(PAYLOAD, KEY);
-      expect(result).toEqual({
+      expect(result).toMatchObject({
         ok: false,
-        error: expect.objectContaining({
+        error: {
           code: 'RESPONSE_SCHEMA_DRIFT',
           retryable: false,
           drift: { compatible: false, differences: [difference] },
-        }),
+        },
       });
     },
   );
@@ -246,6 +246,21 @@ describe('upsertAsset against the mock', () => {
       error: { code: 'NETWORK', attempts: 2, status: null },
     });
     expect(waits).toEqual([50]);
+  });
+
+  it.each([500, 502, 504, 418])('does not retry an unexpected %i', async (status) => {
+    let calls = 0;
+    const result = await client({
+      fetch: () => {
+        calls += 1;
+        return Promise.resolve(new Response('{}', { status }));
+      },
+    }).upsertAsset(PAYLOAD, KEY);
+    expect(result).toMatchObject({
+      ok: false,
+      error: { code: 'UNEXPECTED_STATUS', status, retryable: false, attempts: 1 },
+    });
+    expect(calls).toBe(1);
   });
 
   it('stops when the caller aborts', async () => {

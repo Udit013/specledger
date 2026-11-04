@@ -11,7 +11,7 @@ import {
   uploadFieldsSchema,
 } from '@specledger/core';
 import type { ReviewEventSubject } from '@specledger/core';
-import { exportRegisterCsv, exportRegisterJson } from '@specledger/exporters';
+import { exporterFor } from '@specledger/exporters';
 import type { IngestError } from '@specledger/ingest';
 import type { FastifyInstance } from 'fastify';
 import type { z } from 'zod';
@@ -258,13 +258,12 @@ export function registerRoutes(app: FastifyInstance, deps: AppDeps): void {
       publishedAt: version.publishedAt,
       items: items.map((item) => ({ tag: item.tag, values: item.values })),
     };
+    const exporter = exporterFor(format);
     void reply.header(
       'content-disposition',
-      `attachment; filename="register-v${String(version.number)}.${format}"`,
+      `attachment; filename="register-v${String(version.number)}.${exporter.extension}"`,
     );
-    return format === 'csv'
-      ? reply.type('text/csv; charset=utf-8').send(exportRegisterCsv(exportable))
-      : reply.type('application/json; charset=utf-8').send(exportRegisterJson(exportable));
+    return reply.type(exporter.contentType).send(exporter.render(exportable));
   });
 
   // ---- audit ----------------------------------------------------------------------------------

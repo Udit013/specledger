@@ -8,7 +8,7 @@ it and an approver publishes an immutable register version.
 
 ## Status
 
-Phases 0 to 9 of the plan are in place:
+Phases 0 to 10 of the plan are in place:
 
 - Foundation and quality gates: the monorepo, strict TypeScript, lint and dependency-boundary
   rules, CI, a local Postgres container, validated configuration, a redacting logger and Git
@@ -55,6 +55,10 @@ Phases 0 to 9 of the plan are in place:
   each value beside its source page with the quote highlighted, keyboard review, the conflicts
   panel with evidence and the rules' suggestion, the publish dialog and the audit history. See
   [Review UI](#review-ui).
+- Exporters and the ACC-style adapter (Phase 10): deterministic CSV and JSON exports of a
+  published version (the JSON carries a schema version and a content hash), and an asset-system
+  client with retries, idempotency keys and a drift report, tested against a mock.
+  **The real Autodesk API was not used**; see [Exporters and adapter](#exporters-and-adapter).
 
 ## Quick start
 
@@ -315,6 +319,47 @@ UUID, and is echoed on every response and carried by the upload's job.
   rejected fields are left out. Numbers come from a counter row locked for the transaction, so
   concurrent publishes get consecutive numbers and a refused one uses none.
 
+## Exporters and adapter
+
+`GET /register/versions/:n/export?format=csv|json` renders a published version with
+`packages/exporters`, the same bytes for the same version every time.
+
+- CSV (RFC 4180, UTF-8, CRLF): a header `tag,field,value,unit`, one row per field sorted by tag
+  then field. A cell is quoted when it holds a comma, quote or line break. A cell a spreadsheet
+  would run as a formula (starting with `=`, `+`, `-`, `@`, a tab or a carriage return) is
+  prefixed with a single quote, except a plain number such as `-12.5`, which is written as it is.
+- JSON: `schemaVersion` (1), `contentSha256`, then the version, approver, publication time and
+  items sorted by tag with fields by name. The hash is SHA-256 of the compact JSON of everything
+  but itself, in that key order; `verifyRegisterJson` checks it and the schema version.
+
+The adapter pushes a published version to an asset system: `syncRegisterVersion` maps each item
+to an asset payload and calls an `AssetSystemClient`; the HTTP implementation retries 429 and 503
+honouring `Retry-After` up to a cap, retries timeouts and network failures with jittered backoff,
+never retries other 4xx, sends the same `Idempotency-Key` on every attempt, propagates
+`X-Correlation-Id`, and returns typed errors. A drift detector compares responses with the
+contract and reports added, removed and retyped fields instead of failing. A Fastify mock with
+failure switches (429, 503, 400, slow response, response drift, duplicate keys) backs the
+contract tests. The contract, its error codes and its retry rules are in
+[docs/adapter-contract.md](docs/adapter-contract.md).
+
+**The real Autodesk API was not used.** The contract is ACC-style: written for this project and
+checked against the mock only, because free access to Autodesk's API could not be confirmed. The
+contract tests prove the client keeps the written contract; they say nothing about Autodesk's
+actual paths, fields, status codes or idempotency behaviour. Nothing in the API calls the adapter
+yet; it is a library with tests.
+
+## Exporters and adapter limitations
+
+- The adapter targets a contract with a mock, not a verified external API (see above).
+- Values are exported as stored text with their units, not converted to canonical units, so the
+  CSV has no numeric column computed from a number; a plain-number cell is written unaltered.
+- The CSV has no byte-order mark; some spreadsheet programs need one to read UTF-8 (for example
+  `°C`) correctly and show mojibake otherwise.
+- Only 429 and 503 are retried among HTTP statuses, as the contract says; a 500, 502 or 504 from
+  a real gateway would be final.
+- The sync writes items one at a time and has no persistence of its own: re-running it is safe
+  (the keys repeat) but nothing records which items were pushed.
+
 ## Review UI
 
 `apps/web` is React with Vite, TanStack Query and Tailwind. It talks to the API through a typed
@@ -368,8 +413,6 @@ handling, and axe checks on the list, review and publish screens.
 - Conflict lists load the candidates of each conflict with one query per conflict.
 - A document's processing status is its latest `process_document` job; there is no endpoint to
   re-run extraction for a document that succeeded.
-- CSV export prefixes cells that a spreadsheet would read as a formula with `'`, which changes
-  those values as text.
 
 ## Queue and worker limitations
 
