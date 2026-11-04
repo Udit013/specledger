@@ -62,10 +62,11 @@ committed separately and labelled.
 
 ## Page text
 
-Quotes are matched against page text built with one convention, used by the corpus validator and to
-be followed by ingestion (Phase 3): text items are grouped into lines by baseline, lines run top to
-bottom, items within a line run left to right, items separated by a visible gap are joined with one
-space, lines are joined with a newline, and whitespace-only items are ignored. A table row such as
+Quotes are matched against page text built by one function, `assemblePageText` in
+`@specledger/core`, which both the corpus validator and ingestion (`packages/ingest`) call: text
+items are grouped into lines by baseline, lines run top to bottom, items within a line run left to
+right, items separated by a visible gap are joined with one space, lines are joined with a newline,
+whitespace-only items are ignored, and NUL characters are removed. A table row such as
 `Rated speed` / `1450-1780 rpm` therefore reads `Rated speed 1450-1780 rpm`.
 
 ## Designed cases

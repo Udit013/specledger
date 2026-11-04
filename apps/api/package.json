@@ -19,7 +19,13 @@
     "start": "node --env-file-if-exists=../../.env dist/main.js"
   },
   "dependencies": {
+    "@specledger/db": "workspace:*",
+    "@specledger/ingest": "workspace:*",
     "pino": "10.4.0",
     "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@types/pg": "8.23.1",
+    "pg": "8.23.1"
   }
 }

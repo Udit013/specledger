@@ -52,6 +52,16 @@ module.exports = {
       },
     },
     {
+      name: 'ingest-has-no-file-system-access',
+      severity: 'error',
+      comment:
+        'packages/ingest handles untrusted uploads and their client-supplied file names. Its ' +
+        'source never reads or writes files or builds paths, so a name cannot reach the file ' +
+        'system. Bytes are stored in Postgres.',
+      from: { path: '^packages/ingest/src/', pathNot: '\\.test\\.ts$' },
+      to: { dependencyTypes: ['core'], path: '^(node:)?(fs|path)(/|$)' },
+    },
+    {
       name: 'nothing-imports-apps',
       severity: 'error',
       comment:

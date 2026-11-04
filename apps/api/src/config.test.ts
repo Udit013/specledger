@@ -1,3 +1,4 @@
+import { DEFAULT_INGEST_LIMITS } from '@specledger/ingest';
 import { describe, expect, it } from 'vitest';
 
 import { formatConfigIssues, parseConfig } from './config.js';
@@ -9,6 +10,11 @@ const VALID_ENV = {
   PORT: '8080',
   LOG_LEVEL: 'warn',
   DATABASE_URL: 'postgres://app:pw@db.internal:5432/specledger',
+  INGEST_MAX_BYTES: '2097152',
+  INGEST_MAX_PAGES: '20',
+  INGEST_PARSE_TIMEOUT_MS: '5000',
+  INGEST_PARSE_MEMORY_MB: '128',
+  INGEST_MIN_TEXT_CHARS: '40',
 };
 
 function expectIssues(result: ConfigResult): readonly ConfigIssue[] {
@@ -26,6 +32,13 @@ describe('parseConfig', () => {
         port: 8080,
         logLevel: 'warn',
         databaseUrl: 'postgres://app:pw@db.internal:5432/specledger',
+        ingest: {
+          maxBytes: 2097152,
+          maxPages: 20,
+          parseTimeoutMs: 5000,
+          parseMemoryMb: 128,
+          minTextChars: 40,
+        },
       },
     });
   });
@@ -39,6 +52,7 @@ describe('parseConfig', () => {
         port: 3000,
         logLevel: 'info',
         databaseUrl: 'postgresql://localhost/specledger',
+        ingest: DEFAULT_INGEST_LIMITS,
       },
     });
   });
@@ -96,6 +110,7 @@ describe('parseConfig', () => {
       expect(Object.keys(result.config).sort()).toEqual([
         'databaseUrl',
         'host',
+        'ingest',
         'logLevel',
         'nodeEnv',
         'port',
@@ -105,6 +120,21 @@ describe('parseConfig', () => {
   it('returns frozen config', () => {
     const result = parseConfig(VALID_ENV);
     expect(result.ok && Object.isFrozen(result.config)).toBe(true);
+    expect(result.ok && Object.isFrozen(result.config.ingest)).toBe(true);
+  });
+
+  it.each([
+    ['INGEST_MAX_BYTES', '0', 'an integer between 1024 and 104857600'],
+    ['INGEST_MAX_BYTES', '104857601', 'an integer between 1024 and 104857600'],
+    ['INGEST_MAX_PAGES', '0', 'an integer between 1 and 1000'],
+    ['INGEST_PARSE_TIMEOUT_MS', '50', 'an integer between 100 and 120000'],
+    ['INGEST_PARSE_TIMEOUT_MS', 'never', 'an integer between 100 and 120000'],
+    ['INGEST_PARSE_MEMORY_MB', '4096', 'an integer between 32 and 2048'],
+    ['INGEST_MIN_TEXT_CHARS', '0', 'an integer between 1 and 10000'],
+  ])('refuses %s=%s, which would weaken or disable a limit', (key, value, expected) => {
+    expect(expectIssues(parseConfig({ ...VALID_ENV, [key]: value }))).toEqual([
+      { key, problem: 'invalid', expected },
+    ]);
   });
 });
 

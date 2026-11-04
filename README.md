@@ -8,7 +8,7 @@ it and an approver publishes an immutable register version.
 
 ## Status
 
-Phases 0 to 2 of the plan are in place:
+Phases 0 to 3 of the plan are in place:
 
 - Foundation and quality gates: the monorepo, strict TypeScript, lint and dependency-boundary
   rules, CI, a local Postgres container, validated configuration, a redacting logger and Git
@@ -22,12 +22,18 @@ Phases 0 to 2 of the plan are in place:
   datasheets with designed difficult cases, Zod-validated ground truth, a reproducible dev/holdout
   split, and a validator that checks every ground-truth quote against the generated PDFs. See
   [docs/evaluation.md](docs/evaluation.md).
+- Ingestion: upload validation (magic bytes, size, page count) and PDF text extraction in a
+  terminable worker thread with memory and time limits, typed rejection codes, and storage of the
+  document, its bytes and its page text in one transaction with deduplication by sha256. These are
+  service functions; there is no HTTP endpoint yet.
 
-There is no extraction, verification, reconciliation, job queue, API route or user interface yet.
+There is no model extraction, verification, reconciliation, job queue, API route or user interface
+yet.
 
 ## Quick start
 
-Requirements: Node 22 (see `.nvmrc`), pnpm (the exact version is pinned in `package.json` under
+Requirements: Node 22.18 or later in the 22 line (see `.nvmrc`; unit tests run the PDF worker
+thread from TypeScript source, which relies on Node's built-in type stripping), pnpm (the exact version is pinned in `package.json` under
 `packageManager`), and Docker for the local database.
 
 ```sh
@@ -102,7 +108,18 @@ apps; no import cycles.
 
 ## Architecture
 
-To be written.
+To be written in full. So far:
+
+- **Ingestion** (`packages/ingest`). `ingestDocument` validates the bytes (`validateUpload`), then
+  parses them in a `node:worker_threads` worker (`extractPages`) that has a heap limit, an empty
+  environment and a hard time limit after which it is terminated. The worker first checks the
+  cross-reference structure, because pdfjs silently repairs a damaged table, then extracts page
+  text with the shared page-text convention (`assemblePageText` in core). Expected failures are
+  returned as one typed error (`IngestError`) with a stable code and a fixed message. Storage is a
+  port (`IngestStore`) that `@specledger/db` implements; the document row, the bytes and the pages
+  are written in one transaction, and a duplicate upload is detected by the unique sha256
+  constraint (insert on conflict do nothing, then select). `apps/api/src/ingestion.ts` wires the
+  two together with limits from configuration.
 
 ## Limitations
 
@@ -115,6 +132,18 @@ Known gaps at this stage:
 - The evaluation corpus is synthetic. It is suitable for regression testing, not as evidence of
   accuracy on real vendor datasheets.
 - `pdf-lib`, used only to generate the synthetic corpus, has had no release since 2021.
+- Ingestion is strict about PDF structure: a file whose cross-reference table has wrong offsets is
+  rejected as `CORRUPT` even though many readers would repair it, and so is anything after the
+  final `%%EOF` other than whitespace. Entries inside compressed cross-reference streams are not
+  checked individually. Re-saving such a file ("print to PDF") usually fixes it.
+- Encrypted PDFs are rejected even when they open without a password (owner-only restrictions).
+- Text extraction is pdfjs without OCR, CMaps or embedded-font loading, so scanned pages and some
+  CJK or unusually encoded text produce no text. Lines are grouped by baseline rounded to half a
+  unit, so text whose baseline straddles a rounding boundary can split into two lines; a quote
+  across that split will not be found, which fails safe (the value stays unverified).
+- Each upload starts its own worker thread and parses before the duplicate check, so a repeated
+  upload costs a full parse. There is no cap on concurrent parses yet; the per-IP rate limit of
+  the HTTP phase is the intended control.
 - Development dependencies carry two moderate advisories, both in tooling only: `minimatch`
   (through ESLint) and `esbuild` (through drizzle-kit's TypeScript loader; the advisory concerns
   esbuild's development server, which is never started). Neither can be overridden without

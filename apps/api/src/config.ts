@@ -1,6 +1,21 @@
+import { DEFAULT_INGEST_LIMITS, INGEST_LIMIT_BOUNDS } from '@specledger/ingest';
+import type { IngestLimits } from '@specledger/ingest';
 import { z } from 'zod';
 
 const LOG_LEVELS = ['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'] as const;
+
+// Upload limits (INGEST_*) take the ingest package's defaults and bounds, so a value outside the
+// bounds stops start-up instead of disabling a limit.
+const ingestLimit = (name: keyof IngestLimits) =>
+  z.coerce
+    .number()
+    .int()
+    .min(INGEST_LIMIT_BOUNDS[name].min)
+    .max(INGEST_LIMIT_BOUNDS[name].max)
+    .default(DEFAULT_INGEST_LIMITS[name]);
+
+const ingestExpected = (name: keyof IngestLimits) =>
+  `an integer between ${String(INGEST_LIMIT_BOUNDS[name].min)} and ${String(INGEST_LIMIT_BOUNDS[name].max)}`;
 
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
@@ -8,6 +23,11 @@ const envSchema = z.object({
   PORT: z.coerce.number().int().min(1).max(65535).default(3000),
   LOG_LEVEL: z.enum(LOG_LEVELS).default('info'),
   DATABASE_URL: z.url({ protocol: /^postgres(ql)?$/ }),
+  INGEST_MAX_BYTES: ingestLimit('maxBytes'),
+  INGEST_MAX_PAGES: ingestLimit('maxPages'),
+  INGEST_PARSE_TIMEOUT_MS: ingestLimit('parseTimeoutMs'),
+  INGEST_PARSE_MEMORY_MB: ingestLimit('parseMemoryMb'),
+  INGEST_MIN_TEXT_CHARS: ingestLimit('minTextChars'),
 });
 
 export type ConfigKey = keyof typeof envSchema.shape;
@@ -22,6 +42,11 @@ const EXPECTED: Record<ConfigKey, string> = {
   PORT: 'an integer between 1 and 65535',
   LOG_LEVEL: `one of ${LOG_LEVELS.join(', ')}`,
   DATABASE_URL: 'a postgres:// or postgresql:// connection URL',
+  INGEST_MAX_BYTES: ingestExpected('maxBytes'),
+  INGEST_MAX_PAGES: ingestExpected('maxPages'),
+  INGEST_PARSE_TIMEOUT_MS: ingestExpected('parseTimeoutMs'),
+  INGEST_PARSE_MEMORY_MB: ingestExpected('parseMemoryMb'),
+  INGEST_MIN_TEXT_CHARS: ingestExpected('minTextChars'),
 };
 
 export interface Config {
@@ -30,6 +55,7 @@ export interface Config {
   readonly port: number;
   readonly logLevel: (typeof LOG_LEVELS)[number];
   readonly databaseUrl: string;
+  readonly ingest: IngestLimits;
 }
 
 export interface ConfigIssue {
@@ -66,6 +92,13 @@ export function parseConfig(env: Readonly<Record<string, string | undefined>>): 
         port: values.PORT,
         logLevel: values.LOG_LEVEL,
         databaseUrl: values.DATABASE_URL,
+        ingest: Object.freeze({
+          maxBytes: values.INGEST_MAX_BYTES,
+          maxPages: values.INGEST_MAX_PAGES,
+          parseTimeoutMs: values.INGEST_PARSE_TIMEOUT_MS,
+          parseMemoryMb: values.INGEST_PARSE_MEMORY_MB,
+          minTextChars: values.INGEST_MIN_TEXT_CHARS,
+        }),
       }),
     };
   }

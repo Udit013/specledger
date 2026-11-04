@@ -153,6 +153,30 @@ export function createRepositories(db: Executor) {
         const row = single(await db.insert(documents).values(input).returning());
         return toDomain('document', documentRecordSchema, row);
       },
+      // Deduplication by content. The unique constraint on sha256 decides: a concurrent insert of
+      // the same hash waits for the first transaction, then does nothing, and the select (a new
+      // statement under READ COMMITTED) sees the committed row. A check-then-insert would let both
+      // callers see no row and the second fail on the constraint.
+      async insertIfAbsent(
+        input: NewDocument,
+      ): Promise<{ document: DocumentRecord; created: boolean }> {
+        const [inserted] = await db
+          .insert(documents)
+          .values(input)
+          .onConflictDoNothing({ target: documents.sha256 })
+          .returning();
+        if (inserted !== undefined) {
+          return { document: toDomain('document', documentRecordSchema, inserted), created: true };
+        }
+        const [existing] = await db
+          .select()
+          .from(documents)
+          .where(eq(documents.sha256, input.sha256));
+        if (existing === undefined) {
+          throw new Error('document conflicted on sha256 but was not found');
+        }
+        return { document: toDomain('document', documentRecordSchema, existing), created: false };
+      },
       async getById(id: string): Promise<DocumentRecord | null> {
         const [row] = await db.select().from(documents).where(eq(documents.id, id));
         return row === undefined ? null : toDomain('document', documentRecordSchema, row);
