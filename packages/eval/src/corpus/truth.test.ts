@@ -57,13 +57,27 @@ describe('groundTruthSchema', () => {
     expect(result.error?.issues[0]?.path).toEqual(['fields', 'rated_head', 'value']);
   });
 
-  it('rejects a quote that does not contain the value or the unit as written', () => {
-    expect(
-      issues(truth({ rated_head: { value: '45', unit: 'm', page: 1, quote: 'Rated head: 46 m' } })),
-    ).toContain('quote must contain the value as written');
-    expect(
-      issues(truth({ rated_head: { value: '45', unit: 'ft', page: 1, quote: 'Head 45 m' } })),
-    ).toContain('quote must contain the unit as written');
+  it.each([
+    ['a different value', '45', 'm', 'Rated head: 46 m'],
+    ['a different unit', '45', 'ft', 'Head 45 m'],
+    ['a value that is only a prefix of the stated number', '26', 'ft', 'Rated head 260 ft'],
+    ['a value that is only a suffix of the stated number', '60', 'ft', 'Rated head 260 ft'],
+    ['a value after a decimal mark', '5', 'm', 'Rated head 7,5 m'],
+    ['a unit that is only a prefix of the stated unit', '248,6', 'm', 'Flow 248,6 m³/h'],
+    ['a value and unit that are not adjacent', '45', 'm', 'Head 45 (148 ft) m'],
+  ])('rejects a quote with %s', (_case, value, unit, quote) => {
+    expect(issues(truth({ rated_head: { value, unit, page: 1, quote } }))).toContain(
+      'quote must state the value followed by its unit, as written',
+    );
+  });
+
+  it.each([
+    ['a dual-unit statement', '248,6', 'm³/h', 'Rated flow 248,6 m³/h (1095 gpm)'],
+    ['a range', '2900 to 3600', 'rpm', 'Rated speed: 2900 to 3600 rpm'],
+    ['a percentage', '77.9', '%', 'Efficiency: 77.9 %'],
+    ['a degree unit', '248', '°F', 'Design temperature: 248 °F'],
+  ])('accepts %s', (_case, value, unit, quote) => {
+    expect(issues(truth({ rated_head: { value, unit, page: 1, quote } }))).toEqual([]);
   });
 
   it('rejects a field list that is not exactly the class field list', () => {

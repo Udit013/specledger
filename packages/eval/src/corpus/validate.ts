@@ -123,13 +123,17 @@ function coverageProblems(
     if (!devCases.has(designed))
       problems.push(`no dev document covers the designed case ${designed}`);
   }
-  // Every field must be absent from at least one document that does have a text layer, so a value
-  // extracted for it there can only be a hallucination.
+  // Every field must be absent from at least one dev document that does have a text layer, so a
+  // value extracted for it there can only be a hallucination, and regression tests for it can be
+  // built without touching the holdout.
+  const devIds = new Set(documents.filter((d) => d.split === 'dev').map((d) => d.id));
   for (const equipmentClass of Object.keys(FIELD_DEFINITIONS) as EquipmentClass[]) {
-    const ofClass = truths.filter((t) => t.equipmentClass === equipmentClass && t.textLayer);
+    const ofClass = truths.filter(
+      (t) => t.equipmentClass === equipmentClass && t.textLayer && devIds.has(t.documentId),
+    );
     for (const { name } of FIELD_DEFINITIONS[equipmentClass]) {
       if (!ofClass.some((truth) => truth.fields[name] === null)) {
-        problems.push(`${equipmentClass}.${name} is present in every document`);
+        problems.push(`${equipmentClass}.${name} is present in every dev document`);
       }
     }
   }

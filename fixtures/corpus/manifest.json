@@ -8,7 +8,7 @@
     "key": "lineageId",
     "holdoutFraction": 0.3
   },
-  "corpusSha256": "14256ef6aeaf6e01d7f0c619ec07152b21b79bc772c995fc3af284091831462e",
+  "corpusSha256": "e0caf65c0f9c5ab33d92b499d900da22bca8b065f9490f8ca34719846885719b",
   "documents": [
     {
       "id": "m-201-datasheet-rev-a",
@@ -69,6 +69,21 @@
       "pdfSha256": "6cd2d805661519840c18ce3e7ff67fccda2371bd514b20d41cca729a8cc48ed9",
       "truth": "truth/m-203-datasheet.json",
       "truthSha256": "f819b999f2de28c5330fd28cb55eebcfcb0093b3515c37a8f7e3af6c08442c18"
+    },
+    {
+      "id": "m-204-datasheet",
+      "lineageId": "m-204",
+      "equipmentClass": "electric_motor",
+      "split": "dev",
+      "cases": [
+        "absent_fields",
+        "layout_key_value"
+      ],
+      "description": "Motor datasheet without voltage, frequency or speed (hallucination check).",
+      "pdf": "pdf/m-204-datasheet.pdf",
+      "pdfSha256": "c0b739835a8e5074be97da92bee7baabe9d98245e46c9e93a39cdb903d6565b4",
+      "truth": "truth/m-204-datasheet.json",
+      "truthSha256": "4e102444afec57170bffe8471c160ad5ae2bc7bc93a81ce9f200dd9c2b4213fc"
     },
     {
       "id": "m-210-datasheet",

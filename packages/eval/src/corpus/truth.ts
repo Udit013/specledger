@@ -32,9 +32,20 @@ export type Split = z.infer<typeof splitSchema>;
 
 const slug = z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/, 'lower-case words joined by hyphens');
 
+const escapeRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+// True when `quote` states `value` immediately followed by `unit` as whole tokens. A plain
+// substring test would accept value "26" for "260 ft", or unit "m" for "m³/h".
+export function statesValueWithUnit(quote: string, value: string, unit: string): boolean {
+  return new RegExp(
+    `(?<![\\p{L}\\p{N}.,])${escapeRegExp(value)}\\s*${escapeRegExp(unit)}(?![\\p{L}\\p{N}])`,
+    'u',
+  ).test(quote);
+}
+
 // What a correct extraction of one field must produce. `value` and `unit` are written exactly as
-// they appear in the document, and both must occur inside `quote`, which must occur verbatim in the
-// text of `page` (checked against the PDFs by the corpus validator).
+// they appear in the document, the quote states the value followed by the unit, and the quote
+// occurs verbatim in the text of `page` (checked against the PDFs by the corpus validator).
 export const fieldTruthSchema = z
   .strictObject({
     value: z.string().min(1).max(TEXT_LIMITS.value),
@@ -42,12 +53,8 @@ export const fieldTruthSchema = z
     page: z.number().int().min(1),
     quote: z.string().min(1).max(TEXT_LIMITS.quote),
   })
-  .refine((truth) => truth.quote.includes(truth.value), {
-    message: 'quote must contain the value as written',
-    path: ['quote'],
-  })
-  .refine((truth) => truth.quote.includes(truth.unit), {
-    message: 'quote must contain the unit as written',
+  .refine((truth) => statesValueWithUnit(truth.quote, truth.value, truth.unit), {
+    message: 'quote must state the value followed by its unit, as written',
     path: ['quote'],
   });
 export type FieldTruth = z.infer<typeof fieldTruthSchema>;

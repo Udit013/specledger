@@ -464,6 +464,20 @@ function designedDrafts(seed: string): Draft[] {
     brochureDraft(106, p106),
     injectionDraft(seed, 108),
     motorRangeDraft(seed, 203),
+    // In dev: the seeded motors omit these fields only in holdout documents, and hallucination
+    // regression tests may not be built from the holdout.
+    {
+      ...DATASHEET,
+      ...motorTag(204),
+      id: 'm-204-datasheet',
+      revision: 'Rev A',
+      layout: 'key_value',
+      values: motorValues(randomFor(seed, 'm-204')),
+      absent: ['rated_voltage', 'frequency', 'rated_speed'],
+      print: metric,
+      cases: [],
+      description: 'Motor datasheet without voltage, frequency or speed (hallucination check).',
+    },
   ];
 }
 

@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "documentId": "m-204-datasheet",
+  "lineageId": "m-204",
+  "equipmentTag": "M-204",
+  "equipmentClass": "electric_motor",
+  "sourceType": "datasheet",
+  "revision": "Rev A",
+  "pageCount": 1,
+  "textLayer": true,
+  "fields": {
+    "rated_power": {
+      "value": "11.0",
+      "unit": "kW",
+      "page": 1,
+      "quote": "Rated power: 11.0 kW"
+    },
+    "rated_voltage": null,
+    "rated_current": {
+      "value": "11.4",
+      "unit": "A",
+      "page": 1,
+      "quote": "Rated current: 11.4 A"
+    },
+    "frequency": null,
+    "rated_speed": null,
+    "efficiency": {
+      "value": "93.8",
+      "unit": "%",
+      "page": 1,
+      "quote": "Efficiency: 93.8 %"
+    }
+  }
+}

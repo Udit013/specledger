@@ -25,8 +25,9 @@ pnpm fixtures:validate   # check the committed corpus (also run in CI)
 Validation checks that every non-null quote occurs verbatim in the extracted text of its stated
 page, that page counts and text layers match the truth, that file hashes match the manifest, that
 every document's split follows the rule below, that every designed case has a dev document, that
-every field is absent from at least one document with a text layer, and that regenerating the
-corpus reproduces the committed files byte for byte.
+every field is absent from at least one dev document with a text layer, that each quote states the
+value immediately followed by the unit as whole tokens, and that regenerating the corpus reproduces
+the committed files byte for byte.
 
 ## Reproducibility
 
@@ -51,7 +52,9 @@ result reported on the holdout.
 Designed cases must each have a dev document, because later phases build regression tests from
 them. Where the rule put a case's only document in the holdout, a second instance was added under
 the next unused lineage number that the rule assigns to dev (p-106 brochure, p-108 injection, m-203
-range). Documents were only added; none was moved between splits.
+range). The same holds for absent fields, from which hallucination tests are built: m-204 omits the
+motor voltage, frequency and speed, which the seeded motors omit only in holdout documents.
+Documents were only added; none was moved between splits.
 
 **The holdout split is never used to tune prompts, verifier rules or reconciliation rules**, and it
 is not used to build tests. It is evaluated once, after tuning is finished, and that report is
