@@ -219,5 +219,13 @@ This makes real calls and is never run by tests or CI. It needs a Gemini API key
 5. Only after all tuning: record and evaluate the holdout once (`--allow-holdout` on both steps)
    and commit that report separately, labelled as the holdout run.
 
+## The holdout run
+
+The holdout split was evaluated once, with the simulated set, after the verifier, the
+reconciliation rules and the error model were final: [evaluation/holdout/report.md](../evaluation/holdout/report.md).
+It was committed on its own, and nothing was changed after it. Any later change to those three
+invalidates it: the holdout would then have been seen before tuning, and a fresh holdout would be
+needed for an unbiased number.
+
 A new prompt version invalidates the recordings: Replay keys include the prompt, and the report
 names the prompt version it measured.
