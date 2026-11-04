@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "origin": "handcrafted",
+  "label": "A set made for a different corpus, for a CLI test.",
+  "modelId": "none",
+  "promptVersion": "none",
+  "date": "2030-01-01",
+  "corpusSha256": "0000000000000000000000000000000000000000000000000000000000000000",
+  "generator": null,
+  "documents": {}
+}

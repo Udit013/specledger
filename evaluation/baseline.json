@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "corpusSha256": "e0caf65c0f9c5ab33d92b499d900da22bca8b065f9490f8ca34719846885719b",
+  "setSha256": "6e27be66b126915c2ba91a1d582f745f75ee37bbe0091170ec519a837a7cfc55",
+  "split": "dev",
+  "precision": 0.992248,
+  "unsupportedRate": 0
+}

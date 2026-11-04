@@ -25,7 +25,14 @@
     "db:up": "docker compose up --detach --wait postgres",
     "hooks:install": "sh scripts/install-git-hooks.sh",
     "llm:smoke": "turbo run build --filter=@specledger/api... && pnpm --filter @specledger/api llm:smoke",
-    "worker": "turbo run build --filter=@specledger/api... && pnpm --filter @specledger/api worker"
+    "worker": "turbo run build --filter=@specledger/api... && pnpm --filter @specledger/api worker",
+    "eval": "turbo run build --filter=@specledger/eval... && pnpm --filter @specledger/eval eval",
+    "eval:simulate": "turbo run build --filter=@specledger/eval... && pnpm --filter @specledger/eval eval:simulate",
+    "eval:baseline": "turbo run build --filter=@specledger/eval... && pnpm --filter @specledger/eval eval:baseline",
+    "eval:gate": "turbo run build --filter=@specledger/eval... && pnpm --filter @specledger/eval eval:gate",
+    "eval:readme": "turbo run build --filter=@specledger/eval... && pnpm --filter @specledger/eval eval:readme",
+    "eval:ci": "turbo run build --filter=@specledger/eval... && pnpm --filter @specledger/eval eval:ci",
+    "eval:record": "turbo run build --filter=@specledger/api... && pnpm --filter @specledger/api eval:record"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

@@ -40,3 +40,17 @@ describe('simulateExtractions', () => {
     }
   });
 });
+
+describe('the error model', () => {
+  it('misreads a value far beyond the 0.5 percent tolerance', async () => {
+    const { misreadForTest } = await import('./simulate.js');
+    for (const [value, misread] of [
+      ['2929', '3929'],
+      ['1450-1780', '2450-1780'],
+      ['0,85', '0,95'],
+      ['9', '1'],
+    ] as const) {
+      expect(misreadForTest(value)).toBe(misread);
+    }
+  });
+});

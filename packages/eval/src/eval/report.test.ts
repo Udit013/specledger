@@ -68,6 +68,6 @@ describe('README section', () => {
 
   it('states the origin of the extractions in the section itself', () => {
     expect(section).toContain('Constructed test extractions.');
-    expect(section).toContain('precision');
+    expect(section).toMatch(/precision/i);
   });
 });

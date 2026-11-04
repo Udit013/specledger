@@ -35,6 +35,9 @@ jobs:
       - run: pnpm verify
       - run: pnpm db:check-drift
       - run: pnpm fixtures:validate
+      # The evaluation regenerates byte for byte, its README section is current, and precision
+      # and the unsupported-value rate have not regressed against evaluation/baseline.json.
+      - run: pnpm eval:ci
 
   integration:
     name: integration tests (Postgres)

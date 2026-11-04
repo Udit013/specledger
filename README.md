@@ -8,7 +8,7 @@ it and an approver publishes an immutable register version.
 
 ## Status
 
-Phases 0 to 10 of the plan are in place:
+Phases 0 to 11 of the plan are in place:
 
 - Foundation and quality gates: the monorepo, strict TypeScript, lint and dependency-boundary
   rules, CI, a local Postgres container, validated configuration, a redacting logger and Git
@@ -59,6 +59,10 @@ Phases 0 to 10 of the plan are in place:
   published version (the JSON carries a schema version and a content hash), and an asset-system
   client with retries, idempotency keys and a drift report, tested against a mock.
   **The real Autodesk API was not used**; see [Exporters and adapter](#exporters-and-adapter).
+- Evaluation harness and regression gate (Phase 11): precision, recall, unsupported-value,
+  verifier catch and false-reject rates with Wilson intervals, a naive baseline without the
+  verifier, a reconciliation check, and a CI gate. **The committed numbers come from simulated
+  extractions, not from a language model**; see [Evaluation results](#evaluation-results).
 
 ## Quick start
 
@@ -318,6 +322,61 @@ UUID, and is echoed on every response and carried by the upload's job.
   per equipment, the reconciled accepted and edited values and the decisions, as stored text;
   rejected fields are left out. Numbers come from a counter row locked for the transaction, so
   concurrent publishes get consecutive numbers and a refused one uses none.
+
+## Evaluation results
+
+Generated from [evaluation/report.json](evaluation/report.json) by `pnpm eval:readme`; CI fails if
+this section and the report disagree. Do not edit between the markers.
+
+<!-- prettier-ignore-start -->
+<!-- evaluation-results:start -->
+> SIMULATED EXTRACTION: candidates generated from the ground truth by a seeded error model (packages/eval/src/eval/simulate.ts), not answers from any language model. The rates measure the verifier, the per-field pick and reconciliation against these designed errors; they are not a measurement of model accuracy.
+
+- Extractions: **simulated** (see the note above)
+- Model id: `simulated-error-model-v1`; prompt version: `not-applicable`
+- Corpus: `e0caf65c0f9c5ab33d92b499d900da22bca8b065f9490f8ca34719846885719b`, split **dev**
+- Extraction set: `6e27be66b126915c2ba91a1d582f745f75ee37bbe0091170ec519a837a7cfc55`, dated 2026-11-04
+- 26 documents evaluated of 27 in the split; 188 document fields, 170 with a value in the ground truth, 174 candidates
+
+| Rate (95 % Wilson interval) | Pipeline | Count | Naive baseline | Count |
+| --- | --- | --- | --- | --- |
+| Precision | 99.2 % (95.7 to 99.9) | 128 / 129 | 81.0 % (74.3 to 86.2) | 136 / 168 |
+| Recall | 75.3 % (68.3 to 81.2) | 128 / 170 | 80.0 % (73.4 to 85.3) | 136 / 170 |
+| Unsupported-value rate | 0.0 % (0.0 to 2.9) | 0 / 129 | 3.0 % (1.3 to 6.8) | 5 / 168 |
+| Verifier catch rate | 96.9 % (84.3 to 99.4) | 31 / 32 | 0.0 % (0.0 to 10.7) | 0 / 32 |
+| False-reject rate | 9.9 % (6.0 to 15.9) | 14 / 142 | 0.0 % (0.0 to 2.6) | 0 / 142 |
+
+The verifier prevented 31 wrong values (naive baseline 32, pipeline 1). Full report: [evaluation/report.md](evaluation/report.md).
+<!-- evaluation-results:end -->
+<!-- prettier-ignore-end -->
+
+What these numbers are: the evaluation runs the pipeline (recorded extraction, the verifier, the
+per-field pick, reconciliation) on the synthetic corpus's dev split and compares accepted values
+with the ground truth. No recorded answers from a real model exist yet, and none were made,
+because real Gemini calls were not authorized for this project. The committed extraction set is
+therefore **simulated**: a seeded error model writes candidates from the ground truth with designed
+mistakes (misread digits, swapped units, reworded or invented quotes, values taken from another
+line, hallucinated values for absent fields, an obeyed prompt injection). The rates show what the
+verifier and reconciliation do with those mistakes. They are **not** a measurement of any model's
+accuracy, and they say nothing about real vendor documents. How the harness works, the formulas,
+and how to record and evaluate a real model are in [docs/evaluation.md](docs/evaluation.md).
+
+```sh
+pnpm eval --split dev   # writes evaluation/report.json and report.md
+pnpm eval:gate          # compares with evaluation/baseline.json
+```
+
+## Evaluation limitations
+
+- The extraction set is simulated (above); a real-model report needs a recording run.
+- The corpus is small and synthetic: 26 dev documents with a text layer, one class of designed
+  difficulty per document at most a few times. The Wilson intervals are wide, and they assume
+  independent fields, which fields of one document are not.
+- The error model was written by the same person as the verifier, so it may favour mistakes the
+  verifier was built to catch. The decoy case (a value taken from another field's line with a unit
+  of the same quantity) is one the verifier does not catch, and the report shows it.
+- The gate checks overall precision and the unsupported-value rate only; recall and per-field
+  rates can fall without failing CI.
 
 ## Exporters and adapter
 

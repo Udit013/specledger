@@ -17,7 +17,13 @@
     "lint": "eslint .",
     "test": "vitest run --dir src",
     "fixtures:generate": "node dist/corpus/cli.js generate ../../fixtures/corpus",
-    "fixtures:validate": "node dist/corpus/cli.js validate ../../fixtures/corpus"
+    "fixtures:validate": "node dist/corpus/cli.js validate ../../fixtures/corpus",
+    "eval": "node dist/eval/cli.js run",
+    "eval:simulate": "node dist/eval/cli.js simulate",
+    "eval:baseline": "node dist/eval/cli.js baseline",
+    "eval:gate": "node dist/eval/cli.js gate",
+    "eval:readme": "node dist/eval/cli.js readme",
+    "eval:ci": "node dist/eval/cli.js ci"
   },
   "dependencies": {
     "@specledger/core": "workspace:*",

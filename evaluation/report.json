@@ -1,0 +1,1214 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-11-04",
+  "extraction": {
+    "origin": "simulated",
+    "label": "SIMULATED EXTRACTION: candidates generated from the ground truth by a seeded error model (packages/eval/src/eval/simulate.ts), not answers from any language model. The rates measure the verifier, the per-field pick and reconciliation against these designed errors; they are not a measurement of model accuracy.",
+    "modelId": "simulated-error-model-v1",
+    "promptVersion": "not-applicable",
+    "date": "2026-11-04",
+    "setSha256": "6e27be66b126915c2ba91a1d582f745f75ee37bbe0091170ec519a837a7cfc55"
+  },
+  "corpus": {
+    "corpusSha256": "e0caf65c0f9c5ab33d92b499d900da22bca8b065f9490f8ca34719846885719b",
+    "split": "dev",
+    "holdout": false
+  },
+  "documents": {
+    "inSplit": 27,
+    "evaluated": 26,
+    "skipped": [
+      {
+        "id": "p-104-datasheet-scan",
+        "reason": "NO_TEXT_LAYER"
+      }
+    ]
+  },
+  "pipeline": {
+    "overall": {
+      "precision": {
+        "numerator": 128,
+        "denominator": 129,
+        "rate": 0.992248,
+        "low": 0.957397,
+        "high": 0.99863
+      },
+      "recall": {
+        "numerator": 128,
+        "denominator": 170,
+        "rate": 0.752941,
+        "low": 0.682995,
+        "high": 0.811709
+      },
+      "unsupportedRate": {
+        "numerator": 0,
+        "denominator": 129,
+        "rate": 0,
+        "low": 0,
+        "high": 0.028918
+      },
+      "catchRate": {
+        "numerator": 31,
+        "denominator": 32,
+        "rate": 0.96875,
+        "low": 0.842557,
+        "high": 0.994462
+      },
+      "falseRejectRate": {
+        "numerator": 14,
+        "denominator": 142,
+        "rate": 0.098592,
+        "low": 0.05964,
+        "high": 0.158689
+      },
+      "counts": {
+        "fields": 188,
+        "truthPresent": 170,
+        "accepted": 129,
+        "correctAccepted": 128,
+        "wrongAccepted": 1,
+        "unsupportedAccepted": 0,
+        "candidates": 174,
+        "wrongCandidates": 32,
+        "correctCandidates": 142
+      }
+    },
+    "perField": {
+      "design_temperature": {
+        "precision": {
+          "numerator": 12,
+          "denominator": 12,
+          "rate": 1,
+          "low": 0.757506,
+          "high": 1
+        },
+        "recall": {
+          "numerator": 12,
+          "denominator": 14,
+          "rate": 0.857143,
+          "low": 0.600586,
+          "high": 0.959906
+        },
+        "unsupportedRate": {
+          "numerator": 0,
+          "denominator": 12,
+          "rate": 0,
+          "low": 0,
+          "high": 0.242494
+        },
+        "catchRate": {
+          "numerator": 0,
+          "denominator": 0,
+          "rate": null,
+          "low": null,
+          "high": null
+        },
+        "falseRejectRate": {
+          "numerator": 2,
+          "denominator": 14,
+          "rate": 0.142857,
+          "low": 0.040094,
+          "high": 0.399414
+        },
+        "counts": {
+          "fields": 16,
+          "truthPresent": 14,
+          "accepted": 12,
+          "correctAccepted": 12,
+          "wrongAccepted": 0,
+          "unsupportedAccepted": 0,
+          "candidates": 14,
+          "wrongCandidates": 0,
+          "correctCandidates": 14
+        }
+      },
+      "efficiency": {
+        "precision": {
+          "numerator": 20,
+          "denominator": 20,
+          "rate": 1,
+          "low": 0.838875,
+          "high": 1
+        },
+        "recall": {
+          "numerator": 20,
+          "denominator": 24,
+          "rate": 0.833333,
+          "low": 0.641469,
+          "high": 0.933213
+        },
+        "unsupportedRate": {
+          "numerator": 0,
+          "denominator": 20,
+          "rate": 0,
+          "low": 0,
+          "high": 0.161125
+        },
+        "catchRate": {
+          "numerator": 2,
+          "denominator": 2,
+          "rate": 1,
+          "low": 0.34238,
+          "high": 1
+        },
+        "falseRejectRate": {
+          "numerator": 1,
+          "denominator": 21,
+          "rate": 0.047619,
+          "low": 0.008456,
+          "high": 0.226694
+        },
+        "counts": {
+          "fields": 26,
+          "truthPresent": 24,
+          "accepted": 20,
+          "correctAccepted": 20,
+          "wrongAccepted": 0,
+          "unsupportedAccepted": 0,
+          "candidates": 23,
+          "wrongCandidates": 2,
+          "correctCandidates": 21
+        }
+      },
+      "frequency": {
+        "precision": {
+          "numerator": 7,
+          "denominator": 7,
+          "rate": 1,
+          "low": 0.64567,
+          "high": 1
+        },
+        "recall": {
+          "numerator": 7,
+          "denominator": 9,
+          "rate": 0.777778,
+          "low": 0.452589,
+          "high": 0.936775
+        },
+        "unsupportedRate": {
+          "numerator": 0,
+          "denominator": 7,
+          "rate": 0,
+          "low": 0,
+          "high": 0.35433
+        },
+        "catchRate": {
+          "numerator": 1,
+          "denominator": 1,
+          "rate": 1,
+          "low": 0.206549,
+          "high": 1
+        },
+        "falseRejectRate": {
+          "numerator": 1,
+          "denominator": 8,
+          "rate": 0.125,
+          "low": 0.022417,
+          "high": 0.470888
+        },
+        "counts": {
+          "fields": 10,
+          "truthPresent": 9,
+          "accepted": 7,
+          "correctAccepted": 7,
+          "wrongAccepted": 0,
+          "unsupportedAccepted": 0,
+          "candidates": 9,
+          "wrongCandidates": 1,
+          "correctCandidates": 8
+        }
+      },
+      "max_working_pressure": {
+        "precision": {
+          "numerator": 9,
+          "denominator": 9,
+          "rate": 1,
+          "low": 0.700855,
+          "high": 1
+        },
+        "recall": {
+          "numerator": 9,
+          "denominator": 15,
+          "rate": 0.6,
+          "low": 0.357468,
+          "high": 0.801755
+        },
+        "unsupportedRate": {
+          "numerator": 0,
+          "denominator": 9,
+          "rate": 0,
+          "low": 0,
+          "high": 0.299145
+        },
+        "catchRate": {
+          "numerator": 6,
+          "denominator": 6,
+          "rate": 1,
+          "low": 0.609666,
+          "high": 1
+        },
+        "falseRejectRate": {
+          "numerator": 0,
+          "denominator": 9,
+          "rate": 0,
+          "low": 0,
+          "high": 0.299145
+        },
+        "counts": {
+          "fields": 16,
+          "truthPresent": 15,
+          "accepted": 9,
+          "correctAccepted": 9,
+          "wrongAccepted": 0,
+          "unsupportedAccepted": 0,
+          "candidates": 15,
+          "wrongCandidates": 6,
+          "correctCandidates": 9
+        }
+      },
+      "npsh_required": {
+        "precision": {
+          "numerator": 10,
+          "denominator": 10,
+          "rate": 1,
+          "low": 0.722467,
+          "high": 1
+        },
+        "recall": {
+          "numerator": 10,
+          "denominator": 14,
+          "rate": 0.714286,
+          "low": 0.453509,
+          "high": 0.882786
+        },
+        "unsupportedRate": {
+          "numerator": 0,
+          "denominator": 10,
+          "rate": 0,
+          "low": 0,
+          "high": 0.277533
+        },
+        "catchRate": {
+          "numerator": 2,
+          "denominator": 2,
+          "rate": 1,
+          "low": 0.34238,
+          "high": 1
+        },
+        "falseRejectRate": {
+          "numerator": 3,
+          "denominator": 13,
+          "rate": 0.230769,
+          "low": 0.081795,
+          "high": 0.502564
+        },
+        "counts": {
+          "fields": 16,
+          "truthPresent": 14,
+          "accepted": 10,
+          "correctAccepted": 10,
+          "wrongAccepted": 0,
+          "unsupportedAccepted": 0,
+          "candidates": 15,
+          "wrongCandidates": 2,
+          "correctCandidates": 13
+        }
+      },
+      "rated_current": {
+        "precision": {
+          "numerator": 9,
+          "denominator": 9,
+          "rate": 1,
+          "low": 0.700855,
+          "high": 1
+        },
+        "recall": {
+          "numerator": 9,
+          "denominator": 9,
+          "rate": 1,
+          "low": 0.700855,
+          "high": 1
+        },
+        "unsupportedRate": {
+          "numerator": 0,
+          "denominator": 9,
+          "rate": 0,
+          "low": 0,
+          "high": 0.299145
+        },
+        "catchRate": {
+          "numerator": 0,
+          "denominator": 0,
+          "rate": null,
+          "low": null,
+          "high": null
+        },
+        "falseRejectRate": {
+          "numerator": 0,
+          "denominator": 9,
+          "rate": 0,
+          "low": 0,
+          "high": 0.299145
+        },
+        "counts": {
+          "fields": 10,
+          "truthPresent": 9,
+          "accepted": 9,
+          "correctAccepted": 9,
+          "wrongAccepted": 0,
+          "unsupportedAccepted": 0,
+          "candidates": 9,
+          "wrongCandidates": 0,
+          "correctCandidates": 9
+        }
+      },
+      "rated_flow": {
+        "precision": {
+          "numerator": 10,
+          "denominator": 10,
+          "rate": 1,
+          "low": 0.722467,
+          "high": 1
+        },
+        "recall": {
+          "numerator": 10,
+          "denominator": 14,
+          "rate": 0.714286,
+          "low": 0.453509,
+          "high": 0.882786
+        },
+        "unsupportedRate": {
+          "numerator": 0,
+          "denominator": 10,
+          "rate": 0,
+          "low": 0,
+          "high": 0.277533
+        },
+        "catchRate": {
+          "numerator": 5,
+          "denominator": 5,
+          "rate": 1,
+          "low": 0.565518,
+          "high": 1
+        },
+        "falseRejectRate": {
+          "numerator": 0,
+          "denominator": 10,
+          "rate": 0,
+          "low": 0,
+          "high": 0.277533
+        },
+        "counts": {
+          "fields": 16,
+          "truthPresent": 14,
+          "accepted": 10,
+          "correctAccepted": 10,
+          "wrongAccepted": 0,
+          "unsupportedAccepted": 0,
+          "candidates": 15,
+          "wrongCandidates": 5,
+          "correctCandidates": 10
+        }
+      },
+      "rated_head": {
+        "precision": {
+          "numerator": 10,
+          "denominator": 11,
+          "rate": 0.909091,
+          "low": 0.622642,
+          "high": 0.983768
+        },
+        "recall": {
+          "numerator": 10,
+          "denominator": 15,
+          "rate": 0.666667,
+          "low": 0.417135,
+          "high": 0.848237
+        },
+        "unsupportedRate": {
+          "numerator": 0,
+          "denominator": 11,
+          "rate": 0,
+          "low": 0,
+          "high": 0.258833
+        },
+        "catchRate": {
+          "numerator": 3,
+          "denominator": 4,
+          "rate": 0.75,
+          "low": 0.300642,
+          "high": 0.954413
+        },
+        "falseRejectRate": {
+          "numerator": 3,
+          "denominator": 13,
+          "rate": 0.230769,
+          "low": 0.081795,
+          "high": 0.502564
+        },
+        "counts": {
+          "fields": 16,
+          "truthPresent": 15,
+          "accepted": 11,
+          "correctAccepted": 10,
+          "wrongAccepted": 1,
+          "unsupportedAccepted": 0,
+          "candidates": 17,
+          "wrongCandidates": 4,
+          "correctCandidates": 13
+        }
+      },
+      "rated_power": {
+        "precision": {
+          "numerator": 17,
+          "denominator": 17,
+          "rate": 1,
+          "low": 0.815682,
+          "high": 1
+        },
+        "recall": {
+          "numerator": 17,
+          "denominator": 23,
+          "rate": 0.73913,
+          "low": 0.5353,
+          "high": 0.874514
+        },
+        "unsupportedRate": {
+          "numerator": 0,
+          "denominator": 17,
+          "rate": 0,
+          "low": 0,
+          "high": 0.184318
+        },
+        "catchRate": {
+          "numerator": 5,
+          "denominator": 5,
+          "rate": 1,
+          "low": 0.565518,
+          "high": 1
+        },
+        "falseRejectRate": {
+          "numerator": 2,
+          "denominator": 19,
+          "rate": 0.105263,
+          "low": 0.029359,
+          "high": 0.313941
+        },
+        "counts": {
+          "fields": 26,
+          "truthPresent": 23,
+          "accepted": 17,
+          "correctAccepted": 17,
+          "wrongAccepted": 0,
+          "unsupportedAccepted": 0,
+          "candidates": 24,
+          "wrongCandidates": 5,
+          "correctCandidates": 19
+        }
+      },
+      "rated_speed": {
+        "precision": {
+          "numerator": 19,
+          "denominator": 19,
+          "rate": 1,
+          "low": 0.831821,
+          "high": 1
+        },
+        "recall": {
+          "numerator": 19,
+          "denominator": 24,
+          "rate": 0.791667,
+          "low": 0.595295,
+          "high": 0.907552
+        },
+        "unsupportedRate": {
+          "numerator": 0,
+          "denominator": 19,
+          "rate": 0,
+          "low": 0,
+          "high": 0.168179
+        },
+        "catchRate": {
+          "numerator": 5,
+          "denominator": 5,
+          "rate": 1,
+          "low": 0.565518,
+          "high": 1
+        },
+        "falseRejectRate": {
+          "numerator": 1,
+          "denominator": 20,
+          "rate": 0.05,
+          "low": 0.008881,
+          "high": 0.236131
+        },
+        "counts": {
+          "fields": 26,
+          "truthPresent": 24,
+          "accepted": 19,
+          "correctAccepted": 19,
+          "wrongAccepted": 0,
+          "unsupportedAccepted": 0,
+          "candidates": 25,
+          "wrongCandidates": 5,
+          "correctCandidates": 20
+        }
+      },
+      "rated_voltage": {
+        "precision": {
+          "numerator": 5,
+          "denominator": 5,
+          "rate": 1,
+          "low": 0.565518,
+          "high": 1
+        },
+        "recall": {
+          "numerator": 5,
+          "denominator": 9,
+          "rate": 0.555556,
+          "low": 0.266651,
+          "high": 0.811221
+        },
+        "unsupportedRate": {
+          "numerator": 0,
+          "denominator": 5,
+          "rate": 0,
+          "low": 0,
+          "high": 0.434482
+        },
+        "catchRate": {
+          "numerator": 2,
+          "denominator": 2,
+          "rate": 1,
+          "low": 0.34238,
+          "high": 1
+        },
+        "falseRejectRate": {
+          "numerator": 1,
+          "denominator": 6,
+          "rate": 0.166667,
+          "low": 0.030053,
+          "high": 0.563503
+        },
+        "counts": {
+          "fields": 10,
+          "truthPresent": 9,
+          "accepted": 5,
+          "correctAccepted": 5,
+          "wrongAccepted": 0,
+          "unsupportedAccepted": 0,
+          "candidates": 8,
+          "wrongCandidates": 2,
+          "correctCandidates": 6
+        }
+      }
+    }
+  },
+  "naive": {
+    "overall": {
+      "precision": {
+        "numerator": 136,
+        "denominator": 168,
+        "rate": 0.809524,
+        "low": 0.743487,
+        "high": 0.861722
+      },
+      "recall": {
+        "numerator": 136,
+        "denominator": 170,
+        "rate": 0.8,
+        "low": 0.733541,
+        "high": 0.8532
+      },
+      "unsupportedRate": {
+        "numerator": 5,
+        "denominator": 168,
+        "rate": 0.029762,
+        "low": 0.012778,
+        "high": 0.06777
+      },
+      "catchRate": {
+        "numerator": 0,
+        "denominator": 32,
+        "rate": 0,
+        "low": 0,
+        "high": 0.107179
+      },
+      "falseRejectRate": {
+        "numerator": 0,
+        "denominator": 142,
+        "rate": 0,
+        "low": 0,
+        "high": 0.02634
+      },
+      "counts": {
+        "fields": 188,
+        "truthPresent": 170,
+        "accepted": 168,
+        "correctAccepted": 136,
+        "wrongAccepted": 32,
+        "unsupportedAccepted": 5,
+        "candidates": 174,
+        "wrongCandidates": 32,
+        "correctCandidates": 142
+      }
+    },
+    "perField": {
+      "design_temperature": {
+        "precision": {
+          "numerator": 14,
+          "denominator": 14,
+          "rate": 1,
+          "low": 0.784689,
+          "high": 1
+        },
+        "recall": {
+          "numerator": 14,
+          "denominator": 14,
+          "rate": 1,
+          "low": 0.784689,
+          "high": 1
+        },
+        "unsupportedRate": {
+          "numerator": 0,
+          "denominator": 14,
+          "rate": 0,
+          "low": 0,
+          "high": 0.215311
+        },
+        "catchRate": {
+          "numerator": 0,
+          "denominator": 0,
+          "rate": null,
+          "low": null,
+          "high": null
+        },
+        "falseRejectRate": {
+          "numerator": 0,
+          "denominator": 14,
+          "rate": 0,
+          "low": 0,
+          "high": 0.215311
+        },
+        "counts": {
+          "fields": 16,
+          "truthPresent": 14,
+          "accepted": 14,
+          "correctAccepted": 14,
+          "wrongAccepted": 0,
+          "unsupportedAccepted": 0,
+          "candidates": 14,
+          "wrongCandidates": 0,
+          "correctCandidates": 14
+        }
+      },
+      "efficiency": {
+        "precision": {
+          "numerator": 21,
+          "denominator": 23,
+          "rate": 0.913043,
+          "low": 0.73204,
+          "high": 0.97582
+        },
+        "recall": {
+          "numerator": 21,
+          "denominator": 24,
+          "rate": 0.875,
+          "low": 0.689961,
+          "high": 0.956557
+        },
+        "unsupportedRate": {
+          "numerator": 0,
+          "denominator": 23,
+          "rate": 0,
+          "low": 0,
+          "high": 0.143117
+        },
+        "catchRate": {
+          "numerator": 0,
+          "denominator": 2,
+          "rate": 0,
+          "low": 0,
+          "high": 0.65762
+        },
+        "falseRejectRate": {
+          "numerator": 0,
+          "denominator": 21,
+          "rate": 0,
+          "low": 0,
+          "high": 0.154639
+        },
+        "counts": {
+          "fields": 26,
+          "truthPresent": 24,
+          "accepted": 23,
+          "correctAccepted": 21,
+          "wrongAccepted": 2,
+          "unsupportedAccepted": 0,
+          "candidates": 23,
+          "wrongCandidates": 2,
+          "correctCandidates": 21
+        }
+      },
+      "frequency": {
+        "precision": {
+          "numerator": 8,
+          "denominator": 9,
+          "rate": 0.888889,
+          "low": 0.565,
+          "high": 0.980109
+        },
+        "recall": {
+          "numerator": 8,
+          "denominator": 9,
+          "rate": 0.888889,
+          "low": 0.565,
+          "high": 0.980109
+        },
+        "unsupportedRate": {
+          "numerator": 0,
+          "denominator": 9,
+          "rate": 0,
+          "low": 0,
+          "high": 0.299145
+        },
+        "catchRate": {
+          "numerator": 0,
+          "denominator": 1,
+          "rate": 0,
+          "low": 0,
+          "high": 0.793451
+        },
+        "falseRejectRate": {
+          "numerator": 0,
+          "denominator": 8,
+          "rate": 0,
+          "low": 0,
+          "high": 0.324408
+        },
+        "counts": {
+          "fields": 10,
+          "truthPresent": 9,
+          "accepted": 9,
+          "correctAccepted": 8,
+          "wrongAccepted": 1,
+          "unsupportedAccepted": 0,
+          "candidates": 9,
+          "wrongCandidates": 1,
+          "correctCandidates": 8
+        }
+      },
+      "max_working_pressure": {
+        "precision": {
+          "numerator": 8,
+          "denominator": 14,
+          "rate": 0.571429,
+          "low": 0.325906,
+          "high": 0.786192
+        },
+        "recall": {
+          "numerator": 8,
+          "denominator": 15,
+          "rate": 0.533333,
+          "low": 0.30117,
+          "high": 0.751905
+        },
+        "unsupportedRate": {
+          "numerator": 0,
+          "denominator": 14,
+          "rate": 0,
+          "low": 0,
+          "high": 0.215311
+        },
+        "catchRate": {
+          "numerator": 0,
+          "denominator": 6,
+          "rate": 0,
+          "low": 0,
+          "high": 0.390334
+        },
+        "falseRejectRate": {
+          "numerator": 0,
+          "denominator": 9,
+          "rate": 0,
+          "low": 0,
+          "high": 0.299145
+        },
+        "counts": {
+          "fields": 16,
+          "truthPresent": 15,
+          "accepted": 14,
+          "correctAccepted": 8,
+          "wrongAccepted": 6,
+          "unsupportedAccepted": 0,
+          "candidates": 15,
+          "wrongCandidates": 6,
+          "correctCandidates": 9
+        }
+      },
+      "npsh_required": {
+        "precision": {
+          "numerator": 12,
+          "denominator": 14,
+          "rate": 0.857143,
+          "low": 0.600586,
+          "high": 0.959906
+        },
+        "recall": {
+          "numerator": 12,
+          "denominator": 14,
+          "rate": 0.857143,
+          "low": 0.600586,
+          "high": 0.959906
+        },
+        "unsupportedRate": {
+          "numerator": 0,
+          "denominator": 14,
+          "rate": 0,
+          "low": 0,
+          "high": 0.215311
+        },
+        "catchRate": {
+          "numerator": 0,
+          "denominator": 2,
+          "rate": 0,
+          "low": 0,
+          "high": 0.65762
+        },
+        "falseRejectRate": {
+          "numerator": 0,
+          "denominator": 13,
+          "rate": 0,
+          "low": 0,
+          "high": 0.228095
+        },
+        "counts": {
+          "fields": 16,
+          "truthPresent": 14,
+          "accepted": 14,
+          "correctAccepted": 12,
+          "wrongAccepted": 2,
+          "unsupportedAccepted": 0,
+          "candidates": 15,
+          "wrongCandidates": 2,
+          "correctCandidates": 13
+        }
+      },
+      "rated_current": {
+        "precision": {
+          "numerator": 9,
+          "denominator": 9,
+          "rate": 1,
+          "low": 0.700855,
+          "high": 1
+        },
+        "recall": {
+          "numerator": 9,
+          "denominator": 9,
+          "rate": 1,
+          "low": 0.700855,
+          "high": 1
+        },
+        "unsupportedRate": {
+          "numerator": 0,
+          "denominator": 9,
+          "rate": 0,
+          "low": 0,
+          "high": 0.299145
+        },
+        "catchRate": {
+          "numerator": 0,
+          "denominator": 0,
+          "rate": null,
+          "low": null,
+          "high": null
+        },
+        "falseRejectRate": {
+          "numerator": 0,
+          "denominator": 9,
+          "rate": 0,
+          "low": 0,
+          "high": 0.299145
+        },
+        "counts": {
+          "fields": 10,
+          "truthPresent": 9,
+          "accepted": 9,
+          "correctAccepted": 9,
+          "wrongAccepted": 0,
+          "unsupportedAccepted": 0,
+          "candidates": 9,
+          "wrongCandidates": 0,
+          "correctCandidates": 9
+        }
+      },
+      "rated_flow": {
+        "precision": {
+          "numerator": 9,
+          "denominator": 14,
+          "rate": 0.642857,
+          "low": 0.387644,
+          "high": 0.836553
+        },
+        "recall": {
+          "numerator": 9,
+          "denominator": 14,
+          "rate": 0.642857,
+          "low": 0.387644,
+          "high": 0.836553
+        },
+        "unsupportedRate": {
+          "numerator": 1,
+          "denominator": 14,
+          "rate": 0.071429,
+          "low": 0.012722,
+          "high": 0.314687
+        },
+        "catchRate": {
+          "numerator": 0,
+          "denominator": 5,
+          "rate": 0,
+          "low": 0,
+          "high": 0.434482
+        },
+        "falseRejectRate": {
+          "numerator": 0,
+          "denominator": 10,
+          "rate": 0,
+          "low": 0,
+          "high": 0.277533
+        },
+        "counts": {
+          "fields": 16,
+          "truthPresent": 14,
+          "accepted": 14,
+          "correctAccepted": 9,
+          "wrongAccepted": 5,
+          "unsupportedAccepted": 1,
+          "candidates": 15,
+          "wrongCandidates": 5,
+          "correctCandidates": 10
+        }
+      },
+      "rated_head": {
+        "precision": {
+          "numerator": 12,
+          "denominator": 16,
+          "rate": 0.75,
+          "low": 0.505017,
+          "high": 0.898179
+        },
+        "recall": {
+          "numerator": 12,
+          "denominator": 15,
+          "rate": 0.8,
+          "low": 0.548146,
+          "high": 0.929525
+        },
+        "unsupportedRate": {
+          "numerator": 1,
+          "denominator": 16,
+          "rate": 0.0625,
+          "low": 0.011119,
+          "high": 0.283287
+        },
+        "catchRate": {
+          "numerator": 0,
+          "denominator": 4,
+          "rate": 0,
+          "low": 0,
+          "high": 0.489891
+        },
+        "falseRejectRate": {
+          "numerator": 0,
+          "denominator": 13,
+          "rate": 0,
+          "low": 0,
+          "high": 0.228095
+        },
+        "counts": {
+          "fields": 16,
+          "truthPresent": 15,
+          "accepted": 16,
+          "correctAccepted": 12,
+          "wrongAccepted": 4,
+          "unsupportedAccepted": 1,
+          "candidates": 17,
+          "wrongCandidates": 4,
+          "correctCandidates": 13
+        }
+      },
+      "rated_power": {
+        "precision": {
+          "numerator": 17,
+          "denominator": 22,
+          "rate": 0.772727,
+          "low": 0.5656,
+          "high": 0.89877
+        },
+        "recall": {
+          "numerator": 17,
+          "denominator": 23,
+          "rate": 0.73913,
+          "low": 0.5353,
+          "high": 0.874514
+        },
+        "unsupportedRate": {
+          "numerator": 1,
+          "denominator": 22,
+          "rate": 0.045455,
+          "low": 0.008069,
+          "high": 0.21798
+        },
+        "catchRate": {
+          "numerator": 0,
+          "denominator": 5,
+          "rate": 0,
+          "low": 0,
+          "high": 0.434482
+        },
+        "falseRejectRate": {
+          "numerator": 0,
+          "denominator": 19,
+          "rate": 0,
+          "low": 0,
+          "high": 0.168179
+        },
+        "counts": {
+          "fields": 26,
+          "truthPresent": 23,
+          "accepted": 22,
+          "correctAccepted": 17,
+          "wrongAccepted": 5,
+          "unsupportedAccepted": 1,
+          "candidates": 24,
+          "wrongCandidates": 5,
+          "correctCandidates": 19
+        }
+      },
+      "rated_speed": {
+        "precision": {
+          "numerator": 20,
+          "denominator": 25,
+          "rate": 0.8,
+          "low": 0.60869,
+          "high": 0.911394
+        },
+        "recall": {
+          "numerator": 20,
+          "denominator": 24,
+          "rate": 0.833333,
+          "low": 0.641469,
+          "high": 0.933213
+        },
+        "unsupportedRate": {
+          "numerator": 2,
+          "denominator": 25,
+          "rate": 0.08,
+          "low": 0.02222,
+          "high": 0.249661
+        },
+        "catchRate": {
+          "numerator": 0,
+          "denominator": 5,
+          "rate": 0,
+          "low": 0,
+          "high": 0.434482
+        },
+        "falseRejectRate": {
+          "numerator": 0,
+          "denominator": 20,
+          "rate": 0,
+          "low": 0,
+          "high": 0.161125
+        },
+        "counts": {
+          "fields": 26,
+          "truthPresent": 24,
+          "accepted": 25,
+          "correctAccepted": 20,
+          "wrongAccepted": 5,
+          "unsupportedAccepted": 2,
+          "candidates": 25,
+          "wrongCandidates": 5,
+          "correctCandidates": 20
+        }
+      },
+      "rated_voltage": {
+        "precision": {
+          "numerator": 6,
+          "denominator": 8,
+          "rate": 0.75,
+          "low": 0.409275,
+          "high": 0.928521
+        },
+        "recall": {
+          "numerator": 6,
+          "denominator": 9,
+          "rate": 0.666667,
+          "low": 0.354202,
+          "high": 0.879416
+        },
+        "unsupportedRate": {
+          "numerator": 0,
+          "denominator": 8,
+          "rate": 0,
+          "low": 0,
+          "high": 0.324408
+        },
+        "catchRate": {
+          "numerator": 0,
+          "denominator": 2,
+          "rate": 0,
+          "low": 0,
+          "high": 0.65762
+        },
+        "falseRejectRate": {
+          "numerator": 0,
+          "denominator": 6,
+          "rate": 0,
+          "low": 0,
+          "high": 0.390334
+        },
+        "counts": {
+          "fields": 10,
+          "truthPresent": 9,
+          "accepted": 8,
+          "correctAccepted": 6,
+          "wrongAccepted": 2,
+          "unsupportedAccepted": 0,
+          "candidates": 8,
+          "wrongCandidates": 2,
+          "correctCandidates": 6
+        }
+      }
+    }
+  },
+  "prevented": {
+    "naiveWrongAccepted": 32,
+    "pipelineWrongAccepted": 1,
+    "prevented": 31,
+    "naiveUnsupportedAccepted": 5,
+    "pipelineUnsupportedAccepted": 0
+  },
+  "reconciliation": {
+    "equipment": 24,
+    "expected": {
+      "numerator": 121,
+      "denominator": 160,
+      "rate": 0.75625,
+      "low": 0.684226,
+      "high": 0.816258
+    },
+    "conflicts": 0,
+    "missing": 38,
+    "wrong": 1,
+    "unexpected": 0
+  },
+  "limits": [
+    "The corpus is synthetic: generated datasheets with designed difficult cases, not vendor documents. Rates describe this corpus and say nothing about real documents.",
+    "A document counts once per field of its equipment class; fields within a document are not independent, so the intervals are optimistic.",
+    "Correct means within 0.5 percent of the ground truth after SI conversion, with a quote that is the expected one or contains the expected value.",
+    "The pipeline measured is extraction, the verifier, the per-field pick and reconciliation; human review is not simulated."
+  ]
+}

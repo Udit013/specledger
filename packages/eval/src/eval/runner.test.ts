@@ -94,6 +94,7 @@ describe('runEvaluation on constructed documents', () => {
       expected: { numerator: 1, denominator: 3, rate: 0.333333 },
       conflicts: 0,
       missing: 2,
+      wrong: 0,
       unexpected: 1,
     });
   });

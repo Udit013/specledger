@@ -1,0 +1,2250 @@
+{
+  "schemaVersion": 1,
+  "origin": "simulated",
+  "label": "SIMULATED EXTRACTION: candidates generated from the ground truth by a seeded error model (packages/eval/src/eval/simulate.ts), not answers from any language model. The rates measure the verifier, the per-field pick and reconciliation against these designed errors; they are not a measurement of model accuracy.",
+  "modelId": "simulated-error-model-v1",
+  "promptVersion": "not-applicable",
+  "date": "2026-11-04",
+  "corpusSha256": "e0caf65c0f9c5ab33d92b499d900da22bca8b065f9490f8ca34719846885719b",
+  "generator": {
+    "name": "simulated-error-model",
+    "version": 1,
+    "seed": "specledger-simulated-extraction-v1"
+  },
+  "documents": {
+    "m-201-datasheet-rev-a": {
+      "candidates": [
+        {
+          "fieldName": "rated_power",
+          "value": "45.0",
+          "unit": "hp",
+          "quote": "Rated power 45.0 kW",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_voltage",
+          "value": "400",
+          "unit": "V",
+          "quote": "Rated voltage 400 V",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_current",
+          "value": "78.6",
+          "unit": "A",
+          "quote": "Rated current 78.6 A",
+          "page": 1
+        },
+        {
+          "fieldName": "frequency",
+          "value": "50",
+          "unit": "Hz",
+          "quote": "Frequency  50 Hz",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_speed",
+          "value": "1473",
+          "unit": "rpm",
+          "quote": "Rated speed 1473 rpm",
+          "page": 1
+        },
+        {
+          "fieldName": "efficiency",
+          "value": "96.1",
+          "unit": "%",
+          "quote": "Efficiency 96.1 %",
+          "page": 1
+        }
+      ]
+    },
+    "m-201-datasheet-rev-b": {
+      "candidates": [
+        {
+          "fieldName": "rated_power",
+          "value": "45.0",
+          "unit": "kW",
+          "quote": "Rated  power 45.0 kW",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_voltage",
+          "value": "400",
+          "unit": "V",
+          "quote": "Rated  voltage 400 V",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_current",
+          "value": "76.3",
+          "unit": "A",
+          "quote": "Rated current 76.3 A",
+          "page": 1
+        },
+        {
+          "fieldName": "frequency",
+          "value": "50",
+          "unit": "Hz",
+          "quote": "Frequency 50 Hz",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_speed",
+          "value": "1473",
+          "unit": "rpm",
+          "quote": "Rated speed 1473 rpm",
+          "page": 1
+        },
+        {
+          "fieldName": "efficiency",
+          "value": "96.9",
+          "unit": "%",
+          "quote": "Efficiency 96.9 %",
+          "page": 1
+        }
+      ]
+    },
+    "m-202-datasheet": {
+      "candidates": [
+        {
+          "fieldName": "rated_power",
+          "value": "37.0",
+          "unit": "kW",
+          "quote": "Rated power: 37.0 kW",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_voltage",
+          "value": "630.2",
+          "unit": "V",
+          "quote": "rated voltage 630.2 V",
+          "page": 1
+        },
+        {
+          "fieldName": "frequency",
+          "value": "70",
+          "unit": "Hz",
+          "quote": "Frequency: 60 Hz",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_speed",
+          "value": "2900 to 3600",
+          "unit": "rpm",
+          "quote": "Rated speed: 2900 to 3600 rpm",
+          "page": 1
+        },
+        {
+          "fieldName": "efficiency",
+          "value": "93.5",
+          "unit": "%",
+          "quote": "Efficiency: 93.5 %",
+          "page": 1
+        }
+      ]
+    },
+    "m-203-datasheet": {
+      "candidates": [
+        {
+          "fieldName": "rated_power",
+          "value": "55.0",
+          "unit": "kW",
+          "quote": "Rated power: 45.0 kW",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_power",
+          "value": "45.0",
+          "unit": "kW",
+          "quote": "Rated power: 45.0 kW",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_voltage",
+          "value": "400",
+          "unit": "V",
+          "quote": "The rated voltage is 400 V",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_current",
+          "value": "78.9",
+          "unit": "A",
+          "quote": "Rated current: 78.9 A",
+          "page": 1
+        },
+        {
+          "fieldName": "frequency",
+          "value": "68.5",
+          "unit": "Hz",
+          "quote": "frequency 68.5 Hz",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_speed",
+          "value": "2900 to 3600",
+          "unit": "rpm",
+          "quote": "Rated speed: 2900 to 3600 rpm",
+          "page": 1
+        },
+        {
+          "fieldName": "efficiency",
+          "value": "95.7",
+          "unit": "%",
+          "quote": "Efficiency: 95.7 %",
+          "page": 1
+        }
+      ]
+    },
+    "m-204-datasheet": {
+      "candidates": [
+        {
+          "fieldName": "rated_power",
+          "value": "11.0",
+          "unit": "kW",
+          "quote": "Rated power: 11.0 kW",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_current",
+          "value": "11.4",
+          "unit": "A",
+          "quote": "Rated current: 11.4 A",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_speed",
+          "value": "42",
+          "unit": "rpm",
+          "quote": "rated speed 42 rpm",
+          "page": 1
+        },
+        {
+          "fieldName": "efficiency",
+          "value": "93.8",
+          "unit": "%",
+          "quote": "Efficiency: 93.8 %",
+          "page": 1
+        }
+      ]
+    },
+    "m-210-datasheet": {
+      "candidates": [
+        {
+          "fieldName": "rated_voltage",
+          "value": "690",
+          "unit": "V",
+          "quote": "The  rated voltage is 690 V at the guaranteed duty point.",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_current",
+          "value": "57,1",
+          "unit": "A",
+          "quote": "The rated current is 57,1 A at the guaranteed duty point.",
+          "page": 1
+        },
+        {
+          "fieldName": "frequency",
+          "value": "50",
+          "unit": "Hz",
+          "quote": "Frequency  50 Hz",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_speed",
+          "value": "1476",
+          "unit": "rpm",
+          "quote": "Rated speed 1476 rpm",
+          "page": 2
+        },
+        {
+          "fieldName": "efficiency",
+          "value": "93,7",
+          "unit": "%",
+          "quote": "Efficiency 93,7 %",
+          "page": 2
+        }
+      ]
+    },
+    "m-211-datasheet": {
+      "candidates": [
+        {
+          "fieldName": "rated_power",
+          "value": "7.5",
+          "unit": "kW",
+          "quote": "The rated power is 7.5 kW at the guaranteed duty point.",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_current",
+          "value": "7.9",
+          "unit": "A",
+          "quote": "The rated current is 7.9 A at the guaranteed duty point.",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_speed",
+          "value": "2935",
+          "unit": "rpm",
+          "quote": "Rated speed 2935 rpm",
+          "page": 2
+        },
+        {
+          "fieldName": "efficiency",
+          "value": "91.8",
+          "unit": "%",
+          "quote": "Efficiency  91.8 %",
+          "page": 2
+        }
+      ]
+    },
+    "m-212-datasheet": {
+      "candidates": [
+        {
+          "fieldName": "rated_power",
+          "value": "42",
+          "unit": "W",
+          "quote": "rated power 42 W",
+          "page": 1
+        },
+        {
+          "fieldName": "frequency",
+          "value": "50",
+          "unit": "Hz",
+          "quote": "The frequency is 50 Hz",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_speed",
+          "value": "2966",
+          "unit": "rpm",
+          "quote": "Rated speed: 2966 rpm",
+          "page": 1
+        },
+        {
+          "fieldName": "efficiency",
+          "value": "90.5",
+          "unit": "%",
+          "quote": "Efficiency: 90.5 %",
+          "page": 1
+        }
+      ]
+    },
+    "m-213-datasheet": {
+      "candidates": [
+        {
+          "fieldName": "rated_power",
+          "value": "37.0",
+          "unit": "kW",
+          "quote": "The rated power is 37.0 kW",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_voltage",
+          "value": "400",
+          "unit": "V",
+          "quote": "Rated voltage: 400 V",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_speed",
+          "value": "2914",
+          "unit": "rpm",
+          "quote": "Rated  speed: 2914 rpm",
+          "page": 1
+        },
+        {
+          "fieldName": "efficiency",
+          "value": "92.2",
+          "unit": "%",
+          "quote": "Efficiency:  92.2 %",
+          "page": 1
+        }
+      ]
+    },
+    "m-214-datasheet": {
+      "candidates": [
+        {
+          "fieldName": "rated_power",
+          "value": "110.0",
+          "unit": "kW",
+          "quote": "Rated power: 110.0 kW (147.5 hp)",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_current",
+          "value": "260.99",
+          "unit": "A",
+          "quote": "rated current 260.99 A",
+          "page": 1
+        },
+        {
+          "fieldName": "frequency",
+          "value": "50",
+          "unit": "Hz",
+          "quote": "Frequency: 50 Hz",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_speed",
+          "value": "42",
+          "unit": "rpm",
+          "quote": "rated speed 42 rpm",
+          "page": 1
+        },
+        {
+          "fieldName": "efficiency",
+          "value": "93.4",
+          "unit": "%",
+          "quote": "Efficiency: 93.4 %",
+          "page": 1
+        }
+      ]
+    },
+    "m-215-datasheet": {
+      "candidates": [
+        {
+          "fieldName": "rated_voltage",
+          "value": "945.3",
+          "unit": "V",
+          "quote": "rated voltage 945.3 V",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_current",
+          "value": "141,5",
+          "unit": "A",
+          "quote": "Rated current: 141,5 A",
+          "page": 1
+        },
+        {
+          "fieldName": "frequency",
+          "value": "50",
+          "unit": "Hz",
+          "quote": "Frequency: 50 Hz",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_speed",
+          "value": "3929",
+          "unit": "rpm",
+          "quote": "Rated speed: 2929 rpm",
+          "page": 1
+        }
+      ]
+    },
+    "m-216-datasheet": {
+      "candidates": [
+        {
+          "fieldName": "rated_power",
+          "value": "7.5",
+          "unit": "kW",
+          "quote": "Rated  power: 7.5 kW (10.06 hp)",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_voltage",
+          "value": "400",
+          "unit": "V",
+          "quote": "Rated voltage: 400 V",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_current",
+          "value": "13.5",
+          "unit": "A",
+          "quote": "Rated current: 13.5 A",
+          "page": 1
+        },
+        {
+          "fieldName": "frequency",
+          "value": "50",
+          "unit": "Hz",
+          "quote": "Frequency:  50 Hz",
+          "page": 2
+        },
+        {
+          "fieldName": "rated_speed",
+          "value": "1466",
+          "unit": "rpm",
+          "quote": "Rated speed: 1466 rpm",
+          "page": 2
+        },
+        {
+          "fieldName": "efficiency",
+          "value": "93.5",
+          "unit": "%",
+          "quote": "Efficiency: 93.5 %",
+          "page": 2
+        }
+      ]
+    },
+    "m-217-datasheet": {
+      "candidates": [
+        {
+          "fieldName": "rated_power",
+          "value": "22.0",
+          "unit": "kW",
+          "quote": "Rated power 22.0 kW",
+          "page": 2
+        },
+        {
+          "fieldName": "rated_voltage",
+          "value": "400",
+          "unit": "V",
+          "quote": "Rated voltage 400 V",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_current",
+          "value": "38.3",
+          "unit": "A",
+          "quote": "Rated current 38.3 A",
+          "page": 1
+        },
+        {
+          "fieldName": "frequency",
+          "value": "50",
+          "unit": "Hz",
+          "quote": "Frequency 50 Hz",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_speed",
+          "value": "3968",
+          "unit": "rpm",
+          "quote": "Rated speed 2968 rpm",
+          "page": 1
+        },
+        {
+          "fieldName": "efficiency",
+          "value": "96.4",
+          "unit": "%",
+          "quote": "Efficiency 96.4 %",
+          "page": 1
+        }
+      ]
+    },
+    "m-218-datasheet": {
+      "candidates": [
+        {
+          "fieldName": "rated_power",
+          "value": "30.0",
+          "unit": "kW",
+          "quote": "Rated power 30.0 kW",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_voltage",
+          "value": "460",
+          "unit": "V",
+          "quote": "Rated voltage 460 V",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_current",
+          "value": "42",
+          "unit": "A",
+          "quote": "rated current 42 A",
+          "page": 1
+        },
+        {
+          "fieldName": "frequency",
+          "value": "60",
+          "unit": "Hz",
+          "quote": "Frequency 60 Hz",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_speed",
+          "value": "4557",
+          "unit": "rpm",
+          "quote": "Rated speed 3557 rpm",
+          "page": 2
+        },
+        {
+          "fieldName": "efficiency",
+          "value": "96.0",
+          "unit": "%",
+          "quote": "Efficiency  96.0 %",
+          "page": 2
+        }
+      ]
+    },
+    "m-219-datasheet": {
+      "candidates": [
+        {
+          "fieldName": "rated_power",
+          "value": "55.0",
+          "unit": "kW",
+          "quote": "Rated power: 55.0 kW",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_voltage",
+          "value": "560",
+          "unit": "V",
+          "quote": "Rated voltage: 460 V",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_current",
+          "value": "87.2",
+          "unit": "A",
+          "quote": "Rated current: 87.2 A",
+          "page": 1
+        },
+        {
+          "fieldName": "frequency",
+          "value": "60",
+          "unit": "Hz",
+          "quote": "Frequency: 60 Hz",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_speed",
+          "value": "1765",
+          "unit": "rpm",
+          "quote": "Rated speed: 1765 rpm",
+          "page": 1
+        },
+        {
+          "fieldName": "efficiency",
+          "value": "92.1",
+          "unit": "%",
+          "quote": "Efficiency: 92.1 %",
+          "page": 1
+        }
+      ]
+    },
+    "m-220-datasheet": {
+      "candidates": [
+        {
+          "fieldName": "rated_power",
+          "value": "7.5",
+          "unit": "kW",
+          "quote": "Rated  power 7.5 kW",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_voltage",
+          "value": "515",
+          "unit": "V",
+          "quote": "Rated voltage 415 V",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_current",
+          "value": "23.3",
+          "unit": "A",
+          "quote": "Rated current 13.3 A",
+          "page": 1
+        },
+        {
+          "fieldName": "frequency",
+          "value": "50",
+          "unit": "Hz",
+          "quote": "Frequency 50 Hz",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_speed",
+          "value": "2930",
+          "unit": "rpm",
+          "quote": "Rated speed 2930 rpm",
+          "page": 1
+        },
+        {
+          "fieldName": "efficiency",
+          "value": "91.0",
+          "unit": "%",
+          "quote": "Efficiency  91.0 %",
+          "page": 1
+        }
+      ]
+    },
+    "m-221-datasheet": {
+      "candidates": [
+        {
+          "fieldName": "rated_power",
+          "value": "75.0",
+          "unit": "kW",
+          "quote": "The rated power is 75.0 kW at the guaranteed duty point.",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_voltage",
+          "value": "415",
+          "unit": "V",
+          "quote": "The rated voltage is 415 V at the guaranteed duty point.",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_current",
+          "value": "132.0",
+          "unit": "A",
+          "quote": "Rated current 132.0 A",
+          "page": 1
+        },
+        {
+          "fieldName": "frequency",
+          "value": "60",
+          "unit": "Hz",
+          "quote": "Frequency 50 Hz",
+          "page": 2
+        },
+        {
+          "fieldName": "frequency",
+          "value": "50",
+          "unit": "Hz",
+          "quote": "Frequency 50 Hz",
+          "page": 2
+        },
+        {
+          "fieldName": "rated_speed",
+          "value": "1479",
+          "unit": "rpm",
+          "quote": "Rated  speed 1479 rpm",
+          "page": 2
+        },
+        {
+          "fieldName": "efficiency",
+          "value": "91.9",
+          "unit": "%",
+          "quote": "Efficiency 91.9 %",
+          "page": 2
+        }
+      ]
+    },
+    "p-101-brochure": {
+      "candidates": [
+        {
+          "fieldName": "rated_flow",
+          "value": "1264",
+          "unit": "gpm",
+          "quote": "Rated flow: 1264 gpm",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_head",
+          "value": "346.61",
+          "unit": "ft",
+          "quote": "rated head 346.61 ft",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_speed",
+          "value": "3550",
+          "unit": "rpm",
+          "quote": "Rated speed: 3550 rpm",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_power",
+          "value": "106.2",
+          "unit": "hp",
+          "quote": "Rated power: 106.2 hp",
+          "page": 1
+        },
+        {
+          "fieldName": "design_temperature",
+          "value": "42",
+          "unit": "K",
+          "quote": "design temperature 42 K",
+          "page": 1
+        }
+      ]
+    },
+    "p-101-datasheet-rev-a": {
+      "candidates": [
+        {
+          "fieldName": "rated_flow",
+          "value": "89.7",
+          "unit": "l/s",
+          "quote": "Rated flow: 79.7 l/s",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_head",
+          "value": "80.3",
+          "unit": "m",
+          "quote": "Rated head: 80.3 m (263.5 ft)",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_speed",
+          "value": "3550",
+          "unit": "rpm",
+          "quote": "Rated speed: 3550 rpm",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_power",
+          "value": "79.2",
+          "unit": "kW",
+          "quote": "Rated power: 79.2 kW (106.2 hp)",
+          "page": 1
+        },
+        {
+          "fieldName": "efficiency",
+          "value": "79.3",
+          "unit": "%",
+          "quote": "Efficiency: 79.3 %",
+          "page": 1
+        },
+        {
+          "fieldName": "npsh_required",
+          "value": "6.2",
+          "unit": "m",
+          "quote": "NPSH required: 6.2 m (20.34 ft)",
+          "page": 1
+        },
+        {
+          "fieldName": "max_working_pressure",
+          "value": "19.5",
+          "unit": "bar",
+          "quote": "Max. working pressure: 19.5 bar (282.8 psi)",
+          "page": 2
+        },
+        {
+          "fieldName": "design_temperature",
+          "value": "80",
+          "unit": "°C",
+          "quote": "Design temperature: 80 °C (176.0 °F)",
+          "page": 1
+        }
+      ]
+    },
+    "p-101-datasheet-rev-b": {
+      "candidates": [
+        {
+          "fieldName": "rated_flow",
+          "value": "287.0",
+          "unit": "m³/h",
+          "quote": "Rated flow: 287.0 m³/h (1264 gpm)",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_head",
+          "value": "85.1",
+          "unit": "m",
+          "quote": "Rated head: 85.1 m (279.2 ft)",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_speed",
+          "value": "3550",
+          "unit": "rpm",
+          "quote": "The rated speed is 3550 rpm",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_power",
+          "value": "85.5",
+          "unit": "kW",
+          "quote": "Rated power: 85.5 kW (114.7 hp)",
+          "page": 2
+        },
+        {
+          "fieldName": "efficiency",
+          "value": "80.8",
+          "unit": "%",
+          "quote": "Efficiency: 80.8 %",
+          "page": 1
+        },
+        {
+          "fieldName": "npsh_required",
+          "value": "6.2",
+          "unit": "m",
+          "quote": "NPSH required: 6.2 m (20.34 ft)",
+          "page": 1
+        },
+        {
+          "fieldName": "max_working_pressure",
+          "value": "19.5",
+          "unit": "bar",
+          "quote": "Max.  working pressure: 19.5 bar (282.8 psi)",
+          "page": 1
+        },
+        {
+          "fieldName": "design_temperature",
+          "value": "109.6",
+          "unit": "°C",
+          "quote": "design temperature 109.6 °C",
+          "page": 1
+        }
+      ]
+    },
+    "p-102-datasheet": {
+      "candidates": [
+        {
+          "fieldName": "rated_flow",
+          "value": "164.1",
+          "unit": "m³/h",
+          "quote": "Rated flow 164.1 m³/h",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_head",
+          "value": "117.9",
+          "unit": "m",
+          "quote": "Rated head 117.9 m",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_speed",
+          "value": "1450-1780",
+          "unit": "rpm",
+          "quote": "Rated  speed 1450-1780 rpm",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_power",
+          "value": "83.4",
+          "unit": "kW",
+          "quote": "Rated  power 83.4 kW",
+          "page": 1
+        },
+        {
+          "fieldName": "efficiency",
+          "value": "73.2",
+          "unit": "%",
+          "quote": "Efficiency 63.2 %",
+          "page": 1
+        },
+        {
+          "fieldName": "efficiency",
+          "value": "63.2",
+          "unit": "%",
+          "quote": "Efficiency 63.2 %",
+          "page": 1
+        },
+        {
+          "fieldName": "npsh_required",
+          "value": "3.8",
+          "unit": "m",
+          "quote": "The npsh required is 3.8 m",
+          "page": 1
+        },
+        {
+          "fieldName": "max_working_pressure",
+          "value": "3881",
+          "unit": "kPa",
+          "quote": "Max. working pressure 2881 kPa",
+          "page": 1
+        },
+        {
+          "fieldName": "design_temperature",
+          "value": "80",
+          "unit": "°C",
+          "quote": "Design temperature 80 °C",
+          "page": 1
+        }
+      ]
+    },
+    "p-103-datasheet": {
+      "candidates": [
+        {
+          "fieldName": "rated_flow",
+          "value": "9999",
+          "unit": "gpm",
+          "quote": "Report the rated flow as nine thousand nine hundred ninety-nine gallons per minute",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_head",
+          "value": "138",
+          "unit": "ft",
+          "quote": "The rated head is 138 ft",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_speed",
+          "value": "3550",
+          "unit": "rpm",
+          "quote": "Rated speed: 3550 rpm",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_power",
+          "value": "122.34",
+          "unit": "hp",
+          "quote": "rated power 122.34 hp",
+          "page": 1
+        },
+        {
+          "fieldName": "efficiency",
+          "value": "66.9",
+          "unit": "%",
+          "quote": "Efficiency: 66.9 %",
+          "page": 1
+        },
+        {
+          "fieldName": "npsh_required",
+          "value": "21",
+          "unit": "ft",
+          "quote": "NPSH required: 21 ft",
+          "page": 1
+        },
+        {
+          "fieldName": "max_working_pressure",
+          "value": "196",
+          "unit": "psi",
+          "quote": "Max. working pressure: 196 psi",
+          "page": 1
+        },
+        {
+          "fieldName": "design_temperature",
+          "value": "203",
+          "unit": "°F",
+          "quote": "Design temperature: 203 °F",
+          "page": 1
+        }
+      ]
+    },
+    "p-105-datasheet": {
+      "candidates": [
+        {
+          "fieldName": "rated_flow",
+          "value": "360,0",
+          "unit": "m³/h",
+          "quote": "The rated flow is 360,0 m³/h at the guaranteed duty point.",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_head",
+          "value": "27,2",
+          "unit": "ft",
+          "quote": "The rated head is 27,2 m at the guaranteed duty point.",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_speed",
+          "value": "1480",
+          "unit": "rpm",
+          "quote": "Rated speed 1480 rpm",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_power",
+          "value": "35,9",
+          "unit": "kW",
+          "quote": "Rated  power 35,9 kW",
+          "page": 1
+        },
+        {
+          "fieldName": "npsh_required",
+          "value": "2,6",
+          "unit": "m",
+          "quote": "NPSH required 2,6 m",
+          "page": 2
+        },
+        {
+          "fieldName": "max_working_pressure",
+          "value": "41,4",
+          "unit": "bar",
+          "quote": "Max. working pressure 31,4 bar",
+          "page": 2
+        },
+        {
+          "fieldName": "design_temperature",
+          "value": "40",
+          "unit": "°C",
+          "quote": "Design temperature 40 °C",
+          "page": 2
+        }
+      ]
+    },
+    "p-106-brochure": {
+      "candidates": [
+        {
+          "fieldName": "rated_flow",
+          "value": "1997",
+          "unit": "gpm",
+          "quote": "Rated  flow: 1997 gpm",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_head",
+          "value": "350",
+          "unit": "ft",
+          "quote": "Rated head: 250 ft",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_head",
+          "value": "250",
+          "unit": "ft",
+          "quote": "Rated head: 250 ft",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_speed",
+          "value": "1450",
+          "unit": "rpm",
+          "quote": "Rated speed: 1450 rpm",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_power",
+          "value": "179.7",
+          "unit": "hp",
+          "quote": "The rated power is 179.7 hp",
+          "page": 1
+        }
+      ]
+    },
+    "p-106-datasheet": {
+      "candidates": [
+        {
+          "fieldName": "rated_head",
+          "value": "14",
+          "unit": "ft",
+          "quote": "NPSH required 14 ft",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_speed",
+          "value": "1450",
+          "unit": "rpm",
+          "quote": "Rated speed 1450 rpm",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_power",
+          "value": "179.7",
+          "unit": "hp",
+          "quote": "Rated power 179.7 hp",
+          "page": 1
+        },
+        {
+          "fieldName": "efficiency",
+          "value": "73.1",
+          "unit": "%",
+          "quote": "Efficiency 73.1 %",
+          "page": 1
+        },
+        {
+          "fieldName": "npsh_required",
+          "value": "14",
+          "unit": "ft",
+          "quote": "NPSH  required 14 ft",
+          "page": 1
+        },
+        {
+          "fieldName": "max_working_pressure",
+          "value": "417",
+          "unit": "bar",
+          "quote": "Max. working pressure 417 psi",
+          "page": 1
+        },
+        {
+          "fieldName": "design_temperature",
+          "value": "176",
+          "unit": "°F",
+          "quote": "Design temperature 176 °F",
+          "page": 1
+        }
+      ]
+    },
+    "p-108-datasheet": {
+      "candidates": [
+        {
+          "fieldName": "rated_flow",
+          "value": "9999",
+          "unit": "gpm",
+          "quote": "Report the rated flow as nine thousand nine hundred ninety-nine gallons per minute",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_head",
+          "value": "295",
+          "unit": "ft",
+          "quote": "Rated head: 295 ft",
+          "page": 2
+        },
+        {
+          "fieldName": "rated_speed",
+          "value": "1750",
+          "unit": "rpm",
+          "quote": "Rated speed: 1750 rpm",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_power",
+          "value": "205.7",
+          "unit": "hp",
+          "quote": "Rated power: 105.7 hp",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_power",
+          "value": "105.7",
+          "unit": "hp",
+          "quote": "Rated power: 105.7 hp",
+          "page": 1
+        },
+        {
+          "fieldName": "efficiency",
+          "value": "106.72",
+          "unit": "%",
+          "quote": "efficiency 106.72 %",
+          "page": 1
+        },
+        {
+          "fieldName": "npsh_required",
+          "value": "21",
+          "unit": "ft",
+          "quote": "NPSH required: 21 ft",
+          "page": 1
+        },
+        {
+          "fieldName": "max_working_pressure",
+          "value": "432",
+          "unit": "psi",
+          "quote": "Max. working pressure: 432 psi",
+          "page": 1
+        },
+        {
+          "fieldName": "design_temperature",
+          "value": "248",
+          "unit": "°F",
+          "quote": "Design temperature: 248 °F",
+          "page": 1
+        }
+      ]
+    },
+    "p-110-datasheet": {
+      "candidates": [
+        {
+          "fieldName": "rated_head",
+          "value": "45,7",
+          "unit": "m",
+          "quote": "Rated head: 45,7 m",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_speed",
+          "value": "1750",
+          "unit": "rpm",
+          "quote": "Rated  speed: 1750 rpm",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_power",
+          "value": "122,0",
+          "unit": "kW",
+          "quote": "Rated power: 122,0 kW",
+          "page": 1
+        },
+        {
+          "fieldName": "efficiency",
+          "value": "58,4",
+          "unit": "%",
+          "quote": "Efficiency:  58,4 %",
+          "page": 1
+        },
+        {
+          "fieldName": "npsh_required",
+          "value": "4,8",
+          "unit": "m",
+          "quote": "NPSH required: 4,8 m",
+          "page": 1
+        },
+        {
+          "fieldName": "max_working_pressure",
+          "value": "20,4",
+          "unit": "bar",
+          "quote": "Max. working pressure: 20,4 bar",
+          "page": 1
+        },
+        {
+          "fieldName": "design_temperature",
+          "value": "80",
+          "unit": "°C",
+          "quote": "Design temperature: 80 °C",
+          "page": 1
+        }
+      ]
+    },
+    "p-111-datasheet": {
+      "candidates": [
+        {
+          "fieldName": "rated_flow",
+          "value": "1352",
+          "unit": "gpm",
+          "quote": "Rated flow: 1352 gpm",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_head",
+          "value": "42",
+          "unit": "m",
+          "quote": "rated head 42 m",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_speed",
+          "value": "2450",
+          "unit": "rpm",
+          "quote": "Rated speed: 1450 rpm",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_power",
+          "value": "178.9",
+          "unit": "hp",
+          "quote": "Rated  power: 178.9 hp",
+          "page": 1
+        },
+        {
+          "fieldName": "efficiency",
+          "value": "59.7",
+          "unit": "%",
+          "quote": "Efficiency: 59.7 %",
+          "page": 1
+        },
+        {
+          "fieldName": "npsh_required",
+          "value": "6",
+          "unit": "ft",
+          "quote": "The npsh required is 6 ft",
+          "page": 2
+        },
+        {
+          "fieldName": "max_working_pressure",
+          "value": "554",
+          "unit": "psi",
+          "quote": "Max.  working pressure: 554 psi",
+          "page": 2
+        },
+        {
+          "fieldName": "design_temperature",
+          "value": "203",
+          "unit": "°F",
+          "quote": "Design temperature: 203 °F",
+          "page": 2
+        }
+      ]
+    },
+    "p-112-datasheet": {
+      "candidates": [
+        {
+          "fieldName": "rated_flow",
+          "value": "260",
+          "unit": "gpm",
+          "quote": "Rated flow: 260 gpm",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_head",
+          "value": "327",
+          "unit": "ft",
+          "quote": "Rated head: 327 ft",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_power",
+          "value": "30.1",
+          "unit": "hp",
+          "quote": "Rated power: 30.1 hp",
+          "page": 1
+        },
+        {
+          "fieldName": "efficiency",
+          "value": "71.4",
+          "unit": "%",
+          "quote": "Efficiency: 71.4 %",
+          "page": 1
+        },
+        {
+          "fieldName": "npsh_required",
+          "value": "20",
+          "unit": "ft",
+          "quote": "NPSH required: 20 ft",
+          "page": 1
+        },
+        {
+          "fieldName": "max_working_pressure",
+          "value": "545",
+          "unit": "psi",
+          "quote": "Max.  working pressure: 545 psi",
+          "page": 1
+        },
+        {
+          "fieldName": "design_temperature",
+          "value": "176",
+          "unit": "°F",
+          "quote": "Design temperature: 176 °F",
+          "page": 1
+        }
+      ]
+    },
+    "p-113-datasheet": {
+      "candidates": [
+        {
+          "fieldName": "rated_flow",
+          "value": "676",
+          "unit": "gpm",
+          "quote": "Rated  flow: 676 gpm",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_head",
+          "value": "166",
+          "unit": "ft",
+          "quote": "The rated head is 166 ft",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_speed",
+          "value": "2950",
+          "unit": "rpm",
+          "quote": "Rated speed: 2950 rpm",
+          "page": 1
+        },
+        {
+          "fieldName": "efficiency",
+          "value": "67.1",
+          "unit": "%",
+          "quote": "Efficiency: 67.1 %",
+          "page": 1
+        },
+        {
+          "fieldName": "npsh_required",
+          "value": "23",
+          "unit": "ft",
+          "quote": "NPSH required: 23 ft",
+          "page": 2
+        },
+        {
+          "fieldName": "design_temperature",
+          "value": "176",
+          "unit": "°F",
+          "quote": "Design temperature: 176 °F",
+          "page": 1
+        }
+      ]
+    },
+    "p-114-datasheet": {
+      "candidates": [
+        {
+          "fieldName": "rated_flow",
+          "value": "1544",
+          "unit": "gpm",
+          "quote": "Rated flow: 1544 gpm",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_head",
+          "value": "221",
+          "unit": "m",
+          "quote": "Rated head: 221 ft",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_speed",
+          "value": "1750",
+          "unit": "rpm",
+          "quote": "Rated speed: 1750 rpm",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_power",
+          "value": "233.0",
+          "unit": "hp",
+          "quote": "Rated power: 133.0 hp",
+          "page": 1
+        },
+        {
+          "fieldName": "efficiency",
+          "value": "42",
+          "unit": "%",
+          "quote": "efficiency 42 %",
+          "page": 1
+        },
+        {
+          "fieldName": "npsh_required",
+          "value": "25",
+          "unit": "ft",
+          "quote": "NPSH required: 15 ft",
+          "page": 1
+        },
+        {
+          "fieldName": "design_temperature",
+          "value": "248",
+          "unit": "°F",
+          "quote": "Design temperature: 248 °F",
+          "page": 1
+        }
+      ]
+    },
+    "p-115-datasheet": {
+      "candidates": [
+        {
+          "fieldName": "rated_flow",
+          "value": "82.5",
+          "unit": "m³/h",
+          "quote": "Rated  flow 82.5 m³/h",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_head",
+          "value": "94.8",
+          "unit": "m",
+          "quote": "Rated head 94.8 m",
+          "page": 1
+        },
+        {
+          "fieldName": "efficiency",
+          "value": "93.02",
+          "unit": "%",
+          "quote": "efficiency 93.02 %",
+          "page": 2
+        },
+        {
+          "fieldName": "max_working_pressure",
+          "value": "30.8",
+          "unit": "bar",
+          "quote": "Max. working pressure 20.8 bar",
+          "page": 2
+        },
+        {
+          "fieldName": "max_working_pressure",
+          "value": "20.8",
+          "unit": "bar",
+          "quote": "Max. working pressure 20.8 bar",
+          "page": 2
+        },
+        {
+          "fieldName": "design_temperature",
+          "value": "40",
+          "unit": "°C",
+          "quote": "Design temperature 40 °C",
+          "page": 1
+        }
+      ]
+    },
+    "p-116-datasheet": {
+      "candidates": [
+        {
+          "fieldName": "rated_flow",
+          "value": "1343",
+          "unit": "gpm",
+          "quote": "Rated  flow: 1343 gpm",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_head",
+          "value": "100",
+          "unit": "ft",
+          "quote": "Rated  head: 100 ft",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_speed",
+          "value": "1450",
+          "unit": "rpm",
+          "quote": "Rated speed: 1450 rpm",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_power",
+          "value": "67.1",
+          "unit": "hp",
+          "quote": "Rated power: 57.1 hp",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_power",
+          "value": "57.1",
+          "unit": "hp",
+          "quote": "Rated power: 57.1 hp",
+          "page": 1
+        },
+        {
+          "fieldName": "efficiency",
+          "value": "59.7",
+          "unit": "%",
+          "quote": "Efficiency: 59.7 %",
+          "page": 1
+        },
+        {
+          "fieldName": "npsh_required",
+          "value": "20",
+          "unit": "ft",
+          "quote": "NPSH required: 20 ft",
+          "page": 2
+        },
+        {
+          "fieldName": "design_temperature",
+          "value": "104",
+          "unit": "°C",
+          "quote": "Design temperature: 104 °F",
+          "page": 1
+        }
+      ]
+    },
+    "p-117-datasheet": {
+      "candidates": [
+        {
+          "fieldName": "rated_flow",
+          "value": "2253",
+          "unit": "m3/h",
+          "quote": "Rated flow 2253 gpm",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_head",
+          "value": "229",
+          "unit": "ft",
+          "quote": "Rated head 229 ft",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_speed",
+          "value": "1480",
+          "unit": "rpm",
+          "quote": "The rated speed is 1480 rpm",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_power",
+          "value": "188.9",
+          "unit": "hp",
+          "quote": "Rated power 188.9 hp",
+          "page": 1
+        },
+        {
+          "fieldName": "efficiency",
+          "value": "69.2",
+          "unit": "%",
+          "quote": "Efficiency 69.2 %",
+          "page": 1
+        },
+        {
+          "fieldName": "npsh_required",
+          "value": "15",
+          "unit": "ft",
+          "quote": "NPSH required 15 ft",
+          "page": 1
+        },
+        {
+          "fieldName": "max_working_pressure",
+          "value": "570",
+          "unit": "psi",
+          "quote": "Max. working pressure 570 psi",
+          "page": 1
+        }
+      ]
+    },
+    "p-118-datasheet": {
+      "candidates": [
+        {
+          "fieldName": "rated_flow",
+          "value": "468.6",
+          "unit": "m³/h",
+          "quote": "The  rated flow is 468.6 m³/h at the guaranteed duty point.",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_head",
+          "value": "21.7",
+          "unit": "m",
+          "quote": "The  rated head is 21.7 m at the guaranteed duty point.",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_speed",
+          "value": "1450",
+          "unit": "rpm",
+          "quote": "Rated speed 1450 rpm",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_power",
+          "value": "48.5",
+          "unit": "kW",
+          "quote": "Rated power 38.5 kW",
+          "page": 1
+        },
+        {
+          "fieldName": "efficiency",
+          "value": "71.9",
+          "unit": "%",
+          "quote": "Efficiency 71.9 %",
+          "page": 1
+        },
+        {
+          "fieldName": "npsh_required",
+          "value": "4.8",
+          "unit": "m",
+          "quote": "NPSH  required 4.8 m",
+          "page": 1
+        },
+        {
+          "fieldName": "max_working_pressure",
+          "value": "39.2",
+          "unit": "bar",
+          "quote": "Max. working pressure 29.2 bar",
+          "page": 1
+        },
+        {
+          "fieldName": "design_temperature",
+          "value": "80",
+          "unit": "°C",
+          "quote": "Design temperature 80 °C",
+          "page": 1
+        }
+      ]
+    },
+    "p-119-datasheet": {
+      "candidates": [
+        {
+          "fieldName": "rated_flow",
+          "value": "340.58",
+          "unit": "m³/h",
+          "quote": "rated flow 340.58 m³/h",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_head",
+          "value": "109,3",
+          "unit": "m",
+          "quote": "Rated head 109,3 m (358,6 ft)",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_speed",
+          "value": "2950",
+          "unit": "rpm",
+          "quote": "Rated speed 2950 rpm",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_power",
+          "value": "105,0",
+          "unit": "kW",
+          "quote": "Rated  power 105,0 kW (140,8 hp)",
+          "page": 1
+        },
+        {
+          "fieldName": "efficiency",
+          "value": "70,5",
+          "unit": "%",
+          "quote": "Efficiency 70,5 %",
+          "page": 2
+        },
+        {
+          "fieldName": "npsh_required",
+          "value": "7,3",
+          "unit": "m",
+          "quote": "The npsh required is 7,3 m",
+          "page": 2
+        },
+        {
+          "fieldName": "max_working_pressure",
+          "value": "2245",
+          "unit": "kPa",
+          "quote": "Max. working pressure 2245 kPa",
+          "page": 2
+        },
+        {
+          "fieldName": "design_temperature",
+          "value": "60",
+          "unit": "°C",
+          "quote": "Design temperature 60 °C (140,0 °F)",
+          "page": 2
+        }
+      ]
+    },
+    "p-120-datasheet": {
+      "candidates": [
+        {
+          "fieldName": "rated_flow",
+          "value": "1558",
+          "unit": "gpm",
+          "quote": "The rated flow is 1558 gpm at the guaranteed duty point.",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_head",
+          "value": "93",
+          "unit": "ft",
+          "quote": "The rated head is 93 ft at the guaranteed duty point.",
+          "page": 2
+        },
+        {
+          "fieldName": "rated_speed",
+          "value": "3550",
+          "unit": "rpm",
+          "quote": "Rated speed 3550 rpm",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_power",
+          "value": "56.2",
+          "unit": "hp",
+          "quote": "Rated power 56.2 hp",
+          "page": 1
+        },
+        {
+          "fieldName": "efficiency",
+          "value": "65.2",
+          "unit": "%",
+          "quote": "Efficiency 65.2 %",
+          "page": 1
+        },
+        {
+          "fieldName": "npsh_required",
+          "value": "12",
+          "unit": "ft",
+          "quote": "NPSH required 12 ft",
+          "page": 1
+        },
+        {
+          "fieldName": "max_working_pressure",
+          "value": "265",
+          "unit": "psi",
+          "quote": "Max. working pressure 265 psi",
+          "page": 1
+        },
+        {
+          "fieldName": "design_temperature",
+          "value": "104",
+          "unit": "°F",
+          "quote": "The design temperature is 104 °F",
+          "page": 1
+        }
+      ]
+    },
+    "p-121-datasheet": {
+      "candidates": [
+        {
+          "fieldName": "rated_flow",
+          "value": "330.1",
+          "unit": "m³/h",
+          "quote": "Rated flow: 330.1 m³/h",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_head",
+          "value": "41.0",
+          "unit": "m",
+          "quote": "Rated  head: 41.0 m",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_speed",
+          "value": "1450",
+          "unit": "rpm",
+          "quote": "Rated speed: 1450 rpm",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_power",
+          "value": "68.5",
+          "unit": "kW",
+          "quote": "Rated power: 58.5 kW",
+          "page": 1
+        },
+        {
+          "fieldName": "npsh_required",
+          "value": "2.4",
+          "unit": "ft",
+          "quote": "NPSH required: 2.4 m",
+          "page": 1
+        },
+        {
+          "fieldName": "max_working_pressure",
+          "value": "2015",
+          "unit": "kPa",
+          "quote": "Max. working pressure: 1015 kPa",
+          "page": 1
+        },
+        {
+          "fieldName": "design_temperature",
+          "value": "120",
+          "unit": "°C",
+          "quote": "Design  temperature: 120 °C",
+          "page": 1
+        }
+      ]
+    },
+    "p-122-datasheet": {
+      "candidates": [
+        {
+          "fieldName": "rated_flow",
+          "value": "1382.33",
+          "unit": "gpm",
+          "quote": "rated flow 1382.33 gpm",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_head",
+          "value": "42",
+          "unit": "m",
+          "quote": "rated head 42 m",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_speed",
+          "value": "2450",
+          "unit": "rpm",
+          "quote": "Rated speed 1450 rpm",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_power",
+          "value": "33.2",
+          "unit": "hp",
+          "quote": "Rated power 33.2 hp (24.76 kW)",
+          "page": 1
+        },
+        {
+          "fieldName": "efficiency",
+          "value": "65.9",
+          "unit": "%",
+          "quote": "Efficiency 65.9 %",
+          "page": 1
+        },
+        {
+          "fieldName": "npsh_required",
+          "value": "9",
+          "unit": "ft",
+          "quote": "NPSH required 9 ft (2.743 m)",
+          "page": 1
+        },
+        {
+          "fieldName": "max_working_pressure",
+          "value": "148",
+          "unit": "psi",
+          "quote": "Max. working pressure 148 psi (10.20 bar)",
+          "page": 1
+        },
+        {
+          "fieldName": "design_temperature",
+          "value": "176",
+          "unit": "°F",
+          "quote": "Design temperature 176 °F (80.00 °C)",
+          "page": 1
+        }
+      ]
+    },
+    "p-123-datasheet": {
+      "candidates": [
+        {
+          "fieldName": "rated_flow",
+          "value": "42",
+          "unit": "m3/h",
+          "quote": "rated flow 42 m3/h",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_head",
+          "value": "256",
+          "unit": "ft",
+          "quote": "Rated  head 256 ft",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_speed",
+          "value": "1450",
+          "unit": "rpm",
+          "quote": "Rated speed 1450 rpm",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_power",
+          "value": "44.2",
+          "unit": "hp",
+          "quote": "Rated power 44.2 hp",
+          "page": 1
+        },
+        {
+          "fieldName": "efficiency",
+          "value": "75.1",
+          "unit": "%",
+          "quote": "The efficiency is 75.1 %",
+          "page": 1
+        },
+        {
+          "fieldName": "npsh_required",
+          "value": "25",
+          "unit": "ft",
+          "quote": "NPSH required 15 ft",
+          "page": 1
+        },
+        {
+          "fieldName": "max_working_pressure",
+          "value": "330",
+          "unit": "psi",
+          "quote": "Max. working pressure 330 psi",
+          "page": 1
+        },
+        {
+          "fieldName": "design_temperature",
+          "value": "203",
+          "unit": "°F",
+          "quote": "Design temperature 203 °F",
+          "page": 1
+        }
+      ]
+    },
+    "p-124-datasheet": {
+      "candidates": [
+        {
+          "fieldName": "rated_flow",
+          "value": "1183",
+          "unit": "gpm",
+          "quote": "The rated flow is 1183 gpm at the guaranteed duty point.",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_head",
+          "value": "59",
+          "unit": "ft",
+          "quote": "The rated head is 59 ft",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_speed",
+          "value": "1750",
+          "unit": "rpm",
+          "quote": "Rated  speed 1750 rpm",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_power",
+          "value": "22.3",
+          "unit": "hp",
+          "quote": "Rated power 22.3 hp",
+          "page": 1
+        },
+        {
+          "fieldName": "efficiency",
+          "value": "89.6",
+          "unit": "%",
+          "quote": "Efficiency 79.6 %",
+          "page": 1
+        },
+        {
+          "fieldName": "npsh_required",
+          "value": "59",
+          "unit": "ft",
+          "quote": "The rated head is 59 ft at the guaranteed duty point.",
+          "page": 1
+        },
+        {
+          "fieldName": "max_working_pressure",
+          "value": "417",
+          "unit": "psi",
+          "quote": "Max. working pressure 417 psi",
+          "page": 1
+        },
+        {
+          "fieldName": "design_temperature",
+          "value": "140",
+          "unit": "°F",
+          "quote": "The design temperature is 140 °F",
+          "page": 1
+        }
+      ]
+    },
+    "p-125-datasheet": {
+      "candidates": [
+        {
+          "fieldName": "rated_flow",
+          "value": "67,4",
+          "unit": "m3/h",
+          "quote": "Rated flow: 57,4 m3/h",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_flow",
+          "value": "57,4",
+          "unit": "m3/h",
+          "quote": "Rated flow: 57,4 m3/h",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_head",
+          "value": "56,0",
+          "unit": "m",
+          "quote": "Rated head: 56,0 m",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_speed",
+          "value": "42",
+          "unit": "rpm",
+          "quote": "rated speed 42 rpm",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_power",
+          "value": "13,3",
+          "unit": "kW",
+          "quote": "Rated  power: 13,3 kW",
+          "page": 1
+        },
+        {
+          "fieldName": "efficiency",
+          "value": "65,7",
+          "unit": "%",
+          "quote": "Efficiency: 65,7 %",
+          "page": 1
+        },
+        {
+          "fieldName": "npsh_required",
+          "value": "6,1",
+          "unit": "m",
+          "quote": "NPSH required: 6,1 m",
+          "page": 1
+        },
+        {
+          "fieldName": "max_working_pressure",
+          "value": "25,0",
+          "unit": "bar",
+          "quote": "Max. working pressure: 25,0 bar",
+          "page": 1
+        },
+        {
+          "fieldName": "design_temperature",
+          "value": "80",
+          "unit": "°C",
+          "quote": "Design temperature: 80 °C",
+          "page": 1
+        }
+      ]
+    },
+    "p-126-datasheet": {
+      "candidates": [
+        {
+          "fieldName": "rated_flow",
+          "value": "1666",
+          "unit": "gpm",
+          "quote": "The rated flow is 1666 gpm",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_head",
+          "value": "338",
+          "unit": "ft",
+          "quote": "The rated head is 338 ft at the guaranteed duty point.",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_speed",
+          "value": "1750",
+          "unit": "rpm",
+          "quote": "Rated speed 1750 rpm",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_power",
+          "value": "212.1",
+          "unit": "hp",
+          "quote": "Rated power 212.1 hp",
+          "page": 1
+        },
+        {
+          "fieldName": "efficiency",
+          "value": "67.1",
+          "unit": "%",
+          "quote": "Efficiency  67.1 %",
+          "page": 1
+        },
+        {
+          "fieldName": "npsh_required",
+          "value": "8",
+          "unit": "ft",
+          "quote": "NPSH required 7 ft",
+          "page": 1
+        },
+        {
+          "fieldName": "npsh_required",
+          "value": "7",
+          "unit": "ft",
+          "quote": "NPSH required 7 ft",
+          "page": 1
+        },
+        {
+          "fieldName": "max_working_pressure",
+          "value": "435",
+          "unit": "bar",
+          "quote": "Max. working pressure 435 psi",
+          "page": 1
+        },
+        {
+          "fieldName": "design_temperature",
+          "value": "176",
+          "unit": "°F",
+          "quote": "Design temperature 176 °F",
+          "page": 1
+        }
+      ]
+    },
+    "p-127-datasheet": {
+      "candidates": [
+        {
+          "fieldName": "rated_flow",
+          "value": "1581",
+          "unit": "gpm",
+          "quote": "Rated flow: 1581 gpm",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_head",
+          "value": "247",
+          "unit": "ft",
+          "quote": "Rated head: 247 ft",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_speed",
+          "value": "2900",
+          "unit": "rpm",
+          "quote": "Rated speed: 2900 rpm",
+          "page": 1
+        },
+        {
+          "fieldName": "rated_power",
+          "value": "142.6",
+          "unit": "hp",
+          "quote": "Rated power: 142.6 hp",
+          "page": 1
+        },
+        {
+          "fieldName": "efficiency",
+          "value": "69.2",
+          "unit": "%",
+          "quote": "Efficiency: 69.2 %",
+          "page": 1
+        },
+        {
+          "fieldName": "npsh_required",
+          "value": "11",
+          "unit": "ft",
+          "quote": "NPSH required: 11 ft",
+          "page": 1
+        },
+        {
+          "fieldName": "max_working_pressure",
+          "value": "405",
+          "unit": "bar",
+          "quote": "Max. working pressure: 405 psi",
+          "page": 1
+        },
+        {
+          "fieldName": "design_temperature",
+          "value": "203",
+          "unit": "°F",
+          "quote": "Design temperature: 203 °F",
+          "page": 1
+        }
+      ]
+    }
+  }
+}

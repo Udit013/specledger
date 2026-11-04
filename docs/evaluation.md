@@ -91,3 +91,133 @@ It gives exact ground truth, so it is suitable for regression testing and for co
 pipeline with and without the verifier. It cannot show accuracy on real vendor datasheets, which
 have denser tables, inconsistent wording, scanned pages and drawing references. Results measured on
 it must be reported as results on synthetic documents only.
+
+# Evaluation harness (Phase 11)
+
+The harness in `packages/eval/src/eval/` measures the pipeline on the corpus: **recorded
+extraction → verifier → per-field pick → reconciliation**, the same functions the worker runs
+(`verifyCandidate`, `pickFields`, `reconcile` from `@specledger/core`). It reads candidates from an
+_extraction set_ instead of calling a model, so a run is free, offline and deterministic.
+
+## Extraction sets, and why the committed one is simulated
+
+An extraction set (`extractionSetSchema`) holds, for each document, the candidates an extraction
+produced, or the error it failed with, plus its `origin`, `label`, model id, prompt version, date
+and corpus hash. Origins:
+
+| Origin        | What it is                                                                 |
+| ------------- | -------------------------------------------------------------------------- |
+| `recorded`    | real model answers, captured by `pnpm eval:record` (below)                 |
+| `handcrafted` | answers written by hand for a test (the p-108 injection fixture is one)    |
+| `simulated`   | generated from the ground truth by a seeded error model; no model involved |
+
+Every report repeats the set's origin and label at the top, and the README section quotes it, so a
+simulated number cannot pass for a measured one.
+
+The options considered:
+
+1. **The existing recordings.** There is one, and it is handcrafted (the injection fixture). A
+   report on one document measures nothing.
+2. **Real recordings now.** Not possible: real Gemini calls were not authorized for this work.
+3. **A simulated set, clearly labelled, with a harness that takes any set.** Chosen. It exercises
+   every part of the harness, the verifier and the gate end to end on the whole corpus, and the
+   same commands evaluate a recorded set the day one exists.
+
+The simulated set is `evaluation/extractions/simulated-v1.json`, written by
+`simulateExtractions` (`simulate.ts`) with seed `specledger-simulated-extraction-v1`. For each
+field the document states, it draws one of: the correct value and quote (sometimes with other
+whitespace), a misread first digit with the true quote, the true number with another unit of the
+same quantity, a reworded quote, an invented value and quote, another value from the page with the
+same unit (a decoy, such as a maximum on a brochure), no candidate, a misread followed by the
+correct candidate, or the right quote cited on the wrong page. For a field the document does not
+state: nothing, an invented value, or a value borrowed from another field of the same quantity.
+The injection document's flow is the value the embedded instruction asks for. CI regenerates the
+set and fails if it differs.
+
+What the simulated numbers show: how the verifier and reconciliation treat these kinds of mistake.
+What they do not show: how often a real model makes them, so nothing here is model accuracy. The
+error model was written alongside the verifier, so it may lean towards mistakes the verifier was
+built to catch; the decoy case is one it does not catch, and the report shows that.
+
+## Correct, accepted, and the metrics
+
+A candidate is **correct** when the document has a value for the field, the candidate's value
+equals it within 0.5 percent after SI conversion (`normalizeValue`, then core's `valuesAgree`),
+and its quote is the expected one or contains the expected value as a whole token, after core's
+normalization. A field's value is **accepted** when the candidate `pickFields` keeps (the first
+verified, else the first) was verified.
+
+Per document field, then summed overall and per field name:
+
+```
+precision            = correct accepted / accepted
+recall               = correct accepted / fields with a value in the truth
+unsupported rate     = accepted where the truth has no value / accepted
+verifier catch rate  = wrong candidates rejected / wrong candidates          (all candidates)
+false-reject rate    = correct candidates rejected / correct candidates      (all candidates)
+```
+
+Each rate is reported with its numerator and denominator and a 95 percent **Wilson score
+interval** (z = 1.959964):
+
+```
+centre = (p + z²/2n) / (1 + z²/n)
+half   = z · √( p(1−p)/n + z²/4n² ) / (1 + z²/n)
+```
+
+It stays inside [0, 1] and behaves for small n and rates near 0 or 1, which a few dozen documents
+produce. It treats fields as independent, which fields of one document are not, so the intervals
+are, if anything, too narrow.
+
+**Naive baseline.** The same extraction with the verifier switched off: the model's first
+candidate per field is accepted and nothing is rejected. The difference in wrong values accepted
+is what the verifier prevented.
+
+**Reconciliation check.** Per piece of equipment, reconciliation runs twice: on the values the
+pipeline accepted, and on the ground truth itself. Where the rules select a value from the truth,
+the report counts how often the pipeline's reconciled value matches it within 0.5 percent, and how
+often it is missing, wrong, in conflict, or present where the truth selects nothing.
+
+## Split discipline
+
+`pnpm eval` evaluates the dev split. The holdout split needs `--allow-holdout`, prints a warning,
+writes to `evaluation/holdout/`, and the report records `holdout: true`. It is run once, after all
+tuning of the verifier, the reconciliation rules and the error model is finished, and committed
+separately. The loader refuses the holdout before reading any of its files. (The simulator reads
+holdout ground truth to write its fixtures, as the corpus generator does; it evaluates nothing.)
+
+## Outputs, determinism and the gate
+
+`evaluation/report.json` and `evaluation/report.md` carry the model id, prompt version, corpus
+hash, extraction set hash, split and date. The date is the extraction set's date, not the clock,
+so the same inputs give byte-identical reports. `pnpm eval:readme` writes the README results
+section from `report.json`; nothing in it is typed by hand.
+
+`evaluation/baseline.json` records the corpus hash, set hash, split, precision and
+unsupported-value rate. `pnpm eval:gate` fails if precision is lower or the unsupported-value rate
+higher than the baseline, by any amount: the inputs are fixed, so the comparison is exact. A
+baseline taken on another corpus or set is refused, so updating it is always deliberate
+(`pnpm eval:baseline`, then review and commit). CI runs `pnpm eval:ci`, which regenerates the
+simulated set and the report, compares both with what is committed, checks the README section,
+and runs the gate.
+
+## Recording and evaluating a real model
+
+This makes real calls and is never run by tests or CI. It needs a Gemini API key in the untracked
+`.env`, and explicit intent to spend free-tier quota.
+
+1. Record the dev split: `pnpm eval:record`. It sends every dev document with a text layer, one at
+   a time, 4.5 s apart (inside a 15 requests per minute limit). A rate-limited call waits 60 s and
+   is tried again up to three times; any other failure is recorded as the document's error and the
+   run goes on. With `RECORD=1` it also writes Replay recordings to `fixtures/recordings/`, so the
+   worker and the demo can replay the same answers.
+2. Evaluate it: `pnpm eval --split dev --extractions evaluation/extractions/recorded-<model>-<prompt>-dev.json`.
+3. Review the report. If it is to be the reference, record a new baseline from it and update the
+   README section.
+4. Commit the extraction set, the report, the baseline and any Replay recordings. Never commit the
+   key or `.env`. The recordings contain only synthetic document text.
+5. Only after all tuning: record and evaluate the holdout once (`--allow-holdout` on both steps)
+   and commit that report separately, labelled as the holdout run.
+
+A new prompt version invalidates the recordings: Replay keys include the prompt, and the report
+names the prompt version it measured.

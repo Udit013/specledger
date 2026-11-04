@@ -18,7 +18,8 @@
     "test": "vitest run --dir src",
     "start": "node --env-file-if-exists=../../.env dist/main.js",
     "llm:smoke": "node --env-file-if-exists=../../.env dist/scripts/llm-smoke.js",
-    "worker": "node --env-file-if-exists=../../.env dist/worker/main.js"
+    "worker": "node --env-file-if-exists=../../.env dist/worker/main.js",
+    "eval:record": "node --env-file-if-exists=../../.env dist/scripts/record-extractions.js"
   },
   "dependencies": {
     "@fastify/cors": "11.3.1",
