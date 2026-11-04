@@ -309,6 +309,12 @@ UUID, and is echoed on every response and carried by the upload's job.
 - Review: a stale `expectedVersion` is a 409 `VERSION_CONFLICT` with the current field. Accepting
   a value the verifier could not confirm needs a reason; an edit must read as a number with a unit
   of the field's quantity.
+- Rejecting a value that takes precedence for its field (a later revision of the same document, or
+  a higher-ranked source) while a value it supersedes remains opens a conflict on the field, unless
+  a human decision already covers it. Without this, publishing would fall back silently to the
+  superseded value: "reject" says the extraction is wrong, not that the newer document has no value.
+  The conflict blocks publishing until someone resolves it, choosing the older value, entering the
+  newer document's value, or another; its audit event says `PRECEDENCE_REJECTED`.
 - Conflicts carry each candidate's evidence (quote and page) and a `suggestion`: what the
   reconciliation rules alone would select from the current candidates, and the rules they applied.
   It is a hint for the reviewer and never applied automatically.
@@ -504,6 +510,14 @@ handling, and axe checks on the list, review and publish screens.
 
 ## Reconciliation limitations
 
+- Only verified candidates compete (Phase 6, requirement 1). When the document that takes
+  precedence for a field yields no verified value, reconciliation selects the best verified value
+  that remains, from an older revision or a lower-ranked source. In the product that never reaches
+  the register silently: the unverified field is pending review, which blocks publishing, and
+  rejecting it opens a conflict (above). The evaluation's reconciliation check has no review step,
+  so it counts such a field as a wrong value (P-106 rated head: the datasheet's extraction is the
+  decoy "NPSH required 14 ft", rightly rejected, so the brochure's 250 ft is selected instead of the
+  datasheet's 260 ft).
 - Lineage is assigned by the caller. Two documents put in one lineage are compared by revision
   even if they are unrelated, and two revisions put in different lineages are compared by source
   rank and may conflict. The pipeline (Phase 7) has to assign it consistently, for example tag and

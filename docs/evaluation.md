@@ -195,7 +195,13 @@ is what the verifier prevented.
 **Reconciliation check.** Per piece of equipment, reconciliation runs twice: on the values the
 pipeline accepted, and on the ground truth itself. Where the rules select a value from the truth,
 the report counts how often the pipeline's reconciled value matches it within 0.5 percent, and how
-often it is missing, wrong, in conflict, or present where the truth selects nothing.
+often it is missing, wrong, in conflict, or present where the truth selects nothing. The
+check models no human review: only verified values take part. When the document that takes
+precedence for a field (a later revision, or a higher-ranked source) yields no verified value, the
+rules select the best verified value that remains, and the check counts it as wrong if it differs
+from the truth. In the product that state blocks publishing (the unverified field is pending
+review, and rejecting it opens a conflict), so these counts are a lower bound on what review has
+to fix, not values that would be published.
 
 ## Split discipline
 
