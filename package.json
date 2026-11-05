@@ -32,7 +32,9 @@
     "eval:gate": "turbo run build --filter=@specledger/eval... && pnpm --filter @specledger/eval eval:gate",
     "eval:readme": "turbo run build --filter=@specledger/eval... && pnpm --filter @specledger/eval eval:readme",
     "eval:ci": "turbo run build --filter=@specledger/eval... && pnpm --filter @specledger/eval eval:ci",
-    "eval:record": "turbo run build --filter=@specledger/api... && pnpm --filter @specledger/api eval:record"
+    "eval:record": "turbo run build --filter=@specledger/api... && pnpm --filter @specledger/api eval:record",
+    "smoke": "turbo run build --filter=@specledger/api... && pnpm --filter @specledger/api smoke",
+    "demo:seed": "turbo run build --filter=@specledger/api... && pnpm --filter @specledger/api demo:seed"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

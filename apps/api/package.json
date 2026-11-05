@@ -19,7 +19,10 @@
     "start": "node --env-file-if-exists=../../.env dist/main.js",
     "llm:smoke": "node --env-file-if-exists=../../.env dist/scripts/llm-smoke.js",
     "worker": "node --env-file-if-exists=../../.env dist/worker/main.js",
-    "eval:record": "node --env-file-if-exists=../../.env dist/scripts/record-extractions.js"
+    "eval:record": "node --env-file-if-exists=../../.env dist/scripts/record-extractions.js",
+    "serve": "node --env-file-if-exists=../../.env dist/serve.js",
+    "smoke": "node dist/scripts/smoke.js",
+    "demo:seed": "node dist/scripts/demo-seed.js"
   },
   "dependencies": {
     "@fastify/cors": "11.3.1",
