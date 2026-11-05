@@ -4,11 +4,8 @@
 import { openDatabase } from '@specledger/db';
 
 import { formatConfigIssues, parseConfig } from './config.js';
-import { buildApp } from './http/app.js';
+import { apiTokensFrom, createApiServer } from './http/server.js';
 import { createLogger } from './logger.js';
-
-// How long /ready waits for the database before answering 503.
-const READY_TIMEOUT_MS = 2_000;
 
 async function main(): Promise<number> {
   const result = parseConfig(process.env);
@@ -17,32 +14,16 @@ async function main(): Promise<number> {
     return 1;
   }
   const { config } = result;
-  const { engineerToken, approverToken, ...http } = config.http;
-  if (engineerToken === null || approverToken === null) {
-    process.stderr.write(
-      formatConfigIssues(
-        (['API_ENGINEER_TOKEN', 'API_APPROVER_TOKEN'] as const)
-          .filter((key) => (key === 'API_ENGINEER_TOKEN' ? engineerToken : approverToken) === null)
-          .map((key) => ({
-            key,
-            problem: 'missing' as const,
-            expected: 'a token of 32 to 256 URL-safe characters; the API needs both',
-          })),
-      ),
-    );
+  const tokens = apiTokensFrom(config);
+  if (Array.isArray(tokens)) {
+    process.stderr.write(formatConfigIssues(tokens));
     return 1;
   }
 
   const logger = createLogger({ name: 'api', level: config.logLevel });
   const database = openDatabase({ connectionString: config.databaseUrl });
   await database.migrate();
-  const app = await buildApp({
-    database,
-    tokens: { engineer: engineerToken, approver: approverToken },
-    limits: config.ingest,
-    http: { ...http, readyTimeoutMs: READY_TIMEOUT_MS },
-    logger,
-  });
+  const app = await createApiServer(config, tokens, database, logger);
 
   const stopped = new Promise<void>((resolve) => {
     const stop = (signal: string) => {

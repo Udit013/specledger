@@ -73,6 +73,7 @@ const envSchema = z.object({
   UPLOAD_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().min(1).max(10_000).default(20),
   REQUEST_TIMEOUT_MS: z.coerce.number().int().min(1_000).max(600_000).default(60_000),
   JSON_BODY_LIMIT_BYTES: z.coerce.number().int().min(1_024).max(10_485_760).default(1_048_576),
+  UPLOAD_ALLOWLIST: z.enum(['none', 'corpus']).default('none'),
 });
 
 export type ConfigKey = keyof typeof envSchema.shape;
@@ -104,6 +105,7 @@ const EXPECTED: Record<ConfigKey, string> = {
   UPLOAD_RATE_LIMIT_PER_MINUTE: 'an integer between 1 and 10000',
   REQUEST_TIMEOUT_MS: 'an integer between 1000 and 600000',
   JSON_BODY_LIMIT_BYTES: 'an integer between 1024 and 10485760',
+  UPLOAD_ALLOWLIST: 'none, or corpus to accept only the synthetic corpus PDFs',
 };
 
 export interface Config {
@@ -131,6 +133,9 @@ export interface Config {
     readonly requestTimeoutMs: number;
     readonly bodyLimitBytes: number;
   };
+  // 'corpus' accepts only uploads whose sha256 is in fixtures/corpus/manifest.json: a public demo
+  // then never stores or sends to the model anything but the synthetic test documents.
+  readonly uploadAllowlist: 'none' | 'corpus';
 }
 
 export interface ConfigIssue {
@@ -213,6 +218,7 @@ export function parseConfig(env: Readonly<Record<string, string | undefined>>): 
           requestTimeoutMs: values.REQUEST_TIMEOUT_MS,
           bodyLimitBytes: values.JSON_BODY_LIMIT_BYTES,
         }),
+        uploadAllowlist: values.UPLOAD_ALLOWLIST,
       }),
     };
   }

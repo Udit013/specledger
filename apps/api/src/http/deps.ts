@@ -25,4 +25,7 @@ export interface AppDeps {
   readonly logger?: FastifyBaseLogger;
   readonly clock?: () => Date;
   readonly newId?: () => string;
+  // When set, only uploads whose sha256 is in the set are accepted (UPLOAD_ALLOWLIST=corpus): a
+  // public demo then never stores, queues or sends to the model anything but the synthetic corpus.
+  readonly uploadAllowlist?: ReadonlySet<string> | null;
 }

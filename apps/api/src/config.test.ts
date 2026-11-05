@@ -60,6 +60,7 @@ describe('parseConfig', () => {
           timeoutMs: 60_000,
         },
         http: HTTP_DEFAULTS,
+        uploadAllowlist: 'none',
       },
     });
   });
@@ -81,6 +82,7 @@ describe('parseConfig', () => {
           timeoutMs: 60_000,
         },
         http: HTTP_DEFAULTS,
+        uploadAllowlist: 'none',
       },
     });
   });
@@ -144,6 +146,7 @@ describe('parseConfig', () => {
         'logLevel',
         'nodeEnv',
         'port',
+        'uploadAllowlist',
       ]);
   });
 
@@ -278,6 +281,24 @@ describe('HTTP API configuration', () => {
       ['API_APPROVER_TOKEN', 'invalid'],
     ]);
     expect(formatConfigIssues(issues)).not.toContain(ENGINEER_TOKEN);
+  });
+});
+
+describe('upload allowlist configuration', () => {
+  it('accepts every upload by default, and only the corpus with UPLOAD_ALLOWLIST=corpus', () => {
+    const plain = parseConfig(VALID_ENV);
+    expect(plain.ok && plain.config.uploadAllowlist).toBe('none');
+    const corpus = parseConfig({ ...VALID_ENV, UPLOAD_ALLOWLIST: 'corpus' });
+    expect(corpus.ok && corpus.config.uploadAllowlist).toBe('corpus');
+  });
+
+  it('refuses another value', () => {
+    expect(
+      expectIssues(parseConfig({ ...VALID_ENV, UPLOAD_ALLOWLIST: 'everything' })).map((i) => [
+        i.key,
+        i.problem,
+      ]),
+    ).toEqual([['UPLOAD_ALLOWLIST', 'invalid']]);
   });
 });
 

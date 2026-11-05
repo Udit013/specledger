@@ -12,6 +12,7 @@ import {
 } from '@specledger/core';
 import type { ReviewEventSubject } from '@specledger/core';
 import { exporterFor } from '@specledger/exporters';
+import { sha256Hex } from '@specledger/ingest';
 import type { IngestError } from '@specledger/ingest';
 import type { FastifyInstance } from 'fastify';
 import type { z } from 'zod';
@@ -140,6 +141,13 @@ export function registerRoutes(app: FastifyInstance, deps: AppDeps): void {
         throw new ApiError(400, 'VALIDATION_FAILED', 'The request is invalid.', {
           issues: [{ path: 'file', code: 'missing' }],
         });
+      }
+      if (deps.uploadAllowlist != null && !deps.uploadAllowlist.has(sha256Hex(file.bytes))) {
+        throw new ApiError(
+          403,
+          'UPLOAD_NOT_ALLOWED',
+          'This deployment accepts only the synthetic test documents of its corpus.',
+        );
       }
       const stored = await upload({
         bytes: file.bytes,

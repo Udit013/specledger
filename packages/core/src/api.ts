@@ -37,6 +37,8 @@ export const API_ERROR_CODES = [
   'RATE_LIMITED',
   'NOT_READY',
   'INTERNAL',
+  // The deployment accepts only listed documents (UPLOAD_ALLOWLIST).
+  'UPLOAD_NOT_ALLOWED',
   // Upload rejections, as ingestion names them.
   'EMPTY',
   'NOT_A_PDF',
