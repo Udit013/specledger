@@ -5,6 +5,7 @@ export type Route =
   | { readonly name: 'documents' }
   | { readonly name: 'review'; readonly documentId: string }
   | { readonly name: 'conflicts' }
+  | { readonly name: 'upload' }
   | {
       readonly name: 'audit';
       readonly kind: 'field' | 'conflict' | 'register_version';
@@ -24,6 +25,7 @@ export function parseRoute(hash: string): Route {
     return { name: 'review', documentId: second ?? '' };
   }
   if (first === 'conflicts' && second === undefined) return { name: 'conflicts' };
+  if (first === 'upload' && second === undefined) return { name: 'upload' };
   const kind = auditKind.safeParse(second);
   if (first === 'audit' && kind.success && uuid.safeParse(third).success) {
     return { name: 'audit', kind: kind.data, id: third ?? '' };
@@ -39,6 +41,8 @@ export function hrefFor(route: Exclude<Route, { name: 'not_found' }>): string {
       return `#/documents/${route.documentId}`;
     case 'conflicts':
       return '#/conflicts';
+    case 'upload':
+      return '#/upload';
     case 'audit':
       return `#/audit/${route.kind}/${route.id}`;
   }

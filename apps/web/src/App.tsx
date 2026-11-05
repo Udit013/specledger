@@ -10,6 +10,7 @@ import { DocumentList } from './components/DocumentList.js';
 import { PublishDialog } from './components/PublishDialog.js';
 import { ReviewScreen } from './components/ReviewScreen.js';
 import { TokenForm } from './components/TokenForm.js';
+import { UploadForm } from './components/UploadForm.js';
 import { ServicesContext } from './context.js';
 import type { AppServices } from './context.js';
 import type { PollOptions } from './lib/backoff.js';
@@ -105,6 +106,9 @@ export function App({ baseUrl, storage, queryClient, poll = NO_POLL_OPTIONS }: A
               <a href={hrefFor({ name: 'conflicts' })} className="text-blue-800 underline">
                 Conflicts
               </a>
+              <a href={hrefFor({ name: 'upload' })} className="text-blue-800 underline">
+                Upload
+              </a>
             </nav>
             <div className="ml-auto flex gap-2">
               <button
@@ -173,6 +177,8 @@ function Screen({ route }: { readonly route: Route }) {
       return <ReviewScreen key={route.documentId} documentId={route.documentId} />;
     case 'conflicts':
       return <ConflictsPanel />;
+    case 'upload':
+      return <UploadForm />;
     case 'audit':
       return <AuditView key={`${route.kind}:${route.id}`} kind={route.kind} id={route.id} />;
     case 'not_found':

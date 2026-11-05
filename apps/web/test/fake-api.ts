@@ -170,6 +170,7 @@ export interface FakeState {
   audit: Map<string, AuditEvent[]>;
   published: number;
   requests: string[];
+  uploads: { filename: string; fields: Record<string, string> }[];
 }
 
 // Installs the handlers on a fresh state and returns that state for assertions.
@@ -181,6 +182,7 @@ export function fakeApi(options: FakeOptions = {}): FakeState {
     audit: new Map(),
     published: 0,
     requests: [],
+    uploads: [],
   };
   const page = options.page ?? PAGE_1;
   const record = (entity: string, event: Omit<AuditEvent, 'id' | 'createdAt'>) => {
@@ -195,6 +197,48 @@ export function fakeApi(options: FakeOptions = {}): FakeState {
   };
 
   server.use(
+    http.post(`${API}/documents`, async ({ request }) => {
+      seen(request);
+      const denied = refuse(request, ['engineer']);
+      if (denied !== null) return denied;
+      const form = await request.formData();
+      // Parsed by Node's fetch, so the part is Node's File, not jsdom's: check its shape.
+      const file = form.get('file');
+      if (file === null || typeof file === 'string') {
+        return error(400, 'VALIDATION_FAILED', 'The request is invalid.');
+      }
+      state.uploads.push({
+        filename: file.name,
+        fields: Object.fromEntries(
+          [...form.entries()].flatMap(([name, value]) =>
+            typeof value === 'string' ? [[name, value]] : [],
+          ),
+        ),
+      });
+      if (file.name === 'real-vendor.pdf') {
+        return error(
+          403,
+          'UPLOAD_NOT_ALLOWED',
+          'This deployment accepts only the synthetic test documents of its corpus.',
+        );
+      }
+      const duplicate = state.documents.some((d) => d.originalFilename === file.name);
+      const uploaded = document({
+        id: '00000000-0000-4000-8000-0000000000d9',
+        originalFilename: file.name,
+        processing: { status: 'queued', jobId: null, attempts: 0, lastErrorCode: null },
+      });
+      if (!duplicate) state.documents.unshift(uploaded);
+      return HttpResponse.json(
+        {
+          document: duplicate
+            ? state.documents.find((d) => d.originalFilename === file.name)
+            : uploaded,
+          duplicate,
+        },
+        { status: duplicate ? 200 : 202 },
+      );
+    }),
     http.get(`${API}/documents`, ({ request }) => {
       seen(request);
       return refuse(request, ANY) ?? HttpResponse.json({ documents: state.documents });

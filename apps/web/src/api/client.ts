@@ -11,6 +11,8 @@ import {
   publishResponseSchema,
   reviewFieldBodySchema,
   resolveConflictBodySchema,
+  uploadFieldsSchema,
+  uploadResponseSchema,
 } from '@specledger/core';
 import { publishBlockerSchema } from '@specledger/core';
 import type {
@@ -25,6 +27,15 @@ import type {
 import { z } from 'zod';
 
 import type { Tokens } from '../lib/tokens.js';
+
+// What the upload screen collects, before it is checked against the shared upload schema.
+export interface UploadRequest {
+  readonly documentType: 'datasheet' | 'manual' | 'brochure';
+  readonly revision: string;
+  readonly equipmentTag: string;
+  readonly equipmentClass: 'centrifugal_pump' | 'electric_motor';
+  readonly synthetic: boolean;
+}
 
 export type ApiErrorKind =
   | 'unauthenticated'
@@ -83,7 +94,7 @@ export interface ApiClientOptions {
 const MESSAGES: Readonly<Record<string, string>> = {
   UNAUTHENTICATED: 'Your API token is missing or was not accepted. Enter a valid token.',
   FORBIDDEN:
-    'Your token’s role is not allowed to do this. Reviews and resolutions need the engineer token; publishing needs the approver token.',
+    'Your token’s role is not allowed to do this. Uploads, reviews and resolutions need the engineer token; publishing needs the approver token.',
   RATE_LIMITED: 'Too many requests. Wait a moment and try again.',
   INTERNAL: 'The server hit an unexpected error. Try again.',
   NOT_READY: 'The server is not ready. Try again shortly.',
@@ -109,7 +120,7 @@ export function createApiClient(options: ApiClientOptions) {
   async function request<S extends z.ZodType>(
     schema: S,
     path: string,
-    init: { method?: string; body?: unknown; role?: Role } = {},
+    init: { method?: string; body?: unknown; form?: FormData; role?: Role } = {},
   ): Promise<z.output<S>> {
     const tokens = options.tokens();
     const role = init.role ?? 'engineer';
@@ -119,6 +130,7 @@ export function createApiClient(options: ApiClientOptions) {
         : (tokens.engineer ?? tokens.approver);
     const headers: Record<string, string> = { accept: 'application/json' };
     if (token !== null) headers.authorization = `Bearer ${token}`;
+    // A form sets its own multipart content type, with the boundary.
     if (init.body !== undefined) headers['content-type'] = 'application/json';
 
     let response: Response;
@@ -126,7 +138,11 @@ export function createApiClient(options: ApiClientOptions) {
       response = await send(`${options.baseUrl}${path}`, {
         method: init.method ?? 'GET',
         headers,
-        ...(init.body === undefined ? {} : { body: JSON.stringify(init.body) }),
+        ...(init.form !== undefined
+          ? { body: init.form }
+          : init.body === undefined
+            ? {}
+            : { body: JSON.stringify(init.body) }),
       });
     } catch {
       throw new ApiClientError('network', 'The server could not be reached.', null, null, null);
@@ -171,6 +187,27 @@ export function createApiClient(options: ApiClientOptions) {
     async listDocuments(): Promise<DocumentSummary[]> {
       return (await request(documentListSchema, `/documents?limit=${String(DOCUMENT_PAGE_SIZE)}`))
         .documents;
+    },
+    uploadDocument(file: File, fields: UploadRequest) {
+      const form = new FormData();
+      const checked = uploadFieldsSchema.parse({
+        documentType: fields.documentType,
+        revision: fields.revision,
+        equipmentTag: fields.equipmentTag,
+        equipmentClass: fields.equipmentClass,
+        synthetic: fields.synthetic ? 'true' : 'false',
+      });
+      form.set('documentType', checked.documentType);
+      if (checked.revision !== null) form.set('revision', checked.revision);
+      form.set('equipmentTag', checked.equipmentTag);
+      form.set('equipmentClass', checked.equipmentClass);
+      form.set('synthetic', String(checked.synthetic));
+      form.set('file', file, file.name);
+      return request(uploadResponseSchema, '/documents', {
+        method: 'POST',
+        form,
+        role: 'engineer',
+      });
     },
     getDocument(documentId: string): Promise<DocumentSummary> {
       return request(documentSummarySchema, `/documents/${id(documentId)}`);
