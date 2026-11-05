@@ -2,9 +2,49 @@
 
 Every specification, with its proof.
 
-SpecLedger turns vendor equipment datasheets into a verified equipment register. Each extracted
-value must carry a verbatim quote that is checked against the source page before a person reviews
-it and an approver publishes an immutable register version.
+[![ci](https://github.com/Udit013/specledger/actions/workflows/ci.yml/badge.svg)](https://github.com/Udit013/specledger/actions/workflows/ci.yml)
+
+SpecLedger turns vendor equipment datasheets into a verified equipment register. A language model
+proposes each value, but nothing it says is trusted: every value must carry a verbatim quote, and
+deterministic code checks that the quote is on the cited page, that the number and unit are in it,
+that it sits under the field's own label, and that it is plausible. Values from several documents
+and revisions are reconciled by explicit rules, a person reviews them beside the highlighted
+source, and an approver publishes an immutable, audited register version.
+
+**Live demo:** _add your deployment URL here after following [docs/deployment.md](docs/deployment.md)._
+The demo runs on free tiers (it may take a minute to wake up) and accepts only the synthetic test
+datasheets in [`fixtures/corpus/pdf`](fixtures/corpus/pdf).
+
+## At a glance
+
+```mermaid
+flowchart LR
+  U[Upload PDF] --> I[Ingest: validate, extract text\nin a sandboxed worker thread]
+  I -->|same transaction| Q[(Postgres job queue)]
+  Q --> W[Worker: model call, then\nevidence verifier]
+  W --> R[Reconcile revisions and sources;\nopen conflicts]
+  R --> V[Review UI: accept, edit, reject,\nresolve conflicts]
+  V --> P[Publish immutable version]
+  P --> E[CSV / JSON export\nwith content hash]
+```
+
+- **Evidence verification** (`packages/core/src/verifier.ts`): quote on the page, value in the
+  quote, unit of the right quantity, the field's own label, plausible range. An invented quote, a
+  changed number, a value read from the wrong line and an obeyed prompt injection are all rejected.
+- **Reliable processing**: a Postgres job queue with `FOR UPDATE SKIP LOCKED` claims, leases,
+  heartbeats, fencing and idempotent writes; the model call never holds a database lock.
+- **Safe review**: optimistic concurrency (a stale edit gets 409 with the current value), conflicts
+  never auto-resolved, every change in an append-only audit log, published versions immutable.
+- **Measured, honestly**: an evaluation harness with Wilson and document-clustered intervals and a
+  CI regression gate. The committed numbers come from a simulated extraction set, and say so.
+
+| Try it                                 |                                              |
+| -------------------------------------- | -------------------------------------------- |
+| Run it locally                         | [Quick start](#quick-start)                  |
+| Deploy your own (Vercel, Render, Neon) | [docs/deployment.md](docs/deployment.md)     |
+| A 5-minute walkthrough                 | [docs/demo.md](docs/demo.md)                 |
+| Security and threat model              | [docs/threat-model.md](docs/threat-model.md) |
+| How it is evaluated                    | [docs/evaluation.md](docs/evaluation.md)     |
 
 ## Status
 
@@ -63,6 +103,11 @@ Phases 0 to 11 of the plan are in place:
   verifier catch and false-reject rates with Wilson intervals, a naive baseline without the
   verifier, a reconciliation check, and a CI gate. **The committed numbers come from simulated
   extractions, not from a language model**; see [Evaluation results](#evaluation-results).
+- Deployment readiness (selected Phase 12 items): one container running the API and the worker
+  (`apps/api/src/serve.ts`, `Dockerfile`, built and started in CI), a Render blueprint and Vercel
+  configuration with security headers, an upload allowlist for public demos, an upload screen, and
+  `smoke` and `demo:seed` scripts. Metrics, tracing, fault injection, a load check and a Playwright
+  test (the rest of Phase 12) are not done.
 
 ## Quick start
 
@@ -90,6 +135,19 @@ pnpm --filter @specledger/api start
 The API needs `API_ENGINEER_TOKEN` and `API_APPROVER_TOKEN` in `.env` (generate each with
 `openssl rand -hex 32`). It applies migrations at start-up, listens on `HOST:PORT`, and stops
 gracefully on SIGTERM or SIGINT. Uploaded documents are processed by the worker (below).
+
+To run everything as it is deployed (API and worker in one process, plus the review UI), point
+`DATABASE_URL` in `.env` at a database of its own (for example `createdb specledger_dev`; the
+integration tests expect the default database's `public` schema to stay empty), then:
+
+```sh
+pnpm --filter @specledger/api build
+pnpm --filter @specledger/api serve     # API and worker on http://127.0.0.1:3000
+pnpm --filter @specledger/web dev       # review UI on http://127.0.0.1:5173
+```
+
+With the default `LLM_PROVIDER=replay` only the p-108 datasheet has a recorded answer; set
+`LLM_PROVIDER=gemini` and `GEMINI_API_KEY` to extract the other synthetic documents with Gemini.
 
 Git hooks (once per clone):
 

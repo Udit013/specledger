@@ -21,3 +21,6 @@ CLAUDE.local.md
 
 # OS noise
 .DS_Store
+
+# personal interview notes kept beside the code, never committed
+specledger-interview-prep/
