@@ -119,3 +119,49 @@ jobs:
         env:
           BASE: ${{ steps.base.outputs.ref }}
         run: ./scripts/check-commit-hygiene.sh "$BASE"
+
+  container:
+    name: container image builds and serves
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16.15-alpine
+        env:
+          POSTGRES_USER: specledger
+          POSTGRES_PASSWORD: specledger_ci_only
+          POSTGRES_DB: specledger
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U specledger -d specledger"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: docker build --tag specledger-api:ci .
+      # Replay only: CI never calls a model. Tokens are throwaway values made for this run.
+      - name: start the image and check it migrates, serves and refuses anonymous requests
+        run: |
+          engineer="$(openssl rand -hex 32)"
+          approver="$(openssl rand -hex 32)"
+          docker run --detach --name api --network host \
+            -e PORT=3000 \
+            -e DATABASE_URL=postgres://specledger:specledger_ci_only@127.0.0.1:5432/specledger \
+            -e API_ENGINEER_TOKEN="$engineer" -e API_APPROVER_TOKEN="$approver" \
+            -e LLM_PROVIDER=replay -e UPLOAD_ALLOWLIST=corpus \
+            specledger-api:ci
+          for _ in $(seq 1 60); do
+            curl --silent --fail http://127.0.0.1:3000/ready && break
+            sleep 1
+          done
+          test "$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:3000/health)" = 200
+          test "$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:3000/ready)" = 200
+          test "$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:3000/documents)" = 401
+          test "$(curl --silent --output /dev/null --write-out '%{http_code}' -H "Authorization: Bearer $engineer" http://127.0.0.1:3000/documents)" = 200
+          test "$(docker exec api id -u)" != 0
+      - if: always()
+        run: docker logs api 2>&1 | tail -50 || true

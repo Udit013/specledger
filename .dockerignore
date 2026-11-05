@@ -1,0 +1,18 @@
+# Never in the image: secrets, Git metadata, local tooling, build output from the host.
+.git
+.env
+.env.*
+!.env.example
+CLAUDE.md
+CLAUDE.local.md
+.claude
+*.docx
+**/node_modules
+**/dist
+**/coverage
+**/.turbo
+*.log
+# Not needed to build or run the API.
+evaluation
+fixtures/corpus/pdf
+fixtures/corpus/truth
