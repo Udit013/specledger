@@ -87,8 +87,12 @@ type Role = 'engineer' | 'approver';
 
 export interface ApiClientOptions {
   readonly baseUrl: string;
-  readonly tokens: () => Tokens;
+  // Read before every request; the demo workspace starts or renews its session here.
+  readonly tokens: () => Tokens | Promise<Tokens>;
   readonly fetch?: typeof fetch;
+  // In the demo workspace, errors speak of the visitor session instead of role tokens, and a
+  // session the server refused is dropped so that the next request starts a new one.
+  readonly demo?: { readonly onUnauthenticated: () => void };
 }
 
 const MESSAGES: Readonly<Record<string, string>> = {
@@ -98,6 +102,10 @@ const MESSAGES: Readonly<Record<string, string>> = {
   RATE_LIMITED: 'Too many requests. Wait a moment and try again.',
   INTERNAL: 'The server hit an unexpected error. Try again.',
   NOT_READY: 'The server is not ready. Try again shortly.',
+};
+
+const DEMO_MESSAGES: Readonly<Record<string, string>> = {
+  UNAUTHENTICATED: 'Your demo session ended. Try again to start a new one.',
 };
 
 function kindFor(status: number): ApiErrorKind {
@@ -122,7 +130,18 @@ export function createApiClient(options: ApiClientOptions) {
     path: string,
     init: { method?: string; body?: unknown; form?: FormData; role?: Role } = {},
   ): Promise<z.output<S>> {
-    const tokens = options.tokens();
+    let tokens: Tokens;
+    try {
+      tokens = await options.tokens();
+    } catch (error: unknown) {
+      throw new ApiClientError(
+        'network',
+        error instanceof Error ? error.message : 'The server could not be reached.',
+        null,
+        null,
+        null,
+      );
+    }
     const role = init.role ?? 'engineer';
     const token =
       role === 'approver'
@@ -157,7 +176,9 @@ export function createApiClient(options: ApiClientOptions) {
     if (!response.ok) {
       const parsed = apiErrorSchema.safeParse(json);
       const code = parsed.success ? parsed.data.error.code : 'UNKNOWN';
+      if (response.status === 401) options.demo?.onUnauthenticated();
       const message =
+        (options.demo === undefined ? undefined : DEMO_MESSAGES[code]) ??
         MESSAGES[code] ??
         (parsed.success ? parsed.data.error.message : 'The request failed unexpectedly.');
       throw new ApiClientError(

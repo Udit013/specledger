@@ -33,16 +33,18 @@ export function SourcePage({
 
   return (
     <section aria-label={`Source page ${String(pageNumber)}`} className="min-w-0">
-      <h3 className="mb-2 font-semibold">Page {pageNumber}</h3>
+      <h3 className="mb-3 text-sm font-semibold tracking-wide text-slate-600 uppercase">
+        Source · Page {pageNumber}
+      </h3>
       {selectedFound ? null : (
-        <div className="mb-2 rounded border border-amber-700 bg-amber-50 p-2 text-sm text-amber-950">
+        <div className="notice notice-warn mb-3">
           <p className="font-semibold">The quote could not be located on this page.</p>
           <p>
             Quote given for {selected.name}: <q>{selected.quote}</q>
           </p>
         </div>
       )}
-      <pre className="max-h-[70vh] overflow-auto whitespace-pre-wrap rounded border bg-slate-50 p-3 font-mono text-sm leading-relaxed">
+      <pre className="max-h-[70vh] overflow-auto rounded-xl border border-slate-200 bg-white p-4 font-mono text-[13px] leading-relaxed whitespace-pre-wrap text-slate-800 shadow-xs">
         {segments.map((segment) =>
           segment.ids.length === 0 ? (
             segment.text
@@ -52,8 +54,8 @@ export function SourcePage({
               data-current={segment.ids.includes(selected.id) ? 'true' : undefined}
               className={
                 segment.ids.includes(selected.id)
-                  ? 'bg-yellow-300 outline outline-2 outline-yellow-700'
-                  : 'bg-sky-100'
+                  ? 'rounded-sm bg-amber-200 outline-2 outline-amber-600'
+                  : 'rounded-sm bg-brand-100'
               }
             >
               {segment.text}

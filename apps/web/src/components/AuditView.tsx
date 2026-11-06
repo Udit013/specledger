@@ -18,10 +18,10 @@ export function AuditView({
   const events = useQuery({ queryKey: ['audit', kind, id], queryFn: () => client.audit(kind, id) });
   return (
     <section aria-labelledby="audit-heading">
-      <h2 id="audit-heading" className="mb-1 text-xl font-semibold">
+      <h2 id="audit-heading" className="page-title">
         History
       </h2>
-      <p className="mb-3 text-sm">
+      <p className="page-lead mb-6">
         Every change to {KIND_NAMES[kind]} <code>{id}</code>, oldest first.
       </p>
       {events.isPending ? (
@@ -33,43 +33,47 @@ export function AuditView({
           onRetry={() => void events.refetch()}
         />
       ) : events.data.length === 0 ? (
-        <p>No events recorded.</p>
+        <div className="card px-6 py-12 text-center text-sm text-slate-600">
+          <p>No events recorded.</p>
+        </div>
       ) : (
-        <table className="w-full table-fixed border-collapse text-sm">
-          <caption className="sr-only">History</caption>
-          <thead>
-            <tr className="border-b text-left">
-              <th scope="col" className="w-48 py-1">
-                Time
-              </th>
-              <th scope="col" className="w-32">
-                Actor
-              </th>
-              <th scope="col" className="w-20">
-                Action
-              </th>
-              <th scope="col">Reason</th>
-              <th scope="col" className="w-2/5">
-                Change
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {events.data.map((event) => (
-              <tr key={event.id} className="border-b align-top">
-                <td className="py-1">{event.createdAt}</td>
-                <td>{event.actor}</td>
-                <td>{event.action}</td>
-                <td>{event.reason ?? '—'}</td>
-                <td>
-                  <pre className="whitespace-pre-wrap break-all font-mono text-xs">
-                    {JSON.stringify({ before: event.before, after: event.after }, null, 1)}
-                  </pre>
-                </td>
+        <div className="table-wrap">
+          <table className="data-table">
+            <caption className="sr-only">History</caption>
+            <thead>
+              <tr className="text-left">
+                <th scope="col" className="w-48">
+                  Time
+                </th>
+                <th scope="col" className="w-32">
+                  Actor
+                </th>
+                <th scope="col" className="w-20">
+                  Action
+                </th>
+                <th scope="col">Reason</th>
+                <th scope="col" className="w-2/5">
+                  Change
+                </th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {events.data.map((event) => (
+                <tr key={event.id} className="align-top">
+                  <td className="text-slate-700 tabular-nums">{event.createdAt}</td>
+                  <td className="font-mono text-xs">{event.actor}</td>
+                  <td className="font-medium">{event.action}</td>
+                  <td>{event.reason ?? '—'}</td>
+                  <td>
+                    <pre className="rounded-lg bg-slate-50 p-2 font-mono text-xs break-all whitespace-pre-wrap text-slate-700">
+                      {JSON.stringify({ before: event.before, after: event.after }, null, 1)}
+                    </pre>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </section>
   );

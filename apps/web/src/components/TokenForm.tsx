@@ -29,7 +29,7 @@ export function TokenForm({
         Enter the API tokens for your roles. Reviewing and resolving use the engineer token;
         publishing uses the approver token. They stay in this browser tab only.
       </p>
-      <label className="flex flex-col text-sm">
+      <label className="field">
         Engineer token
         <input
           type="password"
@@ -38,10 +38,10 @@ export function TokenForm({
           onChange={(e) => {
             setEngineer(e.target.value);
           }}
-          className="rounded border px-2 py-1"
+          className="input"
         />
       </label>
-      <label className="flex flex-col text-sm">
+      <label className="field">
         Approver token
         <input
           type="password"
@@ -50,14 +50,14 @@ export function TokenForm({
           onChange={(e) => {
             setApprover(e.target.value);
           }}
-          className="rounded border px-2 py-1"
+          className="input"
         />
       </label>
       <div className="flex gap-2">
-        <button type="submit" className="rounded border border-slate-700 px-3 py-1 text-sm">
+        <button type="submit" className="btn btn-primary">
           Save tokens
         </button>
-        <button type="button" onClick={onForget} className="rounded border px-3 py-1 text-sm">
+        <button type="button" onClick={onForget} className="btn btn-secondary">
           Forget tokens
         </button>
       </div>

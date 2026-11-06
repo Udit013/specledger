@@ -8,6 +8,7 @@ import { useServices } from '../context.js';
 import { pollDelay } from '../lib/backoff.js';
 import { JOB_LABELS } from '../lib/labels.js';
 import { hrefFor } from '../lib/router.js';
+import { Icon } from './Icons.js';
 import { ErrorNotice, Loading, Status } from './Status.js';
 
 const ACTIVE = new Set(['queued', 'running']);
@@ -50,9 +51,21 @@ export function DocumentList() {
 
   return (
     <section aria-labelledby="documents-heading">
-      <h2 id="documents-heading" className="mb-3 text-xl font-semibold">
-        Documents
-      </h2>
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h2 id="documents-heading" className="page-title">
+            Documents
+          </h2>
+          <p className="page-lead">
+            Every uploaded document and where its extraction stands. Open one to review its values
+            against the source page.
+          </p>
+        </div>
+        <a href={hrefFor({ name: 'upload' })} className="btn btn-secondary self-start sm:self-auto">
+          <Icon name="upload" className="h-4 w-4" />
+          Upload a document
+        </a>
+      </div>
       {documents.isPending ? (
         <Loading label="Loading documents" />
       ) : documents.isError ? (
@@ -62,61 +75,84 @@ export function DocumentList() {
           onRetry={() => void documents.refetch()}
         />
       ) : documents.data.length === 0 ? (
-        <p>No documents yet. Upload one with POST /documents, then it appears here.</p>
+        <div className="card flex flex-col items-center px-6 py-14 text-center">
+          <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-50 text-brand-700">
+            <Icon name="document" className="h-6 w-6" />
+          </span>
+          <p className="mt-4 font-semibold">No documents yet.</p>
+          <p className="mt-1 max-w-sm text-sm text-slate-600">
+            Upload a datasheet and it appears here while it is extracted.
+          </p>
+          <a href={hrefFor({ name: 'upload' })} className="btn btn-primary mt-5">
+            Upload a document
+          </a>
+        </div>
       ) : (
         <>
           {documents.data.length >= DOCUMENT_PAGE_SIZE ? (
-            <p className="mb-2 text-sm">
+            <p className="mb-3 text-sm text-slate-600">
               Showing the newest {DOCUMENT_PAGE_SIZE} documents. Older ones are not listed here.
             </p>
           ) : null}
-          <table className="w-full table-fixed border-collapse text-sm">
-            <caption className="sr-only">Documents and their processing status</caption>
-            <thead>
-              <tr className="border-b text-left">
-                <th scope="col" className="w-2/5 py-1">
-                  Document
-                </th>
-                <th scope="col">Type</th>
-                <th scope="col">Revision</th>
-                <th scope="col">Pages</th>
-                <th scope="col" className="w-40">
-                  Processing
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {documents.data.map((d) => {
-                const label = JOB_LABELS[d.processing.status];
-                return (
-                  <tr key={d.id} className="border-b">
-                    <td className="truncate py-1">
-                      <a
-                        href={hrefFor({ name: 'review', documentId: d.id })}
-                        className="text-blue-800 underline"
-                        aria-label={`Review ${d.originalFilename}`}
-                      >
-                        {d.originalFilename}
-                      </a>
-                    </td>
-                    <td>{d.documentType}</td>
-                    <td>{d.revision ?? '—'}</td>
-                    <td>{d.pageCount}</td>
-                    <td>
-                      <Status
-                        text={label.text}
-                        symbol={label.symbol}
-                        tone={TONES[d.processing.status]}
-                      />
-                      {d.processing.lastErrorCode === null ? null : (
-                        <span className="ml-1 text-xs">{d.processing.lastErrorCode}</span>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+          <div className="table-wrap">
+            <table className="data-table">
+              <caption className="sr-only">Documents and their processing status</caption>
+              <thead>
+                <tr className="text-left">
+                  <th scope="col" className="w-2/5">
+                    Document
+                  </th>
+                  <th scope="col" className="max-sm:hidden">
+                    Type
+                  </th>
+                  <th scope="col">Revision</th>
+                  <th scope="col" className="max-sm:hidden">
+                    Pages
+                  </th>
+                  <th scope="col" className="sm:w-44">
+                    Processing
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {documents.data.map((d) => {
+                  const label = JOB_LABELS[d.processing.status];
+                  return (
+                    <tr key={d.id}>
+                      <td>
+                        <a
+                          href={hrefFor({ name: 'review', documentId: d.id })}
+                          className="inline-flex items-start gap-2 font-medium text-ink hover:text-brand-700 focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-brand-600"
+                          aria-label={`Review ${d.originalFilename}`}
+                        >
+                          <Icon
+                            name="document"
+                            className="mt-0.5 h-4 w-4 shrink-0 text-slate-400"
+                          />
+                          <span className="break-words">{d.originalFilename}</span>
+                        </a>
+                      </td>
+                      <td className="text-slate-700 capitalize max-sm:hidden">{d.documentType}</td>
+                      <td className="text-slate-700">{d.revision ?? '—'}</td>
+                      <td className="text-slate-700 tabular-nums max-sm:hidden">{d.pageCount}</td>
+                      <td>
+                        <Status
+                          text={label.text}
+                          symbol={label.symbol}
+                          tone={TONES[d.processing.status]}
+                        />
+                        {d.processing.lastErrorCode === null ? null : (
+                          <span className="mt-1 block font-mono text-xs break-all text-red-800">
+                            {d.processing.lastErrorCode}
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </>
       )}
     </section>

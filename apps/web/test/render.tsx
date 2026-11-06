@@ -15,7 +15,7 @@ export function renderApp(
 ) {
   const tokens = options.tokens === undefined ? TOKENS : options.tokens;
   if (tokens !== null) saveTokens(sessionStorage, tokens);
-  window.location.hash = options.hash ?? '';
+  window.location.hash = options.hash ?? '#/documents';
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });

@@ -52,19 +52,19 @@ export function UploadForm() {
   };
 
   return (
-    <section aria-labelledby="upload-heading" className="max-w-xl">
-      <h2 id="upload-heading" className="mb-1 text-xl font-semibold">
+    <section aria-labelledby="upload-heading" className="mx-auto max-w-2xl">
+      <h2 id="upload-heading" className="page-title">
         Upload a document
       </h2>
-      <p className="mb-3 text-sm">
+      <p className="page-lead mb-6">
         Try one of the{' '}
-        <a href={SAMPLES} className="text-blue-800 underline" rel="noreferrer" target="_blank">
+        <a href={SAMPLES} className="link" rel="noreferrer" target="_blank">
           synthetic sample datasheets
         </a>
         . Extraction runs in the background; the document list shows its progress.
       </p>
-      <form onSubmit={submit} noValidate className="space-y-3 text-sm">
-        <label className="flex flex-col">
+      <form onSubmit={submit} noValidate className="card space-y-5 p-6 text-sm">
+        <label className="field">
           PDF file
           <input
             type="file"
@@ -72,11 +72,11 @@ export function UploadForm() {
             onChange={(e) => {
               setFile(e.target.files?.[0] ?? null);
             }}
-            className="mt-1"
+            className="block w-full cursor-pointer rounded-lg border border-dashed border-slate-300 bg-slate-50 p-3 text-sm font-normal text-slate-700 file:mr-3 file:rounded-md file:border-0 file:bg-brand-700 file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-white hover:border-brand-500"
           />
         </label>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <label className="flex flex-col">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <label className="field">
             Equipment tag
             <input
               value={fields.equipmentTag}
@@ -84,37 +84,37 @@ export function UploadForm() {
               onChange={(e) => {
                 set('equipmentTag', e.target.value);
               }}
-              className="rounded border px-2 py-1"
+              className="input"
             />
           </label>
-          <label className="flex flex-col">
+          <label className="field">
             Equipment class
             <select
               value={fields.equipmentClass}
               onChange={(e) => {
                 set('equipmentClass', e.target.value as UploadRequest['equipmentClass']);
               }}
-              className="rounded border px-2 py-1"
+              className="input"
             >
               <option value="centrifugal_pump">Centrifugal pump</option>
               <option value="electric_motor">Electric motor</option>
             </select>
           </label>
-          <label className="flex flex-col">
+          <label className="field">
             Document type
             <select
               value={fields.documentType}
               onChange={(e) => {
                 set('documentType', e.target.value as UploadRequest['documentType']);
               }}
-              className="rounded border px-2 py-1"
+              className="input"
             >
               <option value="datasheet">Datasheet</option>
               <option value="manual">Manual</option>
               <option value="brochure">Brochure</option>
             </select>
           </label>
-          <label className="flex flex-col">
+          <label className="field">
             Revision (optional)
             <input
               value={fields.revision}
@@ -122,26 +122,26 @@ export function UploadForm() {
               onChange={(e) => {
                 set('revision', e.target.value);
               }}
-              className="rounded border px-2 py-1"
+              className="input"
             />
           </label>
         </div>
-        <label className="flex items-start gap-2">
+        <label className="flex items-start gap-3 rounded-lg bg-slate-50 p-3">
           <input
             type="checkbox"
             checked={fields.synthetic}
             onChange={(e) => {
               set('synthetic', e.target.checked);
             }}
-            className="mt-1"
+            className="mt-0.5 h-4 w-4 accent-brand-700"
           />
-          <span>
+          <span className="text-slate-700">
             This is a synthetic test document. Only synthetic documents are sent to the hosted
             model.
           </span>
         </label>
         {problems.length === 0 ? null : (
-          <ul role="alert" className="list-disc pl-5 text-red-900">
+          <ul role="alert" className="notice notice-error list-disc pl-8">
             {problems.map((problem) => (
               <li key={problem}>{problem}</li>
             ))}
@@ -150,11 +150,7 @@ export function UploadForm() {
         {upload.isError ? (
           <ErrorNotice title="The document was not uploaded." error={upload.error} />
         ) : null}
-        <button
-          type="submit"
-          aria-disabled={upload.isPending}
-          className="rounded border border-slate-700 px-3 py-1 font-medium"
-        >
+        <button type="submit" aria-disabled={upload.isPending} className="btn btn-primary">
           {upload.isPending ? 'Uploading…' : 'Upload'}
         </button>
       </form>

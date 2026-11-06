@@ -6,8 +6,8 @@ const ID = '00000000-0000-4000-8000-000000000001';
 
 describe('parseRoute', () => {
   it.each([
-    ['', { name: 'documents' }],
-    ['#/', { name: 'documents' }],
+    ['', { name: 'home' }],
+    ['#/', { name: 'home' }],
     ['#/documents', { name: 'documents' }],
     [`#/documents/${ID}`, { name: 'review', documentId: ID }],
     ['#/conflicts', { name: 'conflicts' }],
@@ -29,6 +29,7 @@ describe('parseRoute', () => {
 describe('hrefFor', () => {
   it('round-trips every route', () => {
     for (const route of [
+      { name: 'home' },
       { name: 'documents' },
       { name: 'review', documentId: ID },
       { name: 'conflicts' },

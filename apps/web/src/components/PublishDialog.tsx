@@ -42,11 +42,11 @@ export function PublishDialog({ onClose }: { readonly onClose: () => void }) {
           onClick={() => {
             if (!publish.isPending) publish.mutate();
           }}
-          className="rounded border border-slate-700 px-3 py-1 text-sm font-medium"
+          className="btn btn-primary"
         >
           Publish now
         </button>
-        <button type="button" onClick={onClose} className="rounded border px-3 py-1 text-sm">
+        <button type="button" onClick={onClose} className="btn btn-secondary">
           Close
         </button>
       </div>

@@ -127,7 +127,12 @@ export interface FakeOptions {
   readonly fields?: FieldView[];
   readonly conflicts?: ConflictView[];
   readonly onRequest?: (request: Request) => void;
+  // Serves the demo workspace instead: POST /demo/session issues DEMO_TOKEN (or answers with
+  // `sessionStatus`), every route lives under /demo, and only the demo token is accepted there.
+  readonly demo?: { readonly sessionStatus?: number };
 }
+
+export const DEMO_TOKEN = 'demo.visitor-session-for-tests.1893456000000.signature';
 
 export const document = (overrides: Partial<DocumentSummary> = {}): DocumentSummary => ({
   id: DOC_ID,
@@ -149,8 +154,11 @@ const error = (status: number, code: string, message: string, details?: unknown)
   );
 
 type Role = 'engineer' | 'approver';
+// Set by fakeApi: whether the routes are the demo workspace's.
+let demoMode = false;
 const roleOf = (request: Request): Role | null => {
   const header = request.headers.get('authorization');
+  if (demoMode) return header === `Bearer ${DEMO_TOKEN}` ? 'engineer' : null;
   if (header === `Bearer ${TOKENS.engineer}`) return 'engineer';
   if (header === `Bearer ${TOKENS.approver}`) return 'approver';
   return null;
@@ -158,7 +166,8 @@ const roleOf = (request: Request): Role | null => {
 const refuse = (request: Request, allowed: readonly Role[]) => {
   const role = roleOf(request);
   if (role === null) return error(401, 'UNAUTHENTICATED', 'A valid bearer token is required.');
-  if (!allowed.includes(role)) return error(403, 'FORBIDDEN', 'This role may not call this route.');
+  if (!demoMode && !allowed.includes(role))
+    return error(403, 'FORBIDDEN', 'This role may not call this route.');
   return null;
 };
 const ANY: readonly Role[] = ['engineer', 'approver'];
@@ -185,6 +194,8 @@ export function fakeApi(options: FakeOptions = {}): FakeState {
     uploads: [],
   };
   const page = options.page ?? PAGE_1;
+  demoMode = options.demo !== undefined;
+  const base = demoMode ? `${API}/demo` : API;
   const record = (entity: string, event: Omit<AuditEvent, 'id' | 'createdAt'>) => {
     const events = state.audit.get(entity) ?? [];
     const n = String(events.length + 1).padStart(12, '0');
@@ -196,8 +207,22 @@ export function fakeApi(options: FakeOptions = {}): FakeState {
     options.onRequest?.(request);
   };
 
+  if (options.demo !== undefined) {
+    const status = options.demo.sessionStatus ?? 201;
+    server.use(
+      http.post(`${API}/demo/session`, ({ request }) => {
+        seen(request);
+        return status === 201
+          ? HttpResponse.json(
+              { token: DEMO_TOKEN, expiresAt: new Date(Date.now() + 3_600_000).toISOString() },
+              { status },
+            )
+          : error(status, status === 404 ? 'NOT_FOUND' : 'RATE_LIMITED', 'Refused.');
+      }),
+    );
+  }
   server.use(
-    http.post(`${API}/documents`, async ({ request }) => {
+    http.post(`${base}/documents`, async ({ request }) => {
       seen(request);
       const denied = refuse(request, ['engineer']);
       if (denied !== null) return denied;
@@ -239,11 +264,11 @@ export function fakeApi(options: FakeOptions = {}): FakeState {
         { status: duplicate ? 200 : 202 },
       );
     }),
-    http.get(`${API}/documents`, ({ request }) => {
+    http.get(`${base}/documents`, ({ request }) => {
       seen(request);
       return refuse(request, ANY) ?? HttpResponse.json({ documents: state.documents });
     }),
-    http.get(`${API}/documents/:id`, ({ request, params }) => {
+    http.get(`${base}/documents/:id`, ({ request, params }) => {
       seen(request);
       const found = state.documents.find((d) => d.id === params.id);
       return (
@@ -253,18 +278,18 @@ export function fakeApi(options: FakeOptions = {}): FakeState {
           : HttpResponse.json(found))
       );
     }),
-    http.get(`${API}/documents/:id/fields`, ({ request }) => {
+    http.get(`${base}/documents/:id/fields`, ({ request }) => {
       seen(request);
       return refuse(request, ANY) ?? HttpResponse.json({ fields: state.fields });
     }),
-    http.get(`${API}/documents/:id/pages/:n`, ({ request, params }) => {
+    http.get(`${base}/documents/:id/pages/:n`, ({ request, params }) => {
       seen(request);
       return (
         refuse(request, ANY) ??
         HttpResponse.json({ documentId: params.id, pageNumber: Number(params.n), content: page })
       );
     }),
-    http.patch(`${API}/fields/:id`, async ({ request, params }) => {
+    http.patch(`${base}/fields/:id`, async ({ request, params }) => {
       seen(request);
       const denied = refuse(request, ['engineer']);
       if (denied !== null) return denied;
@@ -301,7 +326,7 @@ export function fakeApi(options: FakeOptions = {}): FakeState {
       });
       return HttpResponse.json(next);
     }),
-    http.get(`${API}/conflicts`, ({ request }) => {
+    http.get(`${base}/conflicts`, ({ request }) => {
       seen(request);
       const status = new URL(request.url).searchParams.get('status');
       return (
@@ -311,7 +336,7 @@ export function fakeApi(options: FakeOptions = {}): FakeState {
         })
       );
     }),
-    http.post(`${API}/conflicts/:id/resolve`, async ({ request, params }) => {
+    http.post(`${base}/conflicts/:id/resolve`, async ({ request, params }) => {
       seen(request);
       const denied = refuse(request, ['engineer']);
       if (denied !== null) return denied;
@@ -358,7 +383,7 @@ export function fakeApi(options: FakeOptions = {}): FakeState {
       });
       return HttpResponse.json(resolved);
     }),
-    http.post(`${API}/register/publish`, ({ request }) => {
+    http.post(`${base}/register/publish`, ({ request }) => {
       seen(request);
       const denied = refuse(request, ['approver']);
       if (denied !== null) return denied;
@@ -397,7 +422,7 @@ export function fakeApi(options: FakeOptions = {}): FakeState {
         { status: 201 },
       );
     }),
-    http.get(`${API}/audit`, ({ request }) => {
+    http.get(`${base}/audit`, ({ request }) => {
       seen(request);
       const entity = new URL(request.url).searchParams.get('entity') ?? '';
       return refuse(request, ANY) ?? HttpResponse.json({ events: state.audit.get(entity) ?? [] });

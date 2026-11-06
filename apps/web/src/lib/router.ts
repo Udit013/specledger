@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 // Hash routes: the screen and the ids it shows, nothing else. Tokens never go in the URL.
 export type Route =
+  | { readonly name: 'home' }
   | { readonly name: 'documents' }
   | { readonly name: 'review'; readonly documentId: string }
   | { readonly name: 'conflicts' }
@@ -20,7 +21,8 @@ export function parseRoute(hash: string): Route {
   const parts = hash.replace(/^#\/?/, '').split('/');
   const [first = '', second, third, ...rest] = parts;
   if (rest.length > 0) return { name: 'not_found' };
-  if ((first === '' || first === 'documents') && second === undefined) return { name: 'documents' };
+  if (first === '' && second === undefined) return { name: 'home' };
+  if (first === 'documents' && second === undefined) return { name: 'documents' };
   if (first === 'documents' && third === undefined && uuid.safeParse(second).success) {
     return { name: 'review', documentId: second ?? '' };
   }
@@ -35,6 +37,8 @@ export function parseRoute(hash: string): Route {
 
 export function hrefFor(route: Exclude<Route, { name: 'not_found' }>): string {
   switch (route.name) {
+    case 'home':
+      return '#/';
     case 'documents':
       return '#/documents';
     case 'review':

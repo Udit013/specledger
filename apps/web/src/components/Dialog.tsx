@@ -61,7 +61,7 @@ export function Dialog({
   };
 
   return (
-    <div className="fixed inset-0 z-10 flex items-start justify-center bg-slate-900/40 p-4">
+    <div className="fixed inset-0 z-30 flex items-start justify-center bg-slate-900/50 p-4 backdrop-blur-sm">
       <div
         ref={ref}
         role="dialog"
@@ -69,9 +69,9 @@ export function Dialog({
         aria-labelledby={titleId}
         tabIndex={-1}
         onKeyDown={onKeyDown}
-        className="mt-16 w-full max-w-lg rounded bg-white p-4 shadow-lg"
+        className="mt-16 max-h-[calc(100vh-6rem)] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl ring-1 ring-slate-900/5"
       >
-        <h2 id={titleId} className="mb-3 text-lg font-semibold">
+        <h2 id={titleId} className="mb-3 text-lg font-semibold tracking-tight">
           {title}
         </h2>
         {children}

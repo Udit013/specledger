@@ -183,19 +183,30 @@ export function ReviewScreen({ documentId }: { readonly documentId: string }) {
 
   return (
     <section aria-labelledby="review-heading">
-      <h2 id="review-heading" className="mb-1 text-xl font-semibold">
+      <a href={hrefFor({ name: 'documents' })} className="link text-sm">
+        ← All documents
+      </a>
+      <h2 id="review-heading" className="page-title mt-2 break-all">
         {document.data.originalFilename}
       </h2>
-      <p className="mb-3 text-sm">
-        {document.data.documentType}, {document.data.revision ?? 'no revision'}. Press <kbd>?</kbd>{' '}
-        for keyboard shortcuts.
+      <p className="page-lead mb-6">
+        <span className="capitalize">{document.data.documentType}</span>,{' '}
+        {document.data.revision ?? 'no revision'}. Each value is shown next to its source page, with
+        the quote it came from highlighted. Press <kbd>?</kbd> for keyboard shortcuts.
       </p>
       {list.length === 0 || selected === undefined ? (
-        <p>No fields were extracted from this document yet.</p>
+        <div className="card px-6 py-12 text-center">
+          <p className="font-semibold">No fields were extracted from this document yet.</p>
+          <p className="mt-1 text-sm text-slate-600">
+            Extraction runs in the background; the document list shows its progress.
+          </p>
+        </div>
       ) : (
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
           <div className="min-w-0">
-            <h3 className="mb-2 font-semibold">Fields</h3>
+            <h3 className="mb-3 text-sm font-semibold tracking-wide text-slate-600 uppercase">
+              Fields
+            </h3>
             <ol aria-label="Fields" className="space-y-1">
               {list.map((field, i) => {
                 const verification = VERIFICATION_LABELS[field.verificationStatus];
@@ -213,8 +224,10 @@ export function ReviewScreen({ documentId }: { readonly documentId: string }) {
                       onClick={() => {
                         setIndex(i);
                       }}
-                      className={`flex w-full flex-wrap items-center gap-2 rounded border p-2 text-left text-sm ${
-                        isSelected ? 'border-blue-800 bg-blue-50' : 'border-slate-300'
+                      className={`flex w-full flex-wrap items-center gap-2 rounded-xl border p-3 text-left text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 ${
+                        isSelected
+                          ? 'border-brand-600 bg-brand-50 shadow-xs ring-1 ring-brand-600'
+                          : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'
                       }`}
                     >
                       <span className="min-w-44 break-all font-mono">{field.name}</span>{' '}
@@ -237,7 +250,7 @@ export function ReviewScreen({ documentId }: { readonly documentId: string }) {
               })}
             </ol>
 
-            <div className="mt-3 space-y-3">
+            <div className="card mt-4 space-y-4 p-4 lg:sticky lg:bottom-4">
               <div className="flex flex-wrap gap-2">
                 <ActionButton
                   label="Accept"
@@ -262,13 +275,13 @@ export function ReviewScreen({ documentId }: { readonly documentId: string }) {
                 />
                 <a
                   href={hrefFor({ name: 'audit', kind: 'field', id: selected.id })}
-                  className="self-center text-sm text-blue-800 underline"
+                  className="link self-center text-sm"
                 >
                   History of {selected.name}
                 </a>
               </div>
               {selected.verificationStatus === 'verified' ? null : (
-                <p className="text-sm">
+                <p className="notice notice-warn">
                   The verifier could not confirm this value:{' '}
                   {selected.verificationReasons.join(', ')}.
                 </p>
@@ -347,7 +360,7 @@ export function ReviewScreen({ documentId }: { readonly documentId: string }) {
         >
           <button
             type="button"
-            className="mb-2 rounded border px-2 py-1 text-sm"
+            className="input mb-2"
             onClick={() => {
               setHelpOpen(false);
             }}
@@ -385,9 +398,9 @@ function ActionButton({
       type="button"
       onClick={onClick}
       aria-keyshortcuts={shortcut}
-      className="rounded border border-slate-700 px-3 py-1 text-sm font-medium"
+      className={label === 'Accept' ? 'btn btn-primary' : 'btn btn-secondary'}
     >
-      {label} ({shortcut})
+      {label} <kbd className="ml-0.5">{shortcut}</kbd>
     </button>
   );
 }
@@ -424,14 +437,10 @@ function EditForm({
     onSubmit(value.trim(), unit.trim(), reason.trim());
   };
   return (
-    <form
-      onSubmit={save}
-      onKeyDown={escapeCloses(onCancel)}
-      className="space-y-2 rounded border p-2"
-    >
+    <form onSubmit={save} onKeyDown={escapeCloses(onCancel)} className="panel space-y-3 p-4">
       <p className="text-sm font-semibold">Edit {field.name}</p>
       <div className="flex gap-2">
-        <label className="flex flex-col text-sm">
+        <label className="field">
           Value
           <input
             ref={first}
@@ -440,10 +449,10 @@ function EditForm({
             onChange={(e) => {
               setValue(e.target.value);
             }}
-            className="rounded border px-2 py-1"
+            className="input"
           />
         </label>
-        <label className="flex flex-col text-sm">
+        <label className="field">
           Unit
           <input
             value={unit}
@@ -451,29 +460,25 @@ function EditForm({
             onChange={(e) => {
               setUnit(e.target.value);
             }}
-            className="rounded border px-2 py-1"
+            className="input"
           />
         </label>
       </div>
-      <label className="flex flex-col text-sm">
+      <label className="field">
         Reason (optional)
         <input
           value={reason}
           onChange={(e) => {
             setReason(e.target.value);
           }}
-          className="rounded border px-2 py-1"
+          className="input"
         />
       </label>
       <div className="flex gap-2">
-        <button
-          type="submit"
-          disabled={busy}
-          className="rounded border border-slate-700 px-3 py-1 text-sm"
-        >
+        <button type="submit" disabled={busy} className="btn btn-primary">
           Save edit
         </button>
-        <button type="button" onClick={onCancel} className="rounded border px-3 py-1 text-sm">
+        <button type="button" onClick={onCancel} className="btn btn-secondary">
           Cancel
         </button>
       </div>
@@ -505,12 +510,8 @@ function ReasonForm({
     onSubmit(reason.trim());
   };
   return (
-    <form
-      onSubmit={save}
-      onKeyDown={escapeCloses(onCancel)}
-      className="space-y-2 rounded border p-2"
-    >
-      <label className="flex flex-col text-sm">
+    <form onSubmit={save} onKeyDown={escapeCloses(onCancel)} className="panel space-y-3 p-4">
+      <label className="field">
         Reason for accepting an unverified value
         <input
           ref={input}
@@ -519,19 +520,15 @@ function ReasonForm({
           onChange={(e) => {
             setReason(e.target.value);
           }}
-          className="rounded border px-2 py-1"
+          className="input"
         />
       </label>
       {missing ? <p className="text-sm text-red-900">Enter a reason.</p> : null}
       <div className="flex gap-2">
-        <button
-          type="submit"
-          disabled={busy}
-          className="rounded border border-slate-700 px-3 py-1 text-sm"
-        >
+        <button type="submit" disabled={busy} className="btn btn-primary">
           Accept with reason
         </button>
-        <button type="button" onClick={onCancel} className="rounded border px-3 py-1 text-sm">
+        <button type="button" onClick={onCancel} className="btn btn-secondary">
           Cancel
         </button>
       </div>
@@ -552,7 +549,7 @@ function StaleNotice({
 }) {
   const { current } = stale;
   return (
-    <div role="alert" className="space-y-2 rounded border border-amber-700 bg-amber-50 p-3 text-sm">
+    <div role="alert" className="notice notice-warn space-y-2">
       <p className="font-semibold">This field changed on the server since you loaded it.</p>
       <p>
         Server value: {current.value} {current.unit}, {REVIEW_LABELS[current.reviewStatus].text},
@@ -560,15 +557,10 @@ function StaleNotice({
       </p>
       <p>Your change: {describeChange(stale.attempted)}. It was not saved.</p>
       <div className="flex gap-2">
-        <button
-          type="button"
-          disabled={busy}
-          onClick={onReapply}
-          className="rounded border border-slate-700 px-3 py-1"
-        >
+        <button type="button" disabled={busy} onClick={onReapply} className="btn btn-primary">
           Reapply my change
         </button>
-        <button type="button" onClick={onDiscard} className="rounded border px-3 py-1">
+        <button type="button" onClick={onDiscard} className="btn btn-secondary">
           Discard my change
         </button>
       </div>
