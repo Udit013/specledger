@@ -67,7 +67,8 @@ free-tier model id in the Environment tab; the worker reports `LLM_MODEL_RETIRED
      (no trailing slash). It is read at build time.
    - `ENABLE_EXPERIMENTAL_COREPACK` = `1`, so Vercel uses the pnpm version pinned in
      `package.json`.
-3. Set the Node.js version to 22.x in the project settings, and deploy.
+3. Deploy. Vercel builds with Node 22 because `apps/web/package.json` declares `engines.node`
+   (its default, a newer Node, is refused by the workspace's `engineStrict` setting).
 
 The UI's Content-Security-Policy allows API calls only to its own origin and `*.onrender.com`. If
 you host the API elsewhere, change `connect-src` in `apps/web/vercel.json`.
