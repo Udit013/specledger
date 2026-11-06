@@ -11,7 +11,7 @@ that it sits under the field's own label, and that it is plausible. Values from 
 and revisions are reconciled by explicit rules, a person reviews them beside the highlighted
 source, and an approver publishes an immutable, audited register version.
 
-**Live demo:** _add your deployment URL here after following [docs/deployment.md](docs/deployment.md)._
+**Live demo:** [specledger.vercel.app](https://specledger.vercel.app). Access needs the role tokens, shared on request.
 The demo runs on free tiers (it may take a minute to wake up) and accepts only the synthetic test
 datasheets in [`fixtures/corpus/pdf`](fixtures/corpus/pdf).
 
