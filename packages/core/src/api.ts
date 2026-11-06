@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { candidateSchema } from './candidate.js';
 import { equipmentClassSchema, fieldNameSchema, TEXT_LIMITS } from './equipment.js';
 import { reconcileRuleSchema } from './reconcile.js';
+import { registerItemValuesSchema } from './records.js';
 import {
   conflictStatusSchema,
   documentTypeSchema,
@@ -272,6 +273,60 @@ export const publishResponseSchema = z.strictObject({
   version: registerVersionSchema,
   itemCount: z.number().int().nonnegative(),
 });
+
+// GET /register/versions: published versions, newest first.
+export const registerVersionListSchema = z.strictObject({
+  versions: z.array(
+    z.strictObject({ ...registerVersionSchema.shape, itemCount: z.number().int().nonnegative() }),
+  ),
+});
+export type RegisterVersionSummary = z.infer<typeof registerVersionListSchema>['versions'][number];
+
+// GET /register/versions/:n: one published version with its items, by equipment tag.
+export const registerVersionDetailSchema = z.strictObject({
+  version: registerVersionSchema,
+  items: z.array(z.strictObject({ tag: z.string(), values: registerItemValuesSchema })),
+});
+export type RegisterVersionDetail = z.infer<typeof registerVersionDetailSchema>;
+
+// The asset-system handoff: one item of a published version as an asset upsert, in the
+// ACC-style contract of docs/adapter-contract.md (written for this project and checked against
+// a mock only, not against the real Autodesk API).
+export const assetPayloadSchema = z.strictObject({
+  externalId: z.string().min(1).max(200),
+  name: z.string().min(1).max(200),
+  attributes: z
+    .array(
+      z.strictObject({
+        name: z.string().min(1).max(100),
+        value: z.string().max(200),
+        unit: z.string().max(32),
+      }),
+    )
+    .max(200),
+  source: z.strictObject({
+    system: z.literal('specledger'),
+    registerVersion: z.number().int().min(1),
+    publishedAt: z.iso.datetime({ offset: true }),
+  }),
+});
+export type AssetPayload = z.infer<typeof assetPayloadSchema>;
+
+// GET /register/versions/:n/handoff: the requests a sync of this version would send, computed,
+// not sent. `connected` is always false: no asset system is connected to this deployment.
+export const handoffPreviewSchema = z.strictObject({
+  contract: z.literal('acc-style-asset-upsert'),
+  connected: z.literal(false),
+  requests: z.array(
+    z.strictObject({
+      method: z.literal('POST'),
+      path: z.literal('/assets/upsert'),
+      idempotencyKey: z.string().min(1).max(255),
+      payload: assetPayloadSchema,
+    }),
+  ),
+});
+export type HandoffPreview = z.infer<typeof handoffPreviewSchema>;
 
 export const exportParamsSchema = z.strictObject({ n: z.coerce.number().int().min(1) });
 export const exportQuerySchema = z.strictObject({ format: z.enum(['csv', 'json']) });

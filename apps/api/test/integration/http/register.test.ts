@@ -1,5 +1,11 @@
 import { randomUUID } from 'node:crypto';
 
+import {
+  handoffPreviewSchema,
+  registerVersionDetailSchema,
+  registerVersionListSchema,
+} from '@specledger/core';
+import { assetPayloadSchema } from '@specledger/exporters';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -229,6 +235,38 @@ describe('conflict resolution feeding reconciliation and publish', () => {
     expect(csv.body.split('\r\n')[0]).toBe('tag,field,value,unit');
     expect(csv.body).toContain('P-106,rated_head,260,ft');
 
+    // The register screen's view of the same version, and the asset-system handoff it would send.
+    const versions = await s.call('GET', '/register/versions', 'reviewer');
+    expect(registerVersionListSchema.parse(versions.json()).versions).toEqual([
+      expect.objectContaining({ number: 1, approvedBy: ACTORS.approver, itemCount: 1 }),
+    ]);
+    const detail = registerVersionDetailSchema.parse(
+      (await s.call('GET', '/register/versions/1', 'engineer')).json(),
+    );
+    expect(detail.items.map((item) => [item.tag, item.values])).toEqual(
+      exported.items.map((item) => [item.tag, item.values]),
+    );
+    const handoff = handoffPreviewSchema.parse(
+      (await s.call('GET', '/register/versions/1/handoff', 'engineer')).json(),
+    );
+    expect(handoff.connected).toBe(false);
+    expect(handoff.requests).toHaveLength(1);
+    const [request] = handoff.requests;
+    expect(request?.idempotencyKey).toBe('specledger:register:v1:P-106');
+    // Exactly what the tested asset client would send, by the exporters' own contract schema.
+    expect(assetPayloadSchema.parse(request?.payload)).toMatchObject({
+      externalId: 'specledger:P-106',
+      source: { system: 'specledger', registerVersion: 1 },
+    });
+    expect(request?.payload.attributes).toContainEqual({
+      name: 'rated_head',
+      value: '260',
+      unit: 'ft',
+    });
+    for (const url of ['/register/versions/9', '/register/versions/9/handoff']) {
+      expect((await s.call('GET', url, 'engineer')).statusCode, url).toBe(404);
+    }
+
     // A later revision in a lineage the decision was based on: the decision stands but the field
     // needs re-review, which reopens it as a conflict and blocks the next publish.
     const later = await s.documentId('p-110-datasheet', tag, { revision: 'Rev B' });
@@ -296,6 +334,10 @@ describe('parallel publishes', () => {
       .map((r) => r.json<{ version: { number: number } }>().version.number)
       .sort((a, b) => a - b);
     expect(numbers).toEqual([1, 2, 3, 4, 5]);
+    const listed = registerVersionListSchema.parse(
+      (await s.call('GET', '/register/versions', 'approver')).json(),
+    ).versions;
+    expect(listed.map((v) => v.number)).toEqual([5, 4, 3, 2, 1]);
     // Rev B supersedes Rev A in every version.
     const exported = JSON.parse(
       (await s.call('GET', '/register/versions/5/export?format=json', 'engineer')).body,

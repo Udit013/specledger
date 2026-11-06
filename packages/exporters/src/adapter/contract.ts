@@ -1,3 +1,5 @@
+import { assetPayloadSchema } from '@specledger/core';
+import type { AssetPayload } from '@specledger/core';
 import { z } from 'zod';
 
 import type { ExportableVersion } from '../register.js';
@@ -7,25 +9,9 @@ import type { ContractShape } from './drift.js';
 // project and checked against a mock only: it has not been verified against the real Autodesk
 // API.
 
-export const assetPayloadSchema = z.strictObject({
-  externalId: z.string().min(1).max(200),
-  name: z.string().min(1).max(200),
-  attributes: z
-    .array(
-      z.strictObject({
-        name: z.string().min(1).max(100),
-        value: z.string().max(200),
-        unit: z.string().max(32),
-      }),
-    )
-    .max(200),
-  source: z.strictObject({
-    system: z.literal('specledger'),
-    registerVersion: z.number().int().min(1),
-    publishedAt: z.iso.datetime({ offset: true }),
-  }),
-});
-export type AssetPayload = z.infer<typeof assetPayloadSchema>;
+// The payload schema lives in core, so the API and the web app validate the same shape.
+export { assetPayloadSchema };
+export type { AssetPayload };
 
 // The success response the contract promises, as the drift detector checks it.
 export const ASSET_RESPONSE_SHAPE: ContractShape = {

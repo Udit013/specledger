@@ -11,7 +11,7 @@ import {
   uploadFieldsSchema,
 } from '@specledger/core';
 import type { ReviewEventSubject } from '@specledger/core';
-import { exporterFor } from '@specledger/exporters';
+import { assetPayloadFor, exporterFor, idempotencyKeyFor } from '@specledger/exporters';
 import { sha256Hex } from '@specledger/ingest';
 import type { IngestError } from '@specledger/ingest';
 import type { Database } from '@specledger/db';
@@ -204,6 +204,46 @@ export function registerRoutes(
         .send({ version: versionView(published.version), itemCount: published.items.length });
     });
   }
+
+  app.get('/register/versions', { config: { auth: read } }, async (request) => ({
+    versions: (await db(request).register.listPublished()).map(({ version, itemCount }) => ({
+      ...versionView(version),
+      itemCount,
+    })),
+  }));
+
+  app.get('/register/versions/:n', { config: { auth: read } }, async (request) => {
+    const { n } = parse(exportParamsSchema, request.params);
+    const found = await db(request).register.getPublished(n);
+    if (found === null) throw notFound('register version');
+    return {
+      version: versionView(found.version),
+      items: found.items.map((item) => ({ tag: item.tag, values: item.values })),
+    };
+  });
+
+  // What syncing this version to an asset system would send, in the ACC-style contract: computed
+  // by the same functions the tested client uses, never sent. No asset system is connected.
+  app.get('/register/versions/:n/handoff', { config: { auth: read } }, async (request) => {
+    const { n } = parse(exportParamsSchema, request.params);
+    const found = await db(request).register.getPublished(n);
+    if (found === null || found.version.publishedAt === null) throw notFound('register version');
+    const version = {
+      number: found.version.number,
+      approvedBy: found.version.approvedBy ?? '',
+      publishedAt: found.version.publishedAt,
+    };
+    return {
+      contract: 'acc-style-asset-upsert' as const,
+      connected: false as const,
+      requests: found.items.map((item) => ({
+        method: 'POST' as const,
+        path: '/assets/upsert' as const,
+        idempotencyKey: idempotencyKeyFor(version, item),
+        payload: assetPayloadFor(version, { tag: item.tag, values: item.values }),
+      })),
+    };
+  });
 
   app.get('/register/versions/:n/export', { config: { auth: read } }, async (request, reply) => {
     const { n } = parse(exportParamsSchema, request.params);

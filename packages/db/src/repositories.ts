@@ -768,6 +768,23 @@ export function createRepositories(db: Executor) {
           .orderBy(asc(equipment.tag), asc(conflicts.fieldName), asc(conflicts.id));
         return { jobsInProgress, pendingFields, openConflicts };
       },
+      // Published versions, newest first, with how many items each has.
+      async listPublished(): Promise<{ version: RegisterVersionRecord; itemCount: number }[]> {
+        const rows = await db
+          .select({
+            version: registerVersions,
+            itemCount: sql<number>`count(${registerItems.id})::int`,
+          })
+          .from(registerVersions)
+          .leftJoin(registerItems, eq(registerItems.registerVersionId, registerVersions.id))
+          .where(isNotNull(registerVersions.publishedAt))
+          .groupBy(registerVersions.id)
+          .orderBy(desc(registerVersions.number));
+        return rows.map((row) => ({
+          version: toDomain('register_version', registerVersionRecordSchema, row.version),
+          itemCount: row.itemCount,
+        }));
+      },
       async getPublished(number: number): Promise<PublishedVersion | null> {
         const [row] = await db
           .select()
