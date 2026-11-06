@@ -6,6 +6,8 @@ services:
     name: specledger-api
     runtime: docker
     plan: free
+    # Next to the Neon database (AWS US East 2, Ohio); change both together.
+    region: ohio
     dockerfilePath: ./Dockerfile
     healthCheckPath: /health
     autoDeploy: true

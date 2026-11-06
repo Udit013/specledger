@@ -25,7 +25,9 @@ Account names and screens change; the steps say what to set, and the labels may 
 
 ## 1. Database: Neon
 
-1. Create a Neon project (any region close to where Render will run, for example US West).
+1. Create a Neon project in **AWS US East 2 (Ohio)**, where `render.yaml` places the API, with
+   Postgres 16 (the version CI tests). Leave Neon's optional services (Auth, storage, functions)
+   off: SpecLedger does not use them.
 2. In **Connection details**, copy the connection string with **pooled connection turned off**
    (the host must not contain `-pooler`). Migrations take a session-level advisory lock, which a
    transaction-mode pooler does not keep.
