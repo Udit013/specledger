@@ -4,7 +4,7 @@ The free deployment is three services:
 
 | Part           | Where                                         | What runs                                                                                             |
 | -------------- | --------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| Database       | [Neon](https://neon.tech) free Postgres       | two databases: the real workspace, and the public demo workspace                                      |
+| Database       | [Neon](https://neon.tech) free Postgres       | two databases: the real workspace, and the public demo (showcase and visitor sandboxes)               |
 | API and worker | [Render](https://render.com) free web service | `apps/api/dist/serve.js` from the `Dockerfile`: the HTTP API and the extraction worker in one process |
 | Review UI      | [Vercel](https://vercel.com) Hobby            | the static build of `apps/web`                                                                        |
 

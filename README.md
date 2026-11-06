@@ -122,8 +122,9 @@ Phases 0 to 11 of the plan are in place:
   a `smoke` script. User accounts with roles and server-side sessions
   ([Accounts and roles](#accounts-and-roles)); a public demo of a read-only showcase and private
   per-visitor sandboxes in a separate database ([Public demo](#public-demo)); and a redesigned
-  UI with an overview page. Metrics, tracing, fault injection, a load check and a Playwright
-  test (the rest of Phase 12) are not done.
+  UI with an overview page, an equipment register screen and a Playwright end-to-end test
+  ([End-to-end test](#end-to-end-test)). Metrics, tracing, fault-injection tests, a load check
+  and a runbook (the rest of Phase 12) are not done.
 
 ## Quick start
 
@@ -292,6 +293,17 @@ To be written in full. So far:
 
 Known gaps at this stage:
 
+- **Integration**: the asset-system adapter follows an ACC-style contract written for this project
+  and is tested against a mock only. No real Autodesk (or other) system is connected; the UI's
+  handoff preview computes the requests and never sends them.
+- **Authentication**: email and password accounts only (no single sign-on, multi-factor
+  authentication or self-service password reset); details under
+  [HTTP API limitations](#http-api-limitations).
+- **Deployment**: free tiers. The API sleeps when idle (about a minute to wake), memory is 512 MB,
+  and the Gemini free tier has daily limits. The public demo needs `DEMO_DATABASE_URL`, and nobody
+  can sign in until the first admin is created ([docs/deployment.md](docs/deployment.md)).
+- **Scope**: two equipment classes (centrifugal pumps, electric motors) and text-layer PDFs only:
+  no OCR, drawings or P&IDs.
 - Immutability triggers and constraints protect against application bugs and ordinary SQL, not
   against a database superuser, who can disable triggers.
 - The migration drift check compares the schema with drizzle-kit's snapshots. It does not detect
@@ -620,14 +632,36 @@ Tests (`pnpm --filter @specledger/web test`) run in jsdom against an in-memory A
 including a keyboard-only flow from the list to a published version, hostile page text, 409
 handling, and axe checks on the list, review and publish screens.
 
+### End-to-end test
+
+`apps/web/e2e/workflow.spec.ts` drives the whole workflow in Chromium with Playwright: sign in,
+upload two vendor documents for one pump, wait for extraction, review every value by keyboard
+(rejecting the datasheet's rated head opens a conflict with the brochure), resolve the conflict,
+publish, open the version in the register, check the handoff notice, and download the CSV.
+
+It runs against the real built API, queue, worker, verifier and reconciliation on a fresh `e2e`
+schema, through the Vite dev server's `/api` proxy, as in production. One part is a stand-in:
+the model, a deterministic reader of the corpus ground truth (`apps/web/e2e/server.mjs`), because
+only one real model response is recorded and the test must never call a paid model. So it proves
+the pipeline and the UI, not the model's accuracy. CI runs it on every push; locally:
+
+```sh
+pnpm build
+E2E_DATABASE_URL=postgres://specledger:specledger_local_only@127.0.0.1:5432/specledger pnpm --filter @specledger/web e2e
+```
+
+Disabling the guard that opens a conflict when a superseding value is rejected makes it fail at
+the conflict step (checked by hand).
+
 ## Review UI limitations
 
 - axe runs in jsdom, which has no layout, so color contrast is not checked automatically; the
   palette was checked by eye in a browser only. The UI has one light color scheme.
 - The review screen shows the page of the selected field only, and it is plain text: there is no
   rendering of the PDF itself, its tables or its layout.
-- There is no browser end-to-end test yet (Playwright is Phase 12); keyboard flows are tested in
-  jsdom with Testing Library, and were checked by hand in a browser against the API.
+- The end-to-end test covers one workflow in one browser (Chromium) with a stand-in model; the
+  sign-in page, the showcase and demo sandboxes are tested in jsdom and the API's integration
+  tests, not in a real browser.
 
 ## HTTP API limitations
 

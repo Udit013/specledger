@@ -71,6 +71,42 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm test:integration
 
+  e2e:
+    name: end-to-end workflow (Playwright)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16.15-alpine
+        env:
+          POSTGRES_USER: specledger
+          POSTGRES_PASSWORD: specledger_ci_only
+          POSTGRES_DB: specledger
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U specledger -d specledger"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 30
+    env:
+      E2E_DATABASE_URL: postgres://specledger:specledger_ci_only@127.0.0.1:5432/specledger
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec turbo run build
+      - run: pnpm --filter @specledger/web exec playwright install --with-deps chromium
+      # The real API, worker and UI in a browser; the model is a deterministic stand-in, so CI
+      # never calls a model (apps/web/e2e/server.mjs).
+      - run: pnpm --filter @specledger/web e2e
+
   audit:
     name: dependency audit (high and above)
     runs-on: ubuntu-24.04
