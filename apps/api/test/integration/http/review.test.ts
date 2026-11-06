@@ -9,6 +9,7 @@ import {
   uniqueTag,
   upload,
   withApp,
+  ACTORS,
 } from '../../support/http.js';
 
 const { app, testDb } = withApp();
@@ -70,7 +71,7 @@ async function processedFields(): Promise<Field[]> {
   return response.json<{ fields: Field[] }>().fields;
 }
 
-const patch = (id: string, payload: unknown, headers = bearer('engineer')) =>
+const patch = (id: string, payload: unknown, headers = bearer('reviewer')) =>
   app.inject({
     method: 'PATCH',
     url: `/fields/${id}`,
@@ -125,8 +126,8 @@ describe('PATCH /fields/:id', () => {
         .events.map((e) => [e.action, e.actor, e.reason]),
     ).toEqual([
       ['extract', 'system:worker', null],
-      ['accept', 'role:engineer', null],
-      ['edit', 'role:engineer', 'datasheet erratum'],
+      ['accept', ACTORS.reviewer, null],
+      ['edit', ACTORS.reviewer, 'datasheet erratum'],
     ]);
   });
 

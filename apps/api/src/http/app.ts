@@ -8,14 +8,19 @@ import type { ApiErrorCode } from '@specledger/core';
 import Fastify from 'fastify';
 import type { FastifyError, FastifyInstance } from 'fastify';
 
-import { registerAuth } from './auth.js';
-import { registerDemoAdminRoutes, registerDemoRoutes } from './demo-routes.js';
+import { registerAccountRoutes } from './account-routes.js';
+import { registerAuth, sessionAuthenticator } from './auth.js';
+import {
+  registerDemoAdminRoutes,
+  registerSandboxRoutes,
+  registerShowcaseRoutes,
+} from './demo-routes.js';
 import type { RouteAuth } from './auth.js';
 import type { AppDeps } from './deps.js';
 import { ApiError } from './errors.js';
 import { registerRoutes } from './routes.js';
 
-export type { AppDeps, DemoDeps, HttpOptions } from './deps.js';
+export type { AppDeps, AuthOptions, DemoDeps, HttpOptions } from './deps.js';
 
 export interface RouteInfo {
   readonly method: string;
@@ -138,8 +143,8 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   await app.register(cors, {
     origin: [...http.corsOrigins],
     methods: ['GET', 'POST', 'PATCH'],
-    allowedHeaders: ['authorization', 'content-type', 'x-request-id'],
-    exposedHeaders: ['x-request-id'],
+    allowedHeaders: ['authorization', 'content-type', 'x-request-id', 'x-requested-with'],
+    exposedHeaders: ['x-request-id', 'x-specledger-workspace'],
   });
   await app.register(rateLimit, {
     global: true,
@@ -159,11 +164,14 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       headerPairs: 50,
     },
   });
-  // Each set of routes lives in a scope of its own, with its own authenticator: the production
-  // routes accept only the role tokens, the demo routes only demo visitor sessions.
+  // Each set of routes lives in a scope of its own, with its own authenticator: the workspace
+  // routes accept only user sessions, the showcase needs none and offers only reads, and the demo
+  // sandbox routes accept only demo visitor sessions.
+  const clock = deps.clock ?? (() => new Date());
   await app.register((scope, _options, done) => {
-    registerAuth(scope, deps.tokens);
+    registerAuth(scope, sessionAuthenticator(deps.database, clock));
     registerRoutes(scope, deps);
+    registerAccountRoutes(scope, deps);
     if (deps.demo != null) registerDemoAdminRoutes(scope, deps.demo);
     done();
   });
@@ -171,7 +179,14 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   if (demo != null) {
     await app.register(
       (scope, _options, done) => {
-        registerDemoRoutes(scope, deps, demo);
+        registerShowcaseRoutes(scope, deps, demo);
+        done();
+      },
+      { prefix: '/showcase' },
+    );
+    await app.register(
+      (scope, _options, done) => {
+        registerSandboxRoutes(scope, deps, demo);
         done();
       },
       { prefix: '/demo' },

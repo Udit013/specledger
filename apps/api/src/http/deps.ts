@@ -3,7 +3,7 @@ import type { IngestLimits } from '@specledger/ingest';
 import type { FastifyBaseLogger } from 'fastify';
 
 import type { DemoSessions } from '../demo/session.js';
-import type { ApiTokens } from './auth.js';
+import type { Sandboxes } from '../demo/sandboxes.js';
 
 export interface HttpOptions {
   // Origins allowed by CORS; empty allows none.
@@ -18,28 +18,37 @@ export interface HttpOptions {
   readonly readyTimeoutMs: number;
 }
 
+export interface AuthOptions {
+  // How long a sign-in lasts.
+  readonly sessionTtlMs: number;
+  // Secure cookies (HTTPS only); off only for local development over http.
+  readonly secureCookies: boolean;
+  // Sign-in attempts per client and minute.
+  readonly loginRateLimitPerMinute: number;
+}
+
 export interface AppDeps {
   readonly database: Database;
-  readonly tokens: ApiTokens;
+  readonly auth: AuthOptions;
   readonly limits: IngestLimits;
   readonly http: HttpOptions;
   readonly logger?: FastifyBaseLogger;
   readonly clock?: () => Date;
   readonly newId?: () => string;
   // When set, only uploads whose sha256 is in the set are accepted (UPLOAD_ALLOWLIST=corpus): a
-  // public demo then never stores, queues or sends to the model anything but the synthetic corpus.
+  // public deployment then never stores, queues or sends to the model anything but the corpus.
   readonly uploadAllowlist?: ReadonlySet<string> | null;
-  // The demo workspace, when configured (DEMO_DATABASE_URL): its own database and visitor
-  // sessions, mounted under /demo. Absent, there are no /demo routes at all.
+  // The public demo, when configured (DEMO_DATABASE_URL). Absent, there are no demo routes.
   readonly demo?: DemoDeps | null;
 }
 
 export interface DemoDeps {
-  // Never the production database.
-  readonly database: Database;
+  // The showcase: the demo database's own schema, extracted once, read-only to visitors.
+  readonly showcase: Database;
   readonly sessions: DemoSessions;
-  // Always enforced in the demo, whatever uploadAllowlist above says.
-  readonly uploadAllowlist: ReadonlySet<string>;
-  // Wipes the demo database and seeds its curated documents again; resolves to how many it queued.
+  readonly sandboxes: Sandboxes;
+  // Whether the showcase has documents and none is still being extracted.
+  isReady(): Promise<boolean>;
+  // Wipes the showcase and seeds it again; resolves to how many documents it queued.
   reset(): Promise<number>;
 }

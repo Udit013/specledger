@@ -14,7 +14,8 @@ import type { ReviewEventSubject } from '@specledger/core';
 import { exporterFor } from '@specledger/exporters';
 import { sha256Hex } from '@specledger/ingest';
 import type { IngestError } from '@specledger/ingest';
-import type { FastifyInstance } from 'fastify';
+import type { Database } from '@specledger/db';
+import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { z } from 'zod';
 
 import { createIngestion } from '../ingestion.js';
@@ -22,14 +23,34 @@ import { conflictView, resolveConflict } from '../services/conflicts.js';
 import { publishRegister } from '../services/publish.js';
 import { reviewField } from '../services/review.js';
 import type { AppDeps } from './deps.js';
-import { actorOf } from './auth.js';
-import type { Role } from './auth.js';
+import { actorOf, holds } from './auth.js';
+import type { Role, RouteAuth } from './auth.js';
 import { ApiError, notFound } from './errors.js';
 import { auditView, documentView, fieldView, versionView } from './views.js';
 
-const ANY: readonly Role[] = ['engineer', 'approver'];
-const ENGINEER: readonly Role[] = ['engineer'];
-const APPROVER: readonly Role[] = ['approver'];
+// Who may do what in the workspace. Reading needs any role.
+const ANY: readonly Role[] = ['engineer', 'reviewer', 'approver', 'admin'];
+const UPLOAD: readonly Role[] = ['engineer'];
+// Editing a value: engineers and reviewers; accepting or rejecting one: reviewers (checked below).
+const REVIEW: readonly Role[] = ['engineer', 'reviewer'];
+const RESOLVE: readonly Role[] = ['reviewer'];
+const PUBLISH: readonly Role[] = ['approver'];
+const ADMIN: readonly Role[] = ['admin'];
+
+// The same routes serve three places:
+//   workspace  the real workspace: every route, for signed-in users by role
+//   showcase   the public demo showcase: read-only routes, no sign-in, on the demo database
+//   sandbox    a demo visitor's private copy: reading, reviewing, resolving and a simulated
+//              publish on the sandbox's own schema; no uploads and no administration, so a
+//              visitor can never cause a model call
+export type RouteMode = 'workspace' | 'showcase' | 'sandbox';
+
+declare module 'fastify' {
+  interface FastifyRequest {
+    // The database a sandbox request works on; null means the scope's own database.
+    workspace: Database | null;
+  }
+}
 
 // Parses a part of the request. A failure reports where and what kind, never the input itself.
 function parse<S extends z.ZodType>(schema: S, value: unknown): z.output<S> {
@@ -70,16 +91,172 @@ function withTimeout<T>(work: Promise<T>, ms: number): Promise<T | 'timeout'> {
   });
 }
 
-export function registerRoutes(app: FastifyInstance, deps: AppDeps): void {
+export function registerRoutes(
+  app: FastifyInstance,
+  deps: AppDeps,
+  mode: RouteMode = 'workspace',
+): void {
   const { database } = deps;
   const clock = deps.clock ?? (() => new Date());
-  const upload = createIngestion(database, deps.limits, {
-    clock,
-    ...(deps.newId === undefined ? {} : { newId: deps.newId }),
+  if (!app.hasRequestDecorator('workspace')) app.decorateRequest('workspace', null);
+  // A sandbox request works only on its visitor's schema, never on the scope's own database.
+  const db = (request: FastifyRequest): Database => {
+    if (request.workspace !== null) return request.workspace;
+    if (mode === 'sandbox') throw new Error('a sandbox request has no sandbox');
+    return database;
+  };
+  // Reads are public in the showcase; everything else needs a role.
+  const read: RouteAuth = mode === 'showcase' ? 'public' : ANY;
+  const writes = mode !== 'showcase';
+
+  if (mode === 'workspace') {
+    registerProbes(app, deps);
+    registerUpload(app, deps);
+  }
+
+  // ---- documents ------------------------------------------------------------------------------
+
+  app.get('/documents', { config: { auth: read } }, async (request) => {
+    const query = parse(listDocumentsQuerySchema, request.query);
+    const documents = await db(request).documents.list(query);
+    return { documents: documents.map(documentView) };
   });
 
-  // ---- probes ---------------------------------------------------------------------------------
+  app.get('/documents/:id', { config: { auth: read } }, async (request) => {
+    const { id } = parse(idParamsSchema, request.params);
+    const found = await db(request).documents.getWithProcessing(id);
+    if (found === null) throw notFound('document');
+    return documentView(found);
+  });
 
+  app.get('/documents/:id/pages/:n', { config: { auth: read } }, async (request) => {
+    const { id, n } = parse(pageParamsSchema, request.params);
+    const page = await db(request).documents.getPage(id, n);
+    if (page === null) throw notFound('page');
+    return page;
+  });
+
+  app.get('/documents/:id/fields', { config: { auth: read } }, async (request) => {
+    const { id } = parse(idParamsSchema, request.params);
+    if ((await db(request).documents.getById(id)) === null) throw notFound('document');
+    const fields = await db(request).fields.listLatestForDocument(id);
+    return { fields: fields.map(fieldView) };
+  });
+
+  // ---- review ---------------------------------------------------------------------------------
+
+  if (writes) {
+    app.patch('/fields/:id', { config: { auth: REVIEW } }, async (request) => {
+      const { id } = parse(idParamsSchema, request.params);
+      const body = parse(reviewFieldBodySchema, request.body);
+      if (body.action !== 'edit' && !holds(request, 'reviewer')) {
+        throw new ApiError(
+          403,
+          'FORBIDDEN',
+          'Accepting or rejecting a value needs the reviewer role.',
+        );
+      }
+      const field = await reviewField(db(request), {
+        fieldId: id,
+        body,
+        actor: actorOf(request),
+      });
+      return fieldView(field);
+    });
+  }
+
+  app.get('/conflicts', { config: { auth: read } }, async (request) => {
+    const query = parse(listConflictsQuerySchema, request.query);
+    const conflicts = await db(request).conflicts.list(
+      query.status === undefined ? {} : { status: query.status },
+    );
+    return {
+      conflicts: await Promise.all(
+        conflicts.map((conflict) => conflictView(db(request), conflict)),
+      ),
+    };
+  });
+
+  if (writes) {
+    app.post('/conflicts/:id/resolve', { config: { auth: RESOLVE } }, async (request) => {
+      const { id } = parse(idParamsSchema, request.params);
+      const body = parse(resolveConflictBodySchema, request.body);
+      const resolved = await resolveConflict(db(request), {
+        conflictId: id,
+        body,
+        actor: actorOf(request),
+        now: clock(),
+      });
+      return conflictView(db(request), resolved);
+    });
+  }
+
+  // ---- register -------------------------------------------------------------------------------
+
+  if (writes) {
+    app.post('/register/publish', { config: { auth: PUBLISH } }, async (request, reply) => {
+      const published = await publishRegister(db(request), {
+        actor: actorOf(request),
+        now: clock(),
+      });
+      return reply
+        .status(201)
+        .send({ version: versionView(published.version), itemCount: published.items.length });
+    });
+  }
+
+  app.get('/register/versions/:n/export', { config: { auth: read } }, async (request, reply) => {
+    const { n } = parse(exportParamsSchema, request.params);
+    const { format } = parse(exportQuerySchema, request.query);
+    const found = await db(request).register.getPublished(n);
+    if (found === null) throw notFound('register version');
+    const { version, items } = found;
+    if (version.approvedBy === null || version.publishedAt === null) {
+      throw notFound('register version');
+    }
+    const exportable = {
+      number: version.number,
+      approvedBy: version.approvedBy,
+      publishedAt: version.publishedAt,
+      items: items.map((item) => ({ tag: item.tag, values: item.values })),
+    };
+    const exporter = exporterFor(format);
+    void reply.header(
+      'content-disposition',
+      `attachment; filename="${mode === 'workspace' ? '' : 'DEMO-'}register-v${String(version.number)}.${exporter.extension}"`,
+    );
+    return reply.type(exporter.contentType).send(exporter.render(exportable));
+  });
+
+  // ---- audit ----------------------------------------------------------------------------------
+
+  app.get('/audit', { config: { auth: read } }, async (request) => {
+    const { entity } = parse(auditQuerySchema, request.query);
+    const subject: ReviewEventSubject =
+      entity.kind === 'field'
+        ? { kind: 'field', fieldId: entity.id }
+        : entity.kind === 'conflict'
+          ? { kind: 'conflict', conflictId: entity.id }
+          : { kind: 'register_version', registerVersionId: entity.id };
+    const events = await db(request).reviewEvents.listForSubject(subject);
+    return { events: events.map(auditView) };
+  });
+
+  // ---- admin ----------------------------------------------------------------------------------
+
+  if (mode !== 'workspace') return;
+  app.post('/admin/jobs/:id/requeue', { config: { auth: ADMIN } }, async (request) => {
+    const { id } = parse(idParamsSchema, request.params);
+    if ((await db(request).jobs.getById(id)) === null) throw notFound('job');
+    if (!(await db(request).jobs.requeue(id, clock()))) {
+      throw new ApiError(409, 'JOB_NOT_DEAD', 'Only a dead job can be requeued.');
+    }
+    return { jobId: id, status: 'queued' as const };
+  });
+}
+
+function registerProbes(app: FastifyInstance, deps: AppDeps): void {
+  const { database } = deps;
   app.get('/health', { config: { auth: 'public' } }, () => ({ status: 'ok' as const }));
 
   app.get('/ready', { config: { auth: 'public' } }, async () => {
@@ -95,14 +272,21 @@ export function registerRoutes(app: FastifyInstance, deps: AppDeps): void {
     }
     return { status: 'ready' as const };
   });
+}
 
-  // ---- documents ------------------------------------------------------------------------------
+// Uploads exist only in the workspace: a demo visitor can never cause a model call.
+function registerUpload(app: FastifyInstance, deps: AppDeps): void {
+  const { database } = deps;
+  const upload = createIngestion(database, deps.limits, {
+    clock: deps.clock ?? (() => new Date()),
+    ...(deps.newId === undefined ? {} : { newId: deps.newId }),
+  });
 
   app.post(
     '/documents',
     {
       config: {
-        auth: ENGINEER,
+        auth: UPLOAD,
         rateLimit: { max: deps.http.uploadRateLimitPerMinute, timeWindow: 60_000 },
       },
     },
@@ -183,119 +367,4 @@ export function registerRoutes(app: FastifyInstance, deps: AppDeps): void {
         .send({ document: documentView(summary), duplicate });
     },
   );
-
-  app.get('/documents', { config: { auth: ANY } }, async (request) => {
-    const query = parse(listDocumentsQuerySchema, request.query);
-    const documents = await database.documents.list(query);
-    return { documents: documents.map(documentView) };
-  });
-
-  app.get('/documents/:id', { config: { auth: ANY } }, async (request) => {
-    const { id } = parse(idParamsSchema, request.params);
-    const found = await database.documents.getWithProcessing(id);
-    if (found === null) throw notFound('document');
-    return documentView(found);
-  });
-
-  app.get('/documents/:id/pages/:n', { config: { auth: ANY } }, async (request) => {
-    const { id, n } = parse(pageParamsSchema, request.params);
-    const page = await database.documents.getPage(id, n);
-    if (page === null) throw notFound('page');
-    return page;
-  });
-
-  app.get('/documents/:id/fields', { config: { auth: ANY } }, async (request) => {
-    const { id } = parse(idParamsSchema, request.params);
-    if ((await database.documents.getById(id)) === null) throw notFound('document');
-    const fields = await database.fields.listLatestForDocument(id);
-    return { fields: fields.map(fieldView) };
-  });
-
-  // ---- review ---------------------------------------------------------------------------------
-
-  app.patch('/fields/:id', { config: { auth: ENGINEER } }, async (request) => {
-    const { id } = parse(idParamsSchema, request.params);
-    const body = parse(reviewFieldBodySchema, request.body);
-    const field = await reviewField(database, { fieldId: id, body, actor: actorOf(request) });
-    return fieldView(field);
-  });
-
-  app.get('/conflicts', { config: { auth: ANY } }, async (request) => {
-    const query = parse(listConflictsQuerySchema, request.query);
-    const conflicts = await database.conflicts.list(
-      query.status === undefined ? {} : { status: query.status },
-    );
-    return {
-      conflicts: await Promise.all(conflicts.map((conflict) => conflictView(database, conflict))),
-    };
-  });
-
-  app.post('/conflicts/:id/resolve', { config: { auth: ENGINEER } }, async (request) => {
-    const { id } = parse(idParamsSchema, request.params);
-    const body = parse(resolveConflictBodySchema, request.body);
-    const resolved = await resolveConflict(database, {
-      conflictId: id,
-      body,
-      actor: actorOf(request),
-      now: clock(),
-    });
-    return conflictView(database, resolved);
-  });
-
-  // ---- register -------------------------------------------------------------------------------
-
-  app.post('/register/publish', { config: { auth: APPROVER } }, async (request, reply) => {
-    const published = await publishRegister(database, { actor: actorOf(request), now: clock() });
-    return reply
-      .status(201)
-      .send({ version: versionView(published.version), itemCount: published.items.length });
-  });
-
-  app.get('/register/versions/:n/export', { config: { auth: ANY } }, async (request, reply) => {
-    const { n } = parse(exportParamsSchema, request.params);
-    const { format } = parse(exportQuerySchema, request.query);
-    const found = await database.register.getPublished(n);
-    if (found === null) throw notFound('register version');
-    const { version, items } = found;
-    if (version.approvedBy === null || version.publishedAt === null) {
-      throw notFound('register version');
-    }
-    const exportable = {
-      number: version.number,
-      approvedBy: version.approvedBy,
-      publishedAt: version.publishedAt,
-      items: items.map((item) => ({ tag: item.tag, values: item.values })),
-    };
-    const exporter = exporterFor(format);
-    void reply.header(
-      'content-disposition',
-      `attachment; filename="register-v${String(version.number)}.${exporter.extension}"`,
-    );
-    return reply.type(exporter.contentType).send(exporter.render(exportable));
-  });
-
-  // ---- audit ----------------------------------------------------------------------------------
-
-  app.get('/audit', { config: { auth: ANY } }, async (request) => {
-    const { entity } = parse(auditQuerySchema, request.query);
-    const subject: ReviewEventSubject =
-      entity.kind === 'field'
-        ? { kind: 'field', fieldId: entity.id }
-        : entity.kind === 'conflict'
-          ? { kind: 'conflict', conflictId: entity.id }
-          : { kind: 'register_version', registerVersionId: entity.id };
-    const events = await database.reviewEvents.listForSubject(subject);
-    return { events: events.map(auditView) };
-  });
-
-  // ---- admin ----------------------------------------------------------------------------------
-
-  app.post('/admin/jobs/:id/requeue', { config: { auth: APPROVER } }, async (request) => {
-    const { id } = parse(idParamsSchema, request.params);
-    if ((await database.jobs.getById(id)) === null) throw notFound('job');
-    if (!(await database.jobs.requeue(id, clock()))) {
-      throw new ApiError(409, 'JOB_NOT_DEAD', 'Only a dead job can be requeued.');
-    }
-    return { jobId: id, status: 'queued' as const };
-  });
 }

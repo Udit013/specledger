@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
-import { bearer, processQueued, truthProvider, upload, withApp } from '../../support/http.js';
+import {
+  bearer,
+  processQueued,
+  truthProvider,
+  upload,
+  withApp,
+  ACTORS,
+} from '../../support/http.js';
 
 // Rejecting the value of the document that takes precedence for a field (a later revision of the
 // same document, or a higher-ranked source) must not let publishing fall back silently to the
@@ -35,7 +42,7 @@ function suite() {
   const call = (
     method: 'GET' | 'POST' | 'PATCH',
     url: string,
-    role: 'engineer' | 'approver',
+    role: 'engineer' | 'reviewer' | 'approver',
     payload?: unknown,
   ) =>
     ctx.app.inject({
@@ -61,7 +68,7 @@ function suite() {
           action === 'accept' && field.verificationStatus !== 'verified'
             ? { action, expectedVersion: field.version, reason: 'checked' }
             : { action, expectedVersion: field.version };
-        expect((await call('PATCH', `/fields/${field.id}`, 'engineer', body)).statusCode).toBe(200);
+        expect((await call('PATCH', `/fields/${field.id}`, 'reviewer', body)).statusCode).toBe(200);
       }
     }
   }
@@ -104,13 +111,13 @@ describe('rejecting the later revision of a field', () => {
     expect(events).toHaveLength(1);
     expect(events[0]).toMatchObject({
       action: 'reject',
-      actor: 'role:engineer',
+      actor: ACTORS.reviewer,
       after: { status: 'open', reason: 'PRECEDENCE_REJECTED' },
     });
 
     // A human decides that Rev A's value stands; then the register can be published with it.
     const revAField = conflict.candidates.find((c) => c.documentId === revA);
-    const resolved = await s.call('POST', `/conflicts/${conflict.id}/resolve`, 'engineer', {
+    const resolved = await s.call('POST', `/conflicts/${conflict.id}/resolve`, 'reviewer', {
       choice: { kind: 'candidate', fieldId: revAField?.fieldId },
       reason: 'Rev B changed only the efficiency; the vendor confirmed 78.6 A',
     });
@@ -127,7 +134,7 @@ describe('rejecting the later revision of a field', () => {
     const current = (await s.call('GET', `/documents/${revB}/fields`, 'engineer'))
       .json<{ fields: Field[] }>()
       .fields.find((f) => f.id === revBField?.fieldId);
-    const again = await s.call('PATCH', `/fields/${current?.id ?? ''}`, 'engineer', {
+    const again = await s.call('PATCH', `/fields/${current?.id ?? ''}`, 'reviewer', {
       action: 'reject',
       expectedVersion: current?.version,
     });

@@ -12,8 +12,12 @@ export interface DemoWorkspace {
   readonly database: Database;
   start(): void;
   stop(): Promise<void>;
-  // Seeds the curated documents if the workspace has no document yet; returns how many it queued.
-  seedIfEmpty(): Promise<number>;
+  // Adds whichever curated documents are missing; returns how many it queued. Idempotent: a
+  // document already stored is a duplicate upload, which queues nothing and calls no model, so
+  // running it after a restart (even one in the middle of seeding) only completes the set.
+  ensureSeeded(): Promise<number>;
+  // Whether there are documents and none is still waiting for or in extraction.
+  isReady(): Promise<boolean>;
   // Removes everything visitors did and seeds the curated documents again.
   reset(): Promise<number>;
 }
@@ -69,10 +73,14 @@ export function createDemoWorkspace(options: DemoWorkspaceOptions): DemoWorkspac
       running = false;
       await worker.stop();
     },
-    seedIfEmpty: () =>
-      exclusive(async () =>
-        (await database.documents.list({ limit: 1, offset: 0 })).length === 0 ? seed() : 0,
-      ),
+    ensureSeeded: () => exclusive(seed),
+    async isReady() {
+      const documents = await database.documents.list({ limit: 100, offset: 0 });
+      return (
+        documents.length > 0 &&
+        documents.every((d) => d.job === null || !['queued', 'running'].includes(d.job.status))
+      );
+    },
     reset: () =>
       exclusive(async () => {
         const wasRunning = running;

@@ -2,7 +2,14 @@ import { randomUUID } from 'node:crypto';
 
 import { describe, expect, it } from 'vitest';
 
-import { bearer, processQueued, truthProvider, upload, withApp } from '../../support/http.js';
+import {
+  bearer,
+  processQueued,
+  truthProvider,
+  upload,
+  withApp,
+  ACTORS,
+} from '../../support/http.js';
 
 // Each test runs on a database of its own, because publish reads the whole register.
 const IDS = [
@@ -42,7 +49,7 @@ function suite() {
   const call = (
     method: 'GET' | 'POST' | 'PATCH',
     url: string,
-    role: 'engineer' | 'approver',
+    role: 'engineer' | 'reviewer' | 'approver',
     payload?: unknown,
   ) =>
     ctx.app.inject({
@@ -67,7 +74,7 @@ function suite() {
           field.verificationStatus === 'verified'
             ? { action: 'accept', expectedVersion: field.version }
             : { action: 'reject', expectedVersion: field.version };
-        expect((await call('PATCH', `/fields/${field.id}`, 'engineer', body)).statusCode).toBe(200);
+        expect((await call('PATCH', `/fields/${field.id}`, 'reviewer', body)).statusCode).toBe(200);
       }
     }
   }
@@ -144,11 +151,11 @@ describe('conflict resolution feeding reconciliation and publish', () => {
     expect(conflict?.suggestion.rules).toContain('EQUAL_RANK_CONFLICT');
 
     // Validation, then the resolution itself.
-    const noReason = await s.call('POST', `/conflicts/${conflict?.id ?? ''}/resolve`, 'engineer', {
+    const noReason = await s.call('POST', `/conflicts/${conflict?.id ?? ''}/resolve`, 'reviewer', {
       choice: { kind: 'value', value: '255', unit: 'ft' },
     });
     expect(noReason.statusCode).toBe(400);
-    const badValue = await s.call('POST', `/conflicts/${conflict?.id ?? ''}/resolve`, 'engineer', {
+    const badValue = await s.call('POST', `/conflicts/${conflict?.id ?? ''}/resolve`, 'reviewer', {
       choice: { kind: 'value', value: '255', unit: 'kW' },
       reason: 'x',
     });
@@ -156,17 +163,17 @@ describe('conflict resolution feeding reconciliation and publish', () => {
     const implausible = await s.call(
       'POST',
       `/conflicts/${conflict?.id ?? ''}/resolve`,
-      'engineer',
+      'reviewer',
       { choice: { kind: 'value', value: '255000', unit: 'ft' }, reason: 'x' },
     );
     expect(implausible.json()).toMatchObject({ error: { code: 'INVALID_VALUE' } });
-    const stranger = await s.call('POST', `/conflicts/${conflict?.id ?? ''}/resolve`, 'engineer', {
+    const stranger = await s.call('POST', `/conflicts/${conflict?.id ?? ''}/resolve`, 'reviewer', {
       choice: { kind: 'candidate', fieldId: randomUUID() },
       reason: 'x',
     });
     expect(stranger.json()).toMatchObject({ error: { code: 'CANDIDATE_NOT_IN_CONFLICT' } });
     const chosen = conflict?.candidates.find((c) => c.value === '260');
-    const resolved = await s.call('POST', `/conflicts/${conflict?.id ?? ''}/resolve`, 'engineer', {
+    const resolved = await s.call('POST', `/conflicts/${conflict?.id ?? ''}/resolve`, 'reviewer', {
       choice: { kind: 'candidate', fieldId: chosen?.fieldId },
       reason: 'the datasheet value, confirmed by the vendor',
     });
@@ -176,11 +183,11 @@ describe('conflict resolution feeding reconciliation and publish', () => {
       resolution: {
         value: '260',
         unit: 'ft',
-        resolvedBy: 'role:engineer',
+        resolvedBy: ACTORS.reviewer,
         chosenFieldId: chosen?.fieldId,
       },
     });
-    const twice = await s.call('POST', `/conflicts/${conflict?.id ?? ''}/resolve`, 'engineer', {
+    const twice = await s.call('POST', `/conflicts/${conflict?.id ?? ''}/resolve`, 'reviewer', {
       choice: { kind: 'value', value: '255', unit: 'ft' },
       reason: 'x',
     });
@@ -204,7 +211,7 @@ describe('conflict resolution feeding reconciliation and publish', () => {
     const published = await s.call('POST', '/register/publish', 'approver');
     expect(published.statusCode).toBe(201);
     expect(published.json()).toMatchObject({
-      version: { number: 1, approvedBy: 'role:approver' },
+      version: { number: 1, approvedBy: ACTORS.approver },
       itemCount: 1,
     });
 
@@ -253,7 +260,7 @@ describe('conflict resolution feeding reconciliation and publish', () => {
   it('returns 404 for an unknown conflict and 400 for a bad id', async () => {
     expect(
       (
-        await s.call('POST', `/conflicts/${randomUUID()}/resolve`, 'engineer', {
+        await s.call('POST', `/conflicts/${randomUUID()}/resolve`, 'reviewer', {
           choice: { kind: 'value', value: '1', unit: 'm' },
           reason: 'x',
         })
@@ -261,7 +268,7 @@ describe('conflict resolution feeding reconciliation and publish', () => {
     ).toBe(404);
     expect(
       (
-        await s.call('POST', '/conflicts/nope/resolve', 'engineer', {
+        await s.call('POST', '/conflicts/nope/resolve', 'reviewer', {
           choice: { kind: 'value', value: '1', unit: 'm' },
           reason: 'x',
         })

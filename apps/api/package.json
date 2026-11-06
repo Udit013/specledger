@@ -22,7 +22,7 @@
     "eval:record": "node --env-file-if-exists=../../.env dist/scripts/record-extractions.js",
     "serve": "node --env-file-if-exists=../../.env dist/serve.js",
     "smoke": "node dist/scripts/smoke.js",
-    "demo:seed": "node dist/scripts/demo-seed.js"
+    "user": "node dist/scripts/user.js"
   },
   "dependencies": {
     "@fastify/cors": "11.3.1",

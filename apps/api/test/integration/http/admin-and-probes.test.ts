@@ -23,7 +23,7 @@ describe('POST /admin/jobs/:id/requeue', () => {
     const response = await app.inject({
       method: 'POST',
       url: `/admin/jobs/${jobId}/requeue`,
-      headers: bearer('approver'),
+      headers: bearer('admin'),
     });
     expect(response.statusCode).toBe(200);
     expect(response.json()).toEqual({ jobId, status: 'queued' });
@@ -32,7 +32,7 @@ describe('POST /admin/jobs/:id/requeue', () => {
     const again = await app.inject({
       method: 'POST',
       url: `/admin/jobs/${jobId}/requeue`,
-      headers: bearer('approver'),
+      headers: bearer('admin'),
     });
     expect(again.statusCode).toBe(409);
     expect(again.json()).toMatchObject({ error: { code: 'JOB_NOT_DEAD' } });
@@ -44,7 +44,7 @@ describe('POST /admin/jobs/:id/requeue', () => {
         await app.inject({
           method: 'POST',
           url: `/admin/jobs/${randomUUID()}/requeue`,
-          headers: bearer('approver'),
+          headers: bearer('admin'),
         })
       ).statusCode,
     ).toBe(404);
@@ -53,7 +53,7 @@ describe('POST /admin/jobs/:id/requeue', () => {
         await app.inject({
           method: 'POST',
           url: '/admin/jobs/42/requeue',
-          headers: bearer('approver'),
+          headers: bearer('admin'),
         })
       ).statusCode,
     ).toBe(400);

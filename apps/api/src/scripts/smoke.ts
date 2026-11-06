@@ -1,8 +1,8 @@
 // Checks a running deployment from the outside: probes, authentication, security headers and,
-// optionally, CORS for the web origin and an authenticated read. It changes nothing.
+// optionally, CORS for the web origin and the public demo showcase. It changes nothing.
 //
 //   pnpm smoke https://specledger-api.onrender.com
-//   SMOKE_ORIGIN=https://specledger.vercel.app SMOKE_ENGINEER_TOKEN=... pnpm smoke <url>
+//   SMOKE_ORIGIN=https://specledger.vercel.app SMOKE_SHOWCASE=1 pnpm smoke <url>
 //
 // A free Render service sleeps when idle; the first request can take a minute to answer.
 import { fileURLToPath } from 'node:url';
@@ -15,7 +15,8 @@ export interface SmokeCheck {
 
 export interface SmokeOptions {
   readonly origin?: string;
-  readonly engineerToken?: string;
+  // Also check that the public demo showcase answers.
+  readonly showcase?: boolean;
   readonly fetch?: typeof fetch;
   readonly timeoutMs?: number;
 }
@@ -75,10 +76,10 @@ export async function runSmoke(baseUrl: string, options: SmokeOptions): Promise<
       String(cors.headers.get('access-control-allow-origin')),
     );
   }
-  if (options.engineerToken !== undefined) {
-    const read = await get('/documents', { authorization: `Bearer ${options.engineerToken}` });
+  if (options.showcase === true) {
+    const read = await get('/showcase/documents', {});
     check(
-      'GET /documents with the engineer token answers 200',
+      'GET /showcase/documents answers 200 without signing in',
       read.status === 200,
       `status ${String(read.status)}`,
     );
@@ -94,9 +95,7 @@ async function main(): Promise<number> {
   }
   const checks = await runSmoke(url, {
     ...(process.env.SMOKE_ORIGIN ? { origin: process.env.SMOKE_ORIGIN } : {}),
-    ...(process.env.SMOKE_ENGINEER_TOKEN
-      ? { engineerToken: process.env.SMOKE_ENGINEER_TOKEN }
-      : {}),
+    ...(process.env.SMOKE_SHOWCASE === '1' ? { showcase: true } : {}),
   });
   for (const c of checks)
     process.stdout.write(`${c.ok ? 'PASS' : 'FAIL'}  ${c.name}  (${c.detail})\n`);

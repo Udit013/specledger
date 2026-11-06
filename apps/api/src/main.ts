@@ -1,12 +1,12 @@
 // The HTTP API process. Start with `pnpm --filter @specledger/api start` (after a build). It
-// refuses to start without both role tokens, applies migrations, and on SIGTERM or SIGINT stops
+// applies migrations, and on SIGTERM or SIGINT stops
 // accepting connections, lets in-flight requests finish, then closes the database pool. The demo
 // workspace (DEMO_DATABASE_URL) is served only by the combined process, serve.ts, which runs its
 // worker too.
 import { openDatabase } from '@specledger/db';
 
 import { formatConfigIssues, parseConfig } from './config.js';
-import { apiTokensFrom, createApiServer } from './http/server.js';
+import { createApiServer } from './http/server.js';
 import { createLogger } from './logger.js';
 
 async function main(): Promise<number> {
@@ -16,16 +16,11 @@ async function main(): Promise<number> {
     return 1;
   }
   const { config } = result;
-  const tokens = apiTokensFrom(config);
-  if (Array.isArray(tokens)) {
-    process.stderr.write(formatConfigIssues(tokens));
-    return 1;
-  }
 
   const logger = createLogger({ name: 'api', level: config.logLevel });
   const database = openDatabase({ connectionString: config.databaseUrl });
   await database.migrate();
-  const app = await createApiServer(config, tokens, database, logger);
+  const app = await createApiServer(config, database, logger);
 
   const stopped = new Promise<void>((resolve) => {
     const stop = (signal: string) => {

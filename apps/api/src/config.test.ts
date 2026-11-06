@@ -18,8 +18,6 @@ const VALID_ENV = {
 };
 
 const HTTP_DEFAULTS = {
-  engineerToken: null,
-  approverToken: null,
   corsOrigins: [],
   trustProxy: false,
   rateLimitPerMinute: 300,
@@ -28,8 +26,7 @@ const HTTP_DEFAULTS = {
   bodyLimitBytes: 1_048_576,
 };
 
-const ENGINEER_TOKEN = 'e'.repeat(40);
-const APPROVER_TOKEN = 'a'.repeat(40);
+const AUTH_DEFAULTS = { sessionTtlMs: 12 * 3_600_000, loginRateLimitPerMinute: 5 };
 
 function expectIssues(result: ConfigResult): readonly ConfigIssue[] {
   if (result.ok) throw new Error('expected configuration to be rejected');
@@ -59,6 +56,7 @@ describe('parseConfig', () => {
           geminiModel: 'gemini-3.5-flash-lite',
           timeoutMs: 60_000,
         },
+        auth: { ...AUTH_DEFAULTS, secureCookies: true },
         http: HTTP_DEFAULTS,
         uploadAllowlist: 'none',
         demo: null,
@@ -82,6 +80,7 @@ describe('parseConfig', () => {
           geminiModel: 'gemini-3.5-flash-lite',
           timeoutMs: 60_000,
         },
+        auth: { ...AUTH_DEFAULTS, secureCookies: false },
         http: HTTP_DEFAULTS,
         uploadAllowlist: 'none',
         demo: null,
@@ -140,6 +139,7 @@ describe('parseConfig', () => {
     expect(result.ok).toBe(true);
     if (result.ok)
       expect(Object.keys(result.config).sort()).toEqual([
+        'auth',
         'databaseUrl',
         'demo',
         'host',
@@ -227,11 +227,9 @@ describe('model provider configuration', () => {
 });
 
 describe('HTTP API configuration', () => {
-  it('reads the role tokens, CORS allowlist, proxy trust and limits', () => {
+  it('reads the CORS allowlist, proxy trust and limits', () => {
     const result = parseConfig({
       ...VALID_ENV,
-      API_ENGINEER_TOKEN: ENGINEER_TOKEN,
-      API_APPROVER_TOKEN: APPROVER_TOKEN,
       CORS_ORIGINS: 'https://review.example.com, http://localhost:5173',
       TRUST_PROXY: '1',
       RATE_LIMIT_PER_MINUTE: '600',
@@ -240,8 +238,6 @@ describe('HTTP API configuration', () => {
       JSON_BODY_LIMIT_BYTES: '65536',
     });
     expect(result.ok && result.config.http).toEqual({
-      engineerToken: ENGINEER_TOKEN,
-      approverToken: APPROVER_TOKEN,
       corsOrigins: ['https://review.example.com', 'http://localhost:5173'],
       trustProxy: 1,
       rateLimitPerMinute: 600,
@@ -253,8 +249,9 @@ describe('HTTP API configuration', () => {
   });
 
   it.each([
-    ['API_ENGINEER_TOKEN', 'short'],
-    ['API_APPROVER_TOKEN', `${'a'.repeat(40)} with spaces`],
+    ['SESSION_TTL_HOURS', '0'],
+    ['SESSION_TTL_HOURS', '169'],
+    ['LOGIN_RATE_LIMIT_PER_MINUTE', '0'],
     ['CORS_ORIGINS', '*'],
     ['CORS_ORIGINS', 'https://review.example.com/path'],
     ['TRUST_PROXY', 'yes'],
@@ -272,18 +269,24 @@ describe('HTTP API configuration', () => {
     ).toEqual([[key, 'invalid']]);
   });
 
-  it('refuses one token for both roles, without printing it', () => {
-    const issues = expectIssues(
-      parseConfig({
-        ...VALID_ENV,
-        API_ENGINEER_TOKEN: ENGINEER_TOKEN,
-        API_APPROVER_TOKEN: ENGINEER_TOKEN,
-      }),
-    );
-    expect(issues.map((issue) => [issue.key, issue.problem])).toEqual([
-      ['API_APPROVER_TOKEN', 'invalid'],
-    ]);
-    expect(formatConfigIssues(issues)).not.toContain(ENGINEER_TOKEN);
+  it('reads the sign-in settings, with secure cookies outside development', () => {
+    const result = parseConfig({
+      ...VALID_ENV,
+      SESSION_TTL_HOURS: '8',
+      LOGIN_RATE_LIMIT_PER_MINUTE: '3',
+    });
+    expect(result.ok && result.config.auth).toEqual({
+      sessionTtlMs: 8 * 3_600_000,
+      secureCookies: true,
+      loginRateLimitPerMinute: 3,
+    });
+    const local = parseConfig({ ...VALID_ENV, NODE_ENV: 'development' });
+    expect(local.ok && local.config.auth.secureCookies).toBe(false);
+  });
+
+  it('ignores the retired role-token variables', () => {
+    const result = parseConfig({ ...VALID_ENV, API_ENGINEER_TOKEN: 'e'.repeat(40) });
+    expect(result.ok).toBe(true);
   });
 });
 
@@ -325,6 +328,7 @@ describe('demo workspace configuration', () => {
       databaseUrl: DEMO_URL,
       sessionSecret: SECRET,
       sessionTtlMs: 30 * 60_000,
+      maxSandboxes: 50,
     });
     const defaults = parseConfig({
       ...VALID_ENV,

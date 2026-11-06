@@ -3,11 +3,14 @@ import { randomUUID } from 'node:crypto';
 import Fastify from 'fastify';
 import { describe, expect, it } from 'vitest';
 
-import { registerAuth, roleForToken } from '../../../src/http/auth.js';
+import { tokenHash } from '../../../src/auth/session-token.js';
+import { registerAuth, ROLES } from '../../../src/http/auth.js';
 import type { Role } from '../../../src/http/auth.js';
-import { bearer, TOKENS, withApp } from '../../support/http.js';
+import { bearer, emailOf, TOKENS, withApp } from '../../support/http.js';
 
-const { app } = withApp();
+const { app, testDb } = withApp();
+
+const ANY: readonly Role[] = ['engineer', 'reviewer', 'approver', 'admin'];
 
 // Every route and who may call it. The matrix below is generated from the app's own route table,
 // and this list must match it exactly, so adding a route or changing its roles is deliberate.
@@ -15,17 +18,23 @@ const EXPECTED_ROUTES: Record<string, readonly Role[] | 'public'> = {
   'GET /health': 'public',
   'GET /ready': 'public',
   'POST /documents': ['engineer'],
-  'GET /documents': ['engineer', 'approver'],
-  'GET /documents/:id': ['engineer', 'approver'],
-  'GET /documents/:id/pages/:n': ['engineer', 'approver'],
-  'GET /documents/:id/fields': ['engineer', 'approver'],
-  'PATCH /fields/:id': ['engineer'],
-  'GET /conflicts': ['engineer', 'approver'],
-  'POST /conflicts/:id/resolve': ['engineer'],
+  'GET /documents': ANY,
+  'GET /documents/:id': ANY,
+  'GET /documents/:id/pages/:n': ANY,
+  'GET /documents/:id/fields': ANY,
+  'PATCH /fields/:id': ['engineer', 'reviewer'],
+  'GET /conflicts': ANY,
+  'POST /conflicts/:id/resolve': ['reviewer'],
   'POST /register/publish': ['approver'],
-  'GET /register/versions/:n/export': ['engineer', 'approver'],
-  'GET /audit': ['engineer', 'approver'],
-  'POST /admin/jobs/:id/requeue': ['approver'],
+  'GET /register/versions/:n/export': ANY,
+  'GET /audit': ANY,
+  'POST /admin/jobs/:id/requeue': ['admin'],
+  'POST /auth/login': 'public',
+  'POST /auth/logout': ANY,
+  'GET /auth/me': ANY,
+  'GET /admin/users': ['admin'],
+  'POST /admin/users': ['admin'],
+  'PATCH /admin/users/:id': ['admin'],
 };
 
 const routes = () =>
@@ -41,25 +50,24 @@ describe('route table', () => {
 
   it('refuses to register a route that does not declare its auth', async () => {
     const bare = Fastify();
-    registerAuth(bare, TOKENS);
+    registerAuth(bare, () => Promise.resolve(null));
     bare.get('/forgotten', () => ({ ok: true }));
     await expect(bare.ready()).rejects.toThrow(/auth/);
   });
 });
 
 describe('authorization matrix', () => {
-  const callers = [
-    ['no token', {}],
-    ['an unknown token', { authorization: 'Bearer not-a-real-token-at-all-0000' }],
-    ['the engineer token', bearer('engineer')],
-    ['the approver token', bearer('approver')],
-  ] as const;
+  const callers: readonly (readonly [string, Role | null, Record<string, string>])[] = [
+    ['no credential', null, {}],
+    ['an unknown token', null, { authorization: `Bearer ${'x'.repeat(43)}` }],
+    ...ROLES.map((role) => [`the ${role}`, role, bearer(role)] as const),
+  ];
 
   it.each(
-    Object.entries(EXPECTED_ROUTES).flatMap(([route, auth]) =>
-      callers.map((c) => [route, c[0], auth, c[1]] as const),
-    ),
-  )('%s with %s', async (route, caller, auth, headers) => {
+    Object.entries(EXPECTED_ROUTES)
+      .filter(([route]) => route !== 'POST /auth/logout')
+      .flatMap(([route, auth]) => callers.map((c) => [route, c[0], auth, c[1], c[2]] as const)),
+  )('%s with %s', async (route, _caller, auth, role, headers) => {
     const [method, url] = route.split(' ') as [string, string];
     const response = await app.inject({
       method: method as 'GET',
@@ -67,12 +75,6 @@ describe('authorization matrix', () => {
       headers: { ...headers, 'content-type': 'application/json' },
       ...(method === 'GET' ? {} : { payload: '{}' }),
     });
-    const role: Role | null =
-      caller === 'the engineer token'
-        ? 'engineer'
-        : caller === 'the approver token'
-          ? 'approver'
-          : null;
     if (auth === 'public') {
       expect([401, 403]).not.toContain(response.statusCode);
     } else if (role === null) {
@@ -86,22 +88,84 @@ describe('authorization matrix', () => {
       expect([401, 403]).not.toContain(response.statusCode);
     }
   });
+
+  it('lets an engineer edit a value but not accept or reject one', async () => {
+    for (const action of ['accept', 'reject'] as const) {
+      const response = await app.inject({
+        method: 'PATCH',
+        url: `/fields/${randomUUID()}`,
+        headers: bearer('engineer'),
+        payload: { action, expectedVersion: 1 },
+      });
+      expect(response.statusCode, action).toBe(403);
+    }
+    const edit = await app.inject({
+      method: 'PATCH',
+      url: `/fields/${randomUUID()}`,
+      headers: bearer('engineer'),
+      payload: { action: 'edit', expectedVersion: 1, value: '1', unit: 'ft' },
+    });
+    expect(edit.statusCode).toBe(404);
+  });
 });
 
-describe('roleForToken', () => {
+describe('sessions', () => {
+  const session = async (role: Role, change: 'expired' | 'revoked' | 'disabled') => {
+    const user = await testDb.database.users.getByEmail(emailOf(role));
+    if (user === null) throw new Error('no test user');
+    const token = `${change}_${role}`.padEnd(43, '0');
+    const past = new Date(Date.now() - 1_000);
+    await testDb.database.sessions.create({
+      tokenHash: tokenHash(token),
+      userId: user.id,
+      expiresAt: change === 'expired' ? past : new Date(Date.now() + 3_600_000),
+    });
+    if (change === 'revoked') await testDb.database.sessions.revoke(tokenHash(token), past);
+    return { token, user };
+  };
+  const me = (headers: Record<string, string>) =>
+    app.inject({ method: 'GET', url: '/auth/me', headers });
+
+  it.each(['expired', 'revoked'] as const)('refuses a %s session', async (change) => {
+    const { token } = await session('reviewer', change);
+    expect((await me({ authorization: `Bearer ${token}` })).statusCode).toBe(401);
+  });
+
+  it('refuses every session of a disabled user', async () => {
+    const { token, user } = await session('engineer', 'disabled');
+    expect((await me({ authorization: `Bearer ${token}` })).statusCode).toBe(200);
+    await testDb.database.users.update(user.id, { disabledAt: new Date() });
+    try {
+      expect((await me({ authorization: `Bearer ${token}` })).statusCode).toBe(401);
+      expect((await me(bearer('engineer'))).statusCode).toBe(401);
+    } finally {
+      await testDb.database.users.update(user.id, { disabledAt: null });
+    }
+  });
+
   it.each([
-    [`Bearer ${TOKENS.engineer}`, 'engineer'],
-    [`Bearer ${TOKENS.approver}`, 'approver'],
-    [`bearer ${TOKENS.engineer}`, 'engineer'],
-    [`Bearer ${TOKENS.engineer} `, null],
-    [`Bearer  ${TOKENS.engineer}`, null],
-    [`Bearer ${TOKENS.engineer}x`, null],
-    [`Bearer ${TOKENS.engineer.slice(0, -1)}`, null],
-    [`Basic ${TOKENS.engineer}`, null],
-    [TOKENS.engineer, null],
-    ['Bearer ', null],
-    [undefined, null],
-  ])('%j is %s', (header, role) => {
-    expect(roleForToken(header, TOKENS)).toBe(role);
+    `Bearer ${TOKENS.engineer} `,
+    `Bearer  ${TOKENS.engineer}`,
+    `Basic ${TOKENS.engineer}`,
+    TOKENS.engineer,
+    'Bearer ',
+  ])('refuses the malformed header %j', async (authorization) => {
+    expect((await me({ authorization })).statusCode).toBe(401);
+  });
+
+  it('accepts the session cookie, but a write needs the anti-forgery header', async () => {
+    const cookie = `specledger_session=${TOKENS.reviewer}`;
+    expect((await me({ cookie })).statusCode).toBe(200);
+    const write = (headers: Record<string, string>) =>
+      app.inject({
+        method: 'PATCH',
+        url: `/fields/${randomUUID()}`,
+        headers: { cookie, ...headers },
+        payload: { action: 'accept', expectedVersion: 1 },
+      });
+    const forged = await write({});
+    expect(forged.statusCode).toBe(403);
+    expect(forged.json()).toMatchObject({ error: { code: 'FORBIDDEN' } });
+    expect((await write({ 'x-requested-with': 'specledger' })).statusCode).toBe(404);
   });
 });

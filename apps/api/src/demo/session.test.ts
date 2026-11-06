@@ -15,7 +15,7 @@ describe('demo sessions', () => {
     const issuer = sessions(at);
     const { token, expiresAt } = issuer.issue();
     expect(expiresAt.getTime()).toBe(at.now + HOUR);
-    expect(token).toMatch(/^demo\.[A-Za-z0-9_-]{16}\.\d{13}\.[A-Za-z0-9_-]{43}$/);
+    expect(token).toMatch(/^demo\.[0-9a-f]{16}\.\d{13}\.[A-Za-z0-9_-]{43}$/);
     expect(issuer.verify(token)?.expiresAt).toEqual(expiresAt);
     at.now += HOUR - 1;
     expect(issuer.verify(token)).not.toBeNull();
@@ -48,7 +48,7 @@ describe('demo sessions', () => {
     ];
     const later = String(Number(expiry) + 1);
     expect(issuer.verify([prefix, id, later, signature].join('.'))).toBeNull();
-    const otherId = `${id.slice(0, -1)}${id.endsWith('A') ? 'B' : 'A'}`;
+    const otherId = `${id.slice(0, -1)}${id.endsWith('a') ? 'b' : 'a'}`;
     expect(issuer.verify([prefix, otherId, expiry, signature].join('.'))).toBeNull();
   });
 

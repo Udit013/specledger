@@ -31,13 +31,14 @@ export interface DemoSessionOptions {
   readonly newId?: () => string;
 }
 
-const TOKEN = /^demo\.([A-Za-z0-9_-]{16})\.([0-9]{13})\.([A-Za-z0-9_-]{43})$/;
+// The session id is lower-case hex: it also names the visitor's sandbox schema.
+const TOKEN = /^demo\.([0-9a-f]{16})\.([0-9]{13})\.([A-Za-z0-9_-]{43})$/;
 
 export function createDemoSessions(options: DemoSessionOptions): DemoSessions {
   if (options.secret.length < 32) throw new Error('the demo session secret is too short');
   if (!(options.ttlMs > 0)) throw new Error('the demo session lifetime must be positive');
   const now = options.now ?? Date.now;
-  const newId = options.newId ?? (() => randomBytes(12).toString('base64url'));
+  const newId = options.newId ?? (() => randomBytes(8).toString('hex'));
   const sign = (body: string) =>
     createHmac('sha256', options.secret).update(body, 'utf8').digest('base64url');
 

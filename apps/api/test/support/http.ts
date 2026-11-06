@@ -4,6 +4,7 @@ import { Writable } from 'node:stream';
 
 import { FIELD_DEFINITIONS } from '@specledger/core';
 import type { Candidate } from '@specledger/core';
+import type { Database } from '@specledger/db';
 import { groundTruthSchema, manifestSchema } from '@specledger/eval';
 import { DEFAULT_INGEST_LIMITS, extractPages } from '@specledger/ingest';
 import type { IngestLimits } from '@specledger/ingest';
@@ -13,20 +14,60 @@ import type { FastifyInstance, LightMyRequestResponse } from 'fastify';
 import { pino } from 'pino';
 import { afterAll, beforeAll } from 'vitest';
 
+import { hashPassword } from '../../src/auth/passwords.js';
+import { tokenHash } from '../../src/auth/session-token.js';
 import { buildApp } from '../../src/http/app.js';
-import type { AppDeps, HttpOptions } from '../../src/http/app.js';
+import type { AppDeps, AuthOptions, HttpOptions } from '../../src/http/app.js';
+import { ROLES } from '../../src/http/auth.js';
 import type { Role } from '../../src/http/auth.js';
 import { createProcessDocumentHandler } from '../../src/worker/process-document.js';
 import { REDACT_PATHS } from '../../src/logger.js';
 import { withTestDatabase } from './test-db.js';
 import type { TestDatabase } from './test-db.js';
 
-export const TOKENS = {
-  engineer: 'engineer-token-for-tests-6f1c2d9a4b',
-  approver: 'approver-token-for-tests-0e8b7a3c5d',
-} as const;
+// One signed-in test user per role, with a session token each (43 URL-safe characters, like a
+// real one). bearer(role) authenticates as that user; ACTORS is how the audit log names them.
+export const TOKENS: Readonly<Record<Role, string>> = {
+  engineer: 'engineer_session_token_for_tests_0000000000',
+  reviewer: 'reviewer_session_token_for_tests_0000000000',
+  approver: 'approver_session_token_for_tests_0000000000',
+  admin: 'admin_session_token_for_tests_0000000000000',
+};
+export const emailOf = (role: Role) => `${role}@test.example`;
+export const ACTORS: Readonly<Record<Role, string>> = {
+  engineer: `user:${emailOf('engineer')}`,
+  reviewer: `user:${emailOf('reviewer')}`,
+  approver: `user:${emailOf('approver')}`,
+  admin: `user:${emailOf('admin')}`,
+};
+export const TEST_PASSWORD = 'test-password-for-everyone';
 
 export const bearer = (role: Role) => ({ authorization: `Bearer ${TOKENS[role]}` });
+
+export const AUTH: AuthOptions = {
+  sessionTtlMs: 3_600_000,
+  secureCookies: true,
+  loginRateLimitPerMinute: 10_000,
+};
+
+// Creates the test users and their sessions in a migrated database.
+export async function seedUsers(database: Database): Promise<void> {
+  const passwordHash = await hashPassword(TEST_PASSWORD);
+  for (const role of ROLES) {
+    const user = await database.users.create({
+      email: emailOf(role),
+      displayName: `Test ${role}`,
+      passwordHash,
+      roles: [role],
+    });
+    if (user === null) throw new Error(`test user ${role} exists`);
+    await database.sessions.create({
+      tokenHash: tokenHash(TOKENS[role]),
+      userId: user.id,
+      expiresAt: new Date(Date.now() + 24 * 3_600_000),
+    });
+  }
+}
 
 export const HTTP: HttpOptions = {
   corsOrigins: ['https://review.example.test'],
@@ -66,15 +107,17 @@ export function withApp(
     http?: Partial<HttpOptions>;
     limits?: Partial<IngestLimits>;
     deps?: Partial<AppDeps>;
+    auth?: Partial<AuthOptions>;
   } = {},
 ): TestApp {
   const testDb = withTestDatabase();
   const capture = logCapture();
   let app: FastifyInstance | undefined;
   beforeAll(async () => {
+    await seedUsers(testDb.database);
     app = await buildApp({
       database: testDb.database,
-      tokens: TOKENS,
+      auth: { ...AUTH, ...overrides.auth },
       limits: { ...DEFAULT_INGEST_LIMITS, ...overrides.limits },
       http: { ...HTTP, ...overrides.http },
       logger: capture.logger,

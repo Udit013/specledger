@@ -8,6 +8,8 @@ import { afterAll, beforeAll } from 'vitest';
 // A migrated schema of its own for one test file, through the db package's public API only.
 export interface TestDatabase {
   readonly database: Database;
+  // The schema the test file's tables live in.
+  readonly schema: string;
   query(
     text: string,
     params?: readonly unknown[],
@@ -45,6 +47,7 @@ export function withTestDatabase(options: { readonly wipeable?: boolean } = {}):
   });
 
   return {
+    schema,
     get database() {
       if (database === undefined) throw new Error('withTestDatabase is used before beforeAll');
       return database;

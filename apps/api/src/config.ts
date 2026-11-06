@@ -22,12 +22,6 @@ const ingestLimit = (name: keyof IngestLimits) =>
 const ingestExpected = (name: keyof IngestLimits) =>
   `an integer between ${String(INGEST_LIMIT_BOUNDS[name].min)} and ${String(INGEST_LIMIT_BOUNDS[name].max)}`;
 
-// API bearer tokens: long random strings (openssl rand -hex 32), one per role.
-const apiToken = z
-  .string()
-  .regex(/^[A-Za-z0-9._~+/=-]{32,256}$/)
-  .optional();
-
 // A comma-separated list of exact origins (scheme, host and optional port; no path).
 const corsOrigins = z
   .string()
@@ -65,8 +59,8 @@ const envSchema = z.object({
     .regex(/^[a-z0-9][a-z0-9.-]{0,63}$/)
     .default(DEFAULT_GEMINI_MODEL),
   LLM_TIMEOUT_MS: z.coerce.number().int().min(1_000).max(300_000).default(60_000),
-  API_ENGINEER_TOKEN: apiToken,
-  API_APPROVER_TOKEN: apiToken,
+  SESSION_TTL_HOURS: z.coerce.number().int().min(1).max(168).default(12),
+  LOGIN_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().min(1).max(100).default(5),
   CORS_ORIGINS: corsOrigins,
   TRUST_PROXY: trustProxy,
   RATE_LIMIT_PER_MINUTE: z.coerce.number().int().min(1).max(100_000).default(300),
@@ -80,6 +74,7 @@ const envSchema = z.object({
     .regex(/^[A-Za-z0-9._~+/=-]{32,256}$/)
     .optional(),
   DEMO_SESSION_TTL_MINUTES: z.coerce.number().int().min(5).max(1_440).default(120),
+  DEMO_MAX_SANDBOXES: z.coerce.number().int().min(1).max(500).default(50),
 });
 
 export type ConfigKey = keyof typeof envSchema.shape;
@@ -103,8 +98,8 @@ const EXPECTED: Record<ConfigKey, string> = {
   GEMINI_API_KEY: 'a Gemini API key (required when LLM_PROVIDER is gemini)',
   GEMINI_MODEL: 'a model id such as gemini-3.5-flash-lite',
   LLM_TIMEOUT_MS: 'an integer between 1000 and 300000',
-  API_ENGINEER_TOKEN: 'a token of 32 to 256 URL-safe characters, unlike the approver token',
-  API_APPROVER_TOKEN: 'a token of 32 to 256 URL-safe characters, unlike the engineer token',
+  SESSION_TTL_HOURS: 'an integer between 1 and 168',
+  LOGIN_RATE_LIMIT_PER_MINUTE: 'an integer between 1 and 100',
   CORS_ORIGINS: 'a comma-separated list of origins such as https://review.example.com',
   TRUST_PROXY: 'true, false or a hop count from 1 to 9',
   RATE_LIMIT_PER_MINUTE: 'an integer between 1 and 100000',
@@ -115,6 +110,7 @@ const EXPECTED: Record<ConfigKey, string> = {
   DEMO_DATABASE_URL: 'a postgres:// URL of a database other than DATABASE_URL, for the demo',
   DEMO_SESSION_SECRET: 'a secret of 32 to 256 URL-safe characters (required with the demo)',
   DEMO_SESSION_TTL_MINUTES: 'an integer between 5 and 1440',
+  DEMO_MAX_SANDBOXES: 'an integer between 1 and 500',
 };
 
 export interface Config {
@@ -131,10 +127,13 @@ export interface Config {
     readonly geminiModel: string;
     readonly timeoutMs: number;
   };
+  readonly auth: {
+    readonly sessionTtlMs: number;
+    // Secure cookies everywhere but local development over plain http.
+    readonly secureCookies: boolean;
+    readonly loginRateLimitPerMinute: number;
+  };
   readonly http: {
-    // Never logged. Optional here (the worker needs none); the API refuses to start without both.
-    readonly engineerToken: string | null;
-    readonly approverToken: string | null;
     readonly corsOrigins: readonly string[];
     readonly trustProxy: boolean | number;
     readonly rateLimitPerMinute: number;
@@ -152,6 +151,7 @@ export interface Config {
     // Signs visitor sessions; never logged.
     readonly sessionSecret: string;
     readonly sessionTtlMs: number;
+    readonly maxSandboxes: number;
   } | null;
 }
 
@@ -187,19 +187,6 @@ export function parseConfig(env: Readonly<Record<string, string | undefined>>): 
     return {
       ok: false,
       issues: [{ key: 'GEMINI_API_KEY', problem: 'missing', expected: EXPECTED.GEMINI_API_KEY }],
-    };
-  }
-  if (
-    parsed.success &&
-    parsed.data.API_ENGINEER_TOKEN !== undefined &&
-    parsed.data.API_ENGINEER_TOKEN === parsed.data.API_APPROVER_TOKEN
-  ) {
-    // One token for both roles would make every engineer an approver.
-    return {
-      ok: false,
-      issues: [
-        { key: 'API_APPROVER_TOKEN', problem: 'invalid', expected: EXPECTED.API_APPROVER_TOKEN },
-      ],
     };
   }
   if (parsed.success && parsed.data.DEMO_DATABASE_URL !== undefined) {
@@ -247,9 +234,12 @@ export function parseConfig(env: Readonly<Record<string, string | undefined>>): 
           geminiModel: values.GEMINI_MODEL,
           timeoutMs: values.LLM_TIMEOUT_MS,
         }),
+        auth: Object.freeze({
+          sessionTtlMs: values.SESSION_TTL_HOURS * 3_600_000,
+          secureCookies: values.NODE_ENV !== 'development',
+          loginRateLimitPerMinute: values.LOGIN_RATE_LIMIT_PER_MINUTE,
+        }),
         http: Object.freeze({
-          engineerToken: values.API_ENGINEER_TOKEN ?? null,
-          approverToken: values.API_APPROVER_TOKEN ?? null,
           corsOrigins: Object.freeze(values.CORS_ORIGINS),
           trustProxy: values.TRUST_PROXY,
           rateLimitPerMinute: values.RATE_LIMIT_PER_MINUTE,
@@ -265,6 +255,7 @@ export function parseConfig(env: Readonly<Record<string, string | undefined>>): 
                 databaseUrl: values.DEMO_DATABASE_URL,
                 sessionSecret: values.DEMO_SESSION_SECRET,
                 sessionTtlMs: values.DEMO_SESSION_TTL_MINUTES * 60_000,
+                maxSandboxes: values.DEMO_MAX_SANDBOXES,
               }),
       }),
     };

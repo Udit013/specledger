@@ -4,18 +4,19 @@ import { fileURLToPath } from 'node:url';
 import { openDatabase } from '@specledger/db';
 import type { Database } from '@specledger/db';
 import { manifestSchema } from '@specledger/eval';
+import type { LlmLogger } from '@specledger/llm';
 import type { FastifyBaseLogger, FastifyInstance } from 'fastify';
 
-import type { Config, ConfigIssue } from '../config.js';
+import type { Config } from '../config.js';
 import { loadDemoDocuments } from '../demo/documents.js';
+import { createSandboxes } from '../demo/sandboxes.js';
+import type { Sandboxes } from '../demo/sandboxes.js';
 import { createDemoSessions } from '../demo/session.js';
 import { createDemoWorkspace } from '../demo/workspace.js';
 import type { DemoWorkspace } from '../demo/workspace.js';
 import { createDocumentWorker } from '../worker/document-worker.js';
 import type { WorkerLogger } from '../worker/worker.js';
-import type { LlmLogger } from '@specledger/llm';
 import { buildApp } from './app.js';
-import type { ApiTokens } from './auth.js';
 import type { DemoDeps } from './deps.js';
 
 // How long /ready waits for the database before answering 503.
@@ -26,21 +27,6 @@ const CORPUS_MANIFEST = fileURLToPath(
   new URL('../../../../fixtures/corpus/manifest.json', import.meta.url),
 );
 
-// Both role tokens, or the configuration issues to report: the API refuses to start without them.
-export function apiTokensFrom(config: Config): ApiTokens | ConfigIssue[] {
-  const { engineerToken, approverToken } = config.http;
-  if (engineerToken !== null && approverToken !== null) {
-    return { engineer: engineerToken, approver: approverToken };
-  }
-  return (['API_ENGINEER_TOKEN', 'API_APPROVER_TOKEN'] as const)
-    .filter((key) => (key === 'API_ENGINEER_TOKEN' ? engineerToken : approverToken) === null)
-    .map((key) => ({
-      key,
-      problem: 'missing' as const,
-      expected: 'a token of 32 to 256 URL-safe characters; the API needs both',
-    }));
-}
-
 // The sha256 of every synthetic corpus PDF, for UPLOAD_ALLOWLIST=corpus.
 export async function corpusAllowlist(path = CORPUS_MANIFEST): Promise<ReadonlySet<string>> {
   const manifest = manifestSchema.parse(JSON.parse(await readFile(path, 'utf8')));
@@ -49,33 +35,42 @@ export async function corpusAllowlist(path = CORPUS_MANIFEST): Promise<ReadonlyS
 
 export interface DemoServices {
   readonly workspace: DemoWorkspace;
+  readonly sandboxes: Sandboxes;
   readonly deps: DemoDeps;
 }
 
-// The demo workspace of a configuration with DEMO_DATABASE_URL: its own wipeable database
-// (migrated), its own extraction worker (not started), and the visitor session issuer.
+// The demo of a configuration with DEMO_DATABASE_URL: the showcase (the demo database's public
+// schema, wipeable, migrated) with its own extraction worker (not started), the visitor sandboxes
+// and the visitor session issuer.
 export async function openDemoServices(
   config: Config,
   logger: LlmLogger & WorkerLogger,
 ): Promise<DemoServices | null> {
   if (config.demo === null) return null;
-  const database = openDatabase({ connectionString: config.demo.databaseUrl, wipeable: true });
-  await database.migrate();
+  const showcase = openDatabase({ connectionString: config.demo.databaseUrl, wipeable: true });
+  await showcase.migrate();
   const workspace = createDemoWorkspace({
-    database,
+    database: showcase,
     limits: config.ingest,
-    worker: createDocumentWorker(config, database, logger),
+    worker: createDocumentWorker(config, showcase, logger),
     documents: () => loadDemoDocuments(ROOT),
+  });
+  const sandboxes = createSandboxes({
+    connectionString: config.demo.databaseUrl,
+    source: 'public',
+    maxSandboxes: config.demo.maxSandboxes,
   });
   return {
     workspace,
+    sandboxes,
     deps: {
-      database,
+      showcase,
       sessions: createDemoSessions({
         secret: config.demo.sessionSecret,
         ttlMs: config.demo.sessionTtlMs,
       }),
-      uploadAllowlist: await corpusAllowlist(),
+      sandboxes,
+      isReady: () => workspace.isReady(),
       reset: () => workspace.reset(),
     },
   };
@@ -84,7 +79,6 @@ export async function openDemoServices(
 // The HTTP API with its configuration applied, not yet listening.
 export async function createApiServer(
   config: Config,
-  tokens: ApiTokens,
   database: Database,
   logger: FastifyBaseLogger,
   demo: DemoDeps | null = null,
@@ -92,7 +86,7 @@ export async function createApiServer(
   const { http } = config;
   return buildApp({
     database,
-    tokens,
+    auth: config.auth,
     limits: config.ingest,
     http: {
       corsOrigins: http.corsOrigins,
