@@ -12,7 +12,9 @@ import {
   reviewStatusSchema,
   verificationStatusSchema,
 } from '@specledger/core';
+import { userRoleSchema } from '@specledger/core';
 import type {
+  UserRole,
   ConflictStatus,
   DecisionBasis,
   ConflictRecord,
@@ -33,7 +35,7 @@ import type {
   VerificationReason,
   VerificationStatus,
 } from '@specledger/core';
-import { and, asc, desc, eq, inArray, isNotNull, isNull, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, inArray, isNotNull, isNull, sql } from 'drizzle-orm';
 import type { PgDatabase, PgQueryResultHKT } from 'drizzle-orm/pg-core';
 import { z } from 'zod';
 
@@ -57,6 +59,8 @@ import {
   registerItems,
   registerVersions,
   reviewEvents,
+  sessions,
+  users,
 } from './schema.js';
 
 // Works for both the pool-backed database and an open transaction.
@@ -218,6 +222,28 @@ function reviewEventFromRow(row: typeof reviewEvents.$inferSelect): ReviewEventR
     createdAt: row.createdAt,
   });
 }
+
+export interface UserRecord {
+  readonly id: string;
+  readonly email: string;
+  readonly displayName: string;
+  readonly passwordHash: string;
+  readonly roles: readonly UserRole[];
+  readonly disabledAt: Date | null;
+  readonly createdAt: Date;
+}
+
+const userRowSchema = z.object({
+  id: z.string(),
+  email: z.string(),
+  displayName: z.string(),
+  passwordHash: z.string(),
+  roles: z.array(userRoleSchema).min(1),
+  disabledAt: z.date().nullable(),
+  createdAt: z.date(),
+});
+const userFromRow = (row: typeof users.$inferSelect): UserRecord =>
+  toDomain('user', userRowSchema, row);
 
 export function createRepositories(db: Executor) {
   // The id of the latest extraction run of every document.
@@ -803,6 +829,100 @@ export function createRepositories(db: Executor) {
           .where(eq(registerItems.registerVersionId, registerVersionId))
           .orderBy(asc(registerItems.tag));
         return rows.map((row) => toDomain('register_item', registerItemRecordSchema, row));
+      },
+    },
+    users: {
+      // Returns null when the email is taken (the unique constraint decides, so two concurrent
+      // sign-ups for one email cannot both succeed).
+      async create(input: {
+        email: string;
+        displayName: string;
+        passwordHash: string;
+        roles: readonly UserRole[];
+      }): Promise<UserRecord | null> {
+        const [row] = await db
+          .insert(users)
+          .values({ ...input, roles: [...input.roles] })
+          .onConflictDoNothing({ target: users.email })
+          .returning();
+        return row === undefined ? null : userFromRow(row);
+      },
+      async getById(id: string): Promise<UserRecord | null> {
+        const [row] = await db.select().from(users).where(eq(users.id, id));
+        return row === undefined ? null : userFromRow(row);
+      },
+      async getByEmail(email: string): Promise<UserRecord | null> {
+        const [row] = await db.select().from(users).where(eq(users.email, email));
+        return row === undefined ? null : userFromRow(row);
+      },
+      async list(): Promise<UserRecord[]> {
+        const rows = await db.select().from(users).orderBy(asc(users.email));
+        return rows.map(userFromRow);
+      },
+      async update(
+        id: string,
+        change: {
+          roles?: readonly UserRole[];
+          disabledAt?: Date | null;
+          passwordHash?: string;
+        },
+      ): Promise<UserRecord | null> {
+        const [row] = await db
+          .update(users)
+          .set({
+            ...(change.roles === undefined ? {} : { roles: [...change.roles] }),
+            ...(change.disabledAt === undefined ? {} : { disabledAt: change.disabledAt }),
+            ...(change.passwordHash === undefined ? {} : { passwordHash: change.passwordHash }),
+          })
+          .where(eq(users.id, id))
+          .returning();
+        return row === undefined ? null : userFromRow(row);
+      },
+      // Active admins, locked so that two concurrent changes cannot remove the last one.
+      async lockActiveAdmins(): Promise<string[]> {
+        const rows = await db
+          .select({ id: users.id })
+          .from(users)
+          .where(and(isNull(users.disabledAt), sql`'admin' = any(${users.roles})`))
+          .for('update');
+        return rows.map((row) => row.id);
+      },
+    },
+    sessions: {
+      async create(input: { tokenHash: string; userId: string; expiresAt: Date }): Promise<void> {
+        await db.insert(sessions).values(input);
+      },
+      // The session and its user, if the session is neither expired nor revoked and the user is
+      // not disabled.
+      async findActive(
+        tokenHash: string,
+        now: Date,
+      ): Promise<{ expiresAt: Date; user: UserRecord } | null> {
+        const [row] = await db
+          .select({ expiresAt: sessions.expiresAt, user: users })
+          .from(sessions)
+          .innerJoin(users, eq(users.id, sessions.userId))
+          .where(
+            and(
+              eq(sessions.tokenHash, tokenHash),
+              isNull(sessions.revokedAt),
+              gt(sessions.expiresAt, now),
+              isNull(users.disabledAt),
+            ),
+          );
+        return row === undefined ? null : { expiresAt: row.expiresAt, user: userFromRow(row.user) };
+      },
+      async revoke(tokenHash: string, now: Date): Promise<void> {
+        await db
+          .update(sessions)
+          .set({ revokedAt: now })
+          .where(and(eq(sessions.tokenHash, tokenHash), isNull(sessions.revokedAt)));
+      },
+      async revokeAllForUser(userId: string, now: Date): Promise<void> {
+        await db
+          .update(sessions)
+          .set({ revokedAt: now })
+          .where(and(eq(sessions.userId, userId), isNull(sessions.revokedAt)));
       },
     },
   };

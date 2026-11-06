@@ -39,6 +39,12 @@ export const API_ERROR_CODES = [
   'INTERNAL',
   // The deployment accepts only listed documents (UPLOAD_ALLOWLIST).
   'UPLOAD_NOT_ALLOWED',
+  // Accounts: an email already in use, and the last active admin, who cannot be removed.
+  'EMAIL_TAKEN',
+  'LAST_ADMIN',
+  // The demo: still being prepared (its documents are being extracted), or at its sandbox limit.
+  'DEMO_NOT_READY',
+  'DEMO_FULL',
   // Upload rejections, as ingestion names them.
   'EMPTY',
   'NOT_A_PDF',

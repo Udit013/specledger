@@ -1,10 +1,12 @@
 import {
+  ACCOUNT_LIMITS,
   CONFLICT_STATUSES,
   DOCUMENT_TYPES,
   EQUIPMENT_CLASSES,
   FIELD_NAME_PATTERN,
   TEXT_LIMITS,
   REVIEW_ACTIONS,
+  USER_ROLES,
   REVIEW_STATUSES,
   VERIFICATION_REASONS,
   VERIFICATION_STATUSES,
@@ -384,5 +386,52 @@ export const reviewEvents = pgTable(
     check('review_events_actor_length', lengthBetween(t.actor, 1, TEXT_LIMITS.person)),
     check('review_events_reason_not_empty', sql`char_length(${t.reason}) >= 1`),
     check('review_events_action_valid', oneOf(t.action, REVIEW_ACTIONS)),
+  ],
+);
+
+// Accounts for the real workspace. Passwords are stored only as scrypt hashes; roles come from
+// core's USER_ROLES. A disabled user keeps their row (the audit log names them) but cannot sign in.
+export const users = pgTable(
+  'users',
+  {
+    id: id(),
+    email: text('email').notNull(),
+    displayName: text('display_name').notNull(),
+    passwordHash: text('password_hash').notNull(),
+    roles: text('roles').array().notNull(),
+    disabledAt: timestamp('disabled_at', { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    unique('users_email_key').on(t.email),
+    check('users_email_lower', sql`${t.email} = lower(${t.email})`),
+    check('users_email_length', lengthBetween(t.email, 3, ACCOUNT_LIMITS.email)),
+    check('users_display_name_length', lengthBetween(t.displayName, 1, ACCOUNT_LIMITS.displayName)),
+    check('users_password_hash_scrypt', sql`${t.passwordHash} like 'scrypt$%'`),
+    check(
+      'users_roles_valid',
+      sql`cardinality(${t.roles}) >= 1 and ${t.roles} <@ array[${sqlList(USER_ROLES)}]::text[]`,
+    ),
+  ],
+);
+
+// Signed-in sessions. Only the SHA-256 of the session token is stored, so a copy of this table
+// cannot be used to sign in. Expired and revoked sessions stop working at once.
+export const sessions = pgTable(
+  'sessions',
+  {
+    id: id(),
+    tokenHash: text('token_hash').notNull(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'restrict' }),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    revokedAt: timestamp('revoked_at', { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    unique('sessions_token_hash_key').on(t.tokenHash),
+    index('sessions_user_id_idx').on(t.userId),
+    check('sessions_token_hash_format', sql`${t.tokenHash} ~ '^[0-9a-f]{64}$'`),
   ],
 );

@@ -43,6 +43,13 @@
       "when": 1793811517997,
       "tag": "0005_verification_label_mismatch",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793973097649,
+      "tag": "0006_accounts",
+      "breakpoints": true
     }
   ]
 }
