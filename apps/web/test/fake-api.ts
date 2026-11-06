@@ -277,6 +277,10 @@ export function fakeApi(options: FakeOptions = {}): FakeState {
         state.user = null;
         return new HttpResponse(null, { status: 204 });
       }),
+      http.post(`${API}/admin/demo/reset`, ({ request }) => {
+        seen(request);
+        return refuse(request, ['admin']) ?? HttpResponse.json({ status: 'reset', queued: 7 });
+      }),
       http.get(`${API}/admin/users`, ({ request }) => {
         seen(request);
         return refuse(request, ['admin']) ?? HttpResponse.json({ users: state.users });

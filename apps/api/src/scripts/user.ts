@@ -88,9 +88,10 @@ function readPassword(): Promise<string> {
   if (!input.isTTY) {
     return new Promise((resolve) => {
       const lines = createInterface({ input });
+      // Resolve first: close() fires the close handler synchronously.
       lines.once('line', (line) => {
-        lines.close();
         resolve(line);
+        lines.close();
       });
       lines.once('close', () => {
         resolve('');

@@ -42,6 +42,7 @@ export function UsersAdmin() {
         roles.
       </p>
       <CreateUser />
+      <DemoReset />
       <h3 className="mt-8 mb-3 text-sm font-semibold tracking-wide text-slate-600 uppercase">
         Accounts
       </h3>
@@ -160,6 +161,74 @@ function RoleEditor({
         </button>
       ) : null}
     </fieldset>
+  );
+}
+
+// Starts the public demo over: the showcase is wiped and its documents are extracted again (one
+// model call each), so it asks before doing it. Visitors' sandboxes are left alone.
+function DemoReset() {
+  const { client, announce } = useServices();
+  const [confirming, setConfirming] = useState(false);
+  const reset = useMutation({
+    mutationFn: () => client.resetDemo(),
+    onSuccess: () => {
+      setConfirming(false);
+      announce('The demo showcase was reset and is being extracted again.');
+    },
+  });
+  return (
+    <div className="card mt-6 flex flex-col gap-3 p-6 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <h3 className="text-lg font-semibold">Demo showcase</h3>
+        <p className="mt-1 text-sm text-slate-600">
+          Reset wipes the public showcase and extracts its documents again with the model. Visitors'
+          sandboxes are not affected.
+        </p>
+        {reset.isSuccess ? (
+          <p className="mt-2 text-sm font-medium">
+            Reset. The documents are being extracted again.
+          </p>
+        ) : null}
+        {reset.isError ? (
+          <div className="mt-2">
+            <ErrorNotice title="The demo was not reset." error={reset.error} />
+          </div>
+        ) : null}
+      </div>
+      {confirming ? (
+        <div className="flex gap-2">
+          <button
+            type="button"
+            aria-disabled={reset.isPending}
+            onClick={() => {
+              if (!reset.isPending) reset.mutate();
+            }}
+            className="btn btn-danger"
+          >
+            {reset.isPending ? 'Resetting…' : 'Yes, reset the showcase'}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setConfirming(false);
+            }}
+            className="btn btn-secondary"
+          >
+            Cancel
+          </button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => {
+            setConfirming(true);
+          }}
+          className="btn btn-secondary self-start sm:self-auto"
+        >
+          Reset the demo showcase
+        </button>
+      )}
+    </div>
   );
 }
 

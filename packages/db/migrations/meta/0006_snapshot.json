@@ -128,12 +128,8 @@
           "name": "conflicts_equipment_id_equipment_id_fk",
           "tableFrom": "conflicts",
           "tableTo": "equipment",
-          "columnsFrom": [
-            "equipment_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["equipment_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -141,12 +137,8 @@
           "name": "conflicts_chosen_field_id_fields_id_fk",
           "tableFrom": "conflicts",
           "tableTo": "fields",
-          "columnsFrom": [
-            "chosen_field_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["chosen_field_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -217,12 +209,8 @@
           "name": "document_blobs_document_id_documents_id_fk",
           "tableFrom": "document_blobs",
           "tableTo": "documents",
-          "columnsFrom": [
-            "document_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["document_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -274,12 +262,8 @@
           "name": "document_pages_document_id_documents_id_fk",
           "tableFrom": "document_pages",
           "tableTo": "documents",
-          "columnsFrom": [
-            "document_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["document_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -289,10 +273,7 @@
         "document_pages_document_page_key": {
           "name": "document_pages_document_page_key",
           "nullsNotDistinct": false,
-          "columns": [
-            "document_id",
-            "page_number"
-          ]
+          "columns": ["document_id", "page_number"]
         }
       },
       "policies": {},
@@ -366,9 +347,7 @@
         "documents_sha256_key": {
           "name": "documents_sha256_key",
           "nullsNotDistinct": false,
-          "columns": [
-            "sha256"
-          ]
+          "columns": ["sha256"]
         }
       },
       "policies": {},
@@ -438,9 +417,7 @@
         "equipment_tag_key": {
           "name": "equipment_tag_key",
           "nullsNotDistinct": false,
-          "columns": [
-            "tag"
-          ]
+          "columns": ["tag"]
         }
       },
       "policies": {},
@@ -533,12 +510,8 @@
           "name": "extraction_runs_document_id_documents_id_fk",
           "tableFrom": "extraction_runs",
           "tableTo": "documents",
-          "columnsFrom": [
-            "document_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["document_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -546,12 +519,8 @@
           "name": "extraction_runs_job_id_jobs_id_fk",
           "tableFrom": "extraction_runs",
           "tableTo": "jobs",
-          "columnsFrom": [
-            "job_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["job_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -561,9 +530,7 @@
         "extraction_runs_job_id_key": {
           "name": "extraction_runs_job_id_key",
           "nullsNotDistinct": false,
-          "columns": [
-            "job_id"
-          ]
+          "columns": ["job_id"]
         }
       },
       "policies": {},
@@ -697,12 +664,8 @@
           "name": "fields_extraction_run_id_extraction_runs_id_fk",
           "tableFrom": "fields",
           "tableTo": "extraction_runs",
-          "columnsFrom": [
-            "extraction_run_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["extraction_run_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -710,12 +673,8 @@
           "name": "fields_equipment_id_equipment_id_fk",
           "tableFrom": "fields",
           "tableTo": "equipment",
-          "columnsFrom": [
-            "equipment_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["equipment_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -725,11 +684,7 @@
         "fields_run_equipment_name_key": {
           "name": "fields_run_equipment_name_key",
           "nullsNotDistinct": false,
-          "columns": [
-            "extraction_run_id",
-            "equipment_id",
-            "name"
-          ]
+          "columns": ["extraction_run_id", "equipment_id", "name"]
         }
       },
       "policies": {},
@@ -896,9 +851,7 @@
         "jobs_idempotency_key_key": {
           "name": "jobs_idempotency_key_key",
           "nullsNotDistinct": false,
-          "columns": [
-            "idempotency_key"
-          ]
+          "columns": ["idempotency_key"]
         }
       },
       "policies": {},
@@ -1025,12 +978,8 @@
           "name": "register_items_register_version_id_register_versions_id_fk",
           "tableFrom": "register_items",
           "tableTo": "register_versions",
-          "columnsFrom": [
-            "register_version_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["register_version_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -1038,12 +987,8 @@
           "name": "register_items_equipment_id_equipment_id_fk",
           "tableFrom": "register_items",
           "tableTo": "equipment",
-          "columnsFrom": [
-            "equipment_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["equipment_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -1053,10 +998,7 @@
         "register_items_version_equipment_key": {
           "name": "register_items_version_equipment_key",
           "nullsNotDistinct": false,
-          "columns": [
-            "register_version_id",
-            "equipment_id"
-          ]
+          "columns": ["register_version_id", "equipment_id"]
         }
       },
       "policies": {},
@@ -1116,9 +1058,7 @@
         "register_versions_number_key": {
           "name": "register_versions_number_key",
           "nullsNotDistinct": false,
-          "columns": [
-            "number"
-          ]
+          "columns": ["number"]
         }
       },
       "policies": {},
@@ -1257,12 +1197,8 @@
           "name": "review_events_field_id_fields_id_fk",
           "tableFrom": "review_events",
           "tableTo": "fields",
-          "columnsFrom": [
-            "field_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["field_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -1270,12 +1206,8 @@
           "name": "review_events_conflict_id_conflicts_id_fk",
           "tableFrom": "review_events",
           "tableTo": "conflicts",
-          "columnsFrom": [
-            "conflict_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["conflict_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -1283,12 +1215,8 @@
           "name": "review_events_register_version_id_register_versions_id_fk",
           "tableFrom": "review_events",
           "tableTo": "register_versions",
-          "columnsFrom": [
-            "register_version_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["register_version_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -1381,12 +1309,8 @@
           "name": "sessions_user_id_users_id_fk",
           "tableFrom": "sessions",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -1396,9 +1320,7 @@
         "sessions_token_hash_key": {
           "name": "sessions_token_hash_key",
           "nullsNotDistinct": false,
-          "columns": [
-            "token_hash"
-          ]
+          "columns": ["token_hash"]
         }
       },
       "policies": {},
@@ -1466,9 +1388,7 @@
         "users_email_key": {
           "name": "users_email_key",
           "nullsNotDistinct": false,
-          "columns": [
-            "email"
-          ]
+          "columns": ["email"]
         }
       },
       "policies": {},

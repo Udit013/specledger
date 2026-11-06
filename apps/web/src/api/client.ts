@@ -297,6 +297,15 @@ export function createApiClient(options: ApiClientOptions) {
         body: updateUserBodySchema.parse(body),
       });
     },
+    resetDemo(): Promise<unknown> {
+      return request(
+        z.object({ status: z.literal('reset'), queued: z.number() }),
+        '/admin/demo/reset',
+        {
+          method: 'POST',
+        },
+      );
+    },
     async audit(
       kind: 'field' | 'conflict' | 'register_version',
       entityId: string,

@@ -78,7 +78,10 @@ export function createDemoWorkspace(options: DemoWorkspaceOptions): DemoWorkspac
       const documents = await database.documents.list({ limit: 100, offset: 0 });
       return (
         documents.length > 0 &&
-        documents.every((d) => d.job === null || !['queued', 'running'].includes(d.job.status))
+        // A failed job is waiting for its retry: still being extracted.
+        documents.every(
+          (d) => d.job === null || !['queued', 'running', 'failed'].includes(d.job.status),
+        )
       );
     },
     reset: () =>

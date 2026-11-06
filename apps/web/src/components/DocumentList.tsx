@@ -27,7 +27,8 @@ const signature = (documents: readonly DocumentSummary[] | undefined) =>
     .join('|');
 
 export function DocumentList() {
-  const { client, poll } = useServices();
+  const { client, poll, can, mode } = useServices();
+  const canUpload = mode === 'account' && can('engineer');
   // Polls only while some document is queued or running, backing off while nothing changes and
   // starting again from the base delay when something does.
   const polling = useRef({ updatedAt: 0, signature: '', unchanged: 0 });
@@ -61,10 +62,15 @@ export function DocumentList() {
             against the source page.
           </p>
         </div>
-        <a href={hrefFor({ name: 'upload' })} className="btn btn-secondary self-start sm:self-auto">
-          <Icon name="upload" className="h-4 w-4" />
-          Upload a document
-        </a>
+        {canUpload ? (
+          <a
+            href={hrefFor({ name: 'upload' })}
+            className="btn btn-secondary self-start sm:self-auto"
+          >
+            <Icon name="upload" className="h-4 w-4" />
+            Upload a document
+          </a>
+        ) : null}
       </div>
       {documents.isPending ? (
         <Loading label="Loading documents" />
@@ -81,11 +87,15 @@ export function DocumentList() {
           </span>
           <p className="mt-4 font-semibold">No documents yet.</p>
           <p className="mt-1 max-w-sm text-sm text-slate-600">
-            Upload a datasheet and it appears here while it is extracted.
+            {canUpload
+              ? 'Upload a datasheet and it appears here while it is extracted.'
+              : 'Documents appear here once they are uploaded and extracted.'}
           </p>
-          <a href={hrefFor({ name: 'upload' })} className="btn btn-primary mt-5">
-            Upload a document
-          </a>
+          {canUpload ? (
+            <a href={hrefFor({ name: 'upload' })} className="btn btn-primary mt-5">
+              Upload a document
+            </a>
+          ) : null}
         </div>
       ) : (
         <>

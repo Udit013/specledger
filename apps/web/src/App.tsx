@@ -327,9 +327,9 @@ export function App({ baseUrl, storage, queryClient, poll = NO_POLL_OPTIONS, fet
           {workspaceRoute && mode === 'showcase' && !checking ? (
             <div className="notice notice-info mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <p>
-                <strong className="font-semibold">Read-only showcase.</strong> Real documents
-                extracted by a model. To review, resolve conflicts and publish, try it in a private
-                sandbox; no account needed.
+                <strong className="font-semibold">Read-only showcase.</strong> Synthetic datasheets
+                extracted by a real model. To review, resolve conflicts and publish, try it in a
+                private sandbox; no account needed.
               </p>
               <button
                 type="button"

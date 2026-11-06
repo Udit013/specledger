@@ -161,6 +161,16 @@ describe('user administration', () => {
     await expectNoAxeViolations(container);
   });
 
+  it('lets an admin reset the demo showcase after confirming', async () => {
+    const state = fakeApi();
+    const { user } = renderApp({ hash: '#/users' });
+    await user.click(await screen.findByRole('button', { name: 'Reset the demo showcase' }));
+    expect(state.requests).not.toContain('POST /admin/demo/reset');
+    await user.click(screen.getByRole('button', { name: 'Yes, reset the showcase' }));
+    expect(await screen.findByText('Reset. The documents are being extracted again.')).toBeTruthy();
+    expect(state.requests).toContain('POST /admin/demo/reset');
+  });
+
   it('is not offered to other roles', async () => {
     fakeApi({ user: ['reviewer'] });
     renderApp({ hash: '#/users' });
