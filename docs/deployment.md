@@ -4,7 +4,7 @@ The free deployment is three services:
 
 | Part           | Where                                         | What runs                                                                                             |
 | -------------- | --------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| Database       | [Neon](https://neon.tech) free Postgres       | the tables, the job queue, the audit log                                                              |
+| Database       | [Neon](https://neon.tech) free Postgres       | two databases: the real workspace, and the public demo workspace                                      |
 | API and worker | [Render](https://render.com) free web service | `apps/api/dist/serve.js` from the `Dockerfile`: the HTTP API and the extraction worker in one process |
 | Review UI      | [Vercel](https://vercel.com) Hobby            | the static build of `apps/web`                                                                        |
 
@@ -33,7 +33,12 @@ Account names and screens change; the steps say what to set, and the labels may 
    transaction-mode pooler does not keep.
 3. Make sure it ends with `?sslmode=require`. Keep it secret: it contains the database password.
 
-The API creates the tables itself on first start (forward-only migrations).
+4. For the public demo, create a **second database** in the same project (Neon: **Databases →
+   New database**, for example `specledger_demo`) and copy its direct connection string the same
+   way. Visitors only ever touch this one; the API refuses to start if it is the same database as
+   `DATABASE_URL`.
+
+The API creates the tables itself on first start (forward-only migrations), in both databases.
 
 ## 2. API and worker: Render
 
@@ -42,10 +47,14 @@ The API creates the tables itself on first start (forward-only migrations).
 2. Render asks for the values marked `sync: false`:
    - `DATABASE_URL`: the Neon connection string from step 1.
    - `GEMINI_API_KEY`: your key from [Google AI Studio](https://aistudio.google.com/apikey).
+   - `DEMO_DATABASE_URL`: the demo database's connection string from step 1.4. Leave it empty
+     to run without a public demo.
    - `CORS_ORIGINS`: leave a placeholder for now (for example `https://example.invalid`); you set
      it to the Vercel URL in step 4.
-3. Render generates `API_ENGINEER_TOKEN` and `API_APPROVER_TOKEN` itself. Open the service's
-   **Environment** tab to copy them; they are what reviewers paste into the UI.
+3. Render generates `API_ENGINEER_TOKEN`, `API_APPROVER_TOKEN` and `DEMO_SESSION_SECRET` itself.
+   The two tokens (in the service's **Environment** tab) are for you and the people you trust with
+   the real workspace; demo visitors never need them. The session secret is never shown to
+   anyone.
 4. Wait for the first deploy, then check the service from your machine:
 
    ```sh
@@ -88,16 +97,25 @@ Vercel preview deployments have other URLs and are refused by CORS; use the prod
 
 ## 5. Demo data
 
-Upload a curated set of synthetic documents (a revision pair, a brochure that disagrees with its
-datasheet, a range, and the prompt-injection document). Each upload is processed by Gemini in the
-background:
+With `DEMO_DATABASE_URL` set, the service seeds the demo database itself when it starts and finds
+it empty: seven synthetic documents (a revision pair, a brochure that disagrees with its
+datasheet, a range, and the prompt-injection document), uploaded through the normal ingestion
+path and extracted by Gemini in the background. Open the UI, press **Explore the live demo**, and
+watch the document list move from Queued to Succeeded. Then follow [docs/demo.md](demo.md).
+
+To start the demo over (visitors share one workspace), reset it with the approver token:
+
+```sh
+curl -X POST -H "Authorization: Bearer <approver token>" https://specledger-api.onrender.com/admin/demo/reset
+```
+
+That wipes only the demo database and seeds it again (seven new Gemini calls).
+
+To put the same documents into the **real** workspace instead, the upload script still works:
 
 ```sh
 SEED_API_URL=https://specledger-api.onrender.com SEED_ENGINEER_TOKEN=<engineer token> pnpm demo:seed
 ```
-
-The script spaces the uploads to stay inside the rate limits. Open the UI, paste both tokens, and
-watch the document list move from Queued to Succeeded. Then follow [docs/demo.md](demo.md).
 
 ## Operating it
 
@@ -107,13 +125,17 @@ watch the document list move from Queued to Succeeded. Then follow [docs/demo.md
 | Rotate a token                | Edit `API_ENGINEER_TOKEN` or `API_APPROVER_TOKEN` in Render (any 32 or more URL-safe characters, for example `openssl rand -hex 32`); the service restarts and old tokens stop working. |
 | A document is stuck in Queued | The service was asleep; any request wakes it. Jobs that failed with a retryable error retry with backoff; `dead` jobs can be requeued with `POST /admin/jobs/:id/requeue` (approver).   |
 | Roll back                     | Render → Deploys → redeploy an earlier commit. Migrations are forward-only: an older build runs against the newer schema, which only ever adds columns, constraints and values.         |
-| Start over                    | Delete the Neon branch's tables (or create a new branch) and redeploy; the API migrates an empty database on start.                                                                     |
+| Start over                    | Demo: `POST /admin/demo/reset` (above). Real workspace: delete the Neon branch's tables (or create a new branch) and redeploy; the API migrates an empty database on start.             |
 | Change the model              | `GEMINI_MODEL` in Render. Replay recordings and the evaluation are tied to the prompt version, not the model.                                                                           |
 
 ## Security notes
 
-- Sharing the tokens shares the roles. Give them only to people you are showing the demo to; the
-  approver token can publish. Anyone with the engineer token can upload, but only corpus PDFs.
+- Demo visitors get a short-lived signed session that works only on the `/demo` routes and the
+  demo database. Share the role tokens only with people who should use the real workspace; the
+  approver token can publish and reset the demo. Anyone with the engineer token can upload, but
+  only corpus PDFs.
+- The site runs entirely on Vercel, Render and Neon. Docker on your machine is only for local
+  development; it does not need to be running for the deployment.
 - Rate limits: 300 requests per minute per client and 10 uploads per minute, per instance
   (`TRUST_PROXY=1` makes them see the client's address behind Render's proxy).
 - The Gemini key lives only in Render's environment, never in the UI or the repository.

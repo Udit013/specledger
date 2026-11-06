@@ -1,9 +1,11 @@
 # A five-minute walkthrough
 
-For a deployment seeded with `pnpm demo:seed` (see [deployment.md](deployment.md)), or a local run
-with the same documents. The documents are synthetic test datasheets; the values come from a real
-model (Gemini), so they can differ from run to run, and what the verifier decides is shown, not
-assumed. Paste the engineer and approver tokens into **API tokens** first.
+Open the site and press **Explore the live demo**: no sign-up and no token. You work in the demo
+workspace (its own database, seeded with the documents below; see
+[deployment.md](deployment.md)), acting as both engineer and approver. The documents are synthetic
+test datasheets; the values come from a real model (Gemini), so they can differ from run to run,
+and what the verifier decides is shown, not assumed. Every visitor shares the workspace, so
+someone may have reviewed or published before you.
 
 ## 1. The document list (30 s)
 
@@ -67,6 +69,13 @@ What to point out:
 Open the same document in two tabs. Accept a field in one, then edit it in the other: the second
 gets "This field changed on the server", with the server's value and your change kept, to reapply
 or discard. Nothing is overwritten.
+
+## 7. The demo boundary, if asked (30 s)
+
+The visitor session is signed by the server and works only on `/demo/...` routes, which are bound
+to the demo database. The real role tokens are refused there, and the visitor session is refused
+everywhere else; `apps/api/test/integration/http/demo.test.ts` checks both directions, and that a
+visitor publishing leaves the production tables empty.
 
 ## The engineering story behind it
 

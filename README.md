@@ -11,9 +11,11 @@ that it sits under the field's own label, and that it is plausible. Values from 
 and revisions are reconciled by explicit rules, a person reviews them beside the highlighted
 source, and an approver publishes an immutable, audited register version.
 
-**Live demo:** [specledger.vercel.app](https://specledger.vercel.app). Access needs the role tokens, shared on request.
-The demo runs on free tiers (it may take a minute to wake up) and accepts only the synthetic test
-datasheets in [`fixtures/corpus/pdf`](fixtures/corpus/pdf).
+**Live demo:** [specledger.vercel.app](https://specledger.vercel.app). Press **Explore the live
+demo**: no sign-up and no token to paste. Visitors work in a separate demo workspace with its own
+database, seeded with synthetic datasheets and extracted by a real model (Gemini). The demo runs on
+free tiers (it may take a minute to wake up) and accepts only the synthetic test datasheets in
+[`fixtures/corpus/pdf`](fixtures/corpus/pdf).
 
 ## At a glance
 
@@ -106,7 +108,9 @@ Phases 0 to 11 of the plan are in place:
 - Deployment readiness (selected Phase 12 items): one container running the API and the worker
   (`apps/api/src/serve.ts`, `Dockerfile`, built and started in CI), a Render blueprint and Vercel
   configuration with security headers, an upload allowlist for public demos, an upload screen, and
-  `smoke` and `demo:seed` scripts. Metrics, tracing, fault injection, a load check and a Playwright
+  `smoke` and `demo:seed` scripts. A public demo workspace: signed visitor sessions on `/demo`
+  routes bound to a separate database, seeded on start and reset by an approver
+  ([Demo workspace](#demo-workspace)), and a redesigned UI with an overview page. Metrics, tracing, fault injection, a load check and a Playwright
   test (the rest of Phase 12) are not done.
 
 ## Quick start
@@ -198,13 +202,26 @@ pnpm worker
 
 The review UI runs on the Vite dev server, which proxies `/api` to the API (`API_URL`, default
 `http://127.0.0.1:3000`), so the API needs no CORS entry locally. Open http://127.0.0.1:5173 and
-paste the tokens from `.env`:
+choose **API tokens** to paste the tokens from `.env`, or, with `DEMO_DATABASE_URL` set and the
+API started with `pnpm serve`, **Explore the live demo**:
 
 ```sh
 pnpm --filter @specledger/web dev
 ```
 
 Other scripts: `pnpm test`, `pnpm format`, `pnpm format:check`, `pnpm boundaries`.
+
+## Docker: what it is for
+
+The deployed site does not depend on your computer. Render builds the API image from this
+repository's `Dockerfile` on its own servers, the databases are on Neon, and the UI is a static
+build on Vercel; Docker Desktop can be closed.
+
+Locally, Docker is only for development:
+
+- `pnpm db:up` runs the Postgres container the API, the worker and the integration tests use.
+- `docker build .` builds the same image Render runs, if you want to try it (CI builds and starts
+  it on every push).
 
 ## Repository layout
 
@@ -357,6 +374,31 @@ may call it, and the app refuses to start if one does not.
 | `GET /register/versions/:n/export` | both     | `format=csv` or `format=json`                                   |
 | `GET /audit`                       | both     | `entity=field:<id>`, `conflict:<id>` or `register_version:<id>` |
 | `POST /admin/jobs/:id/requeue`     | approver | Move a dead job back to the queue                               |
+| `POST /admin/demo/reset`           | approver | Wipe the demo workspace and seed it again (when configured)     |
+
+### Demo workspace
+
+With `DEMO_DATABASE_URL` set (a database other than `DATABASE_URL`, which the API refuses to
+share), the combined server (`serve.ts`) also serves a public demo:
+
+- `POST /demo/session` (public, 10 per minute per client) returns a signed visitor session:
+  `demo.<id>.<expiry>.<HMAC-SHA256>` with `DEMO_SESSION_SECRET`, valid for
+  `DEMO_SESSION_TTL_MINUTES` (default 120). Nothing is stored per session.
+- Every route above is mounted again under `/demo`, bound to the demo database. A visitor session
+  acts as both roles there and is recorded in the audit log as `demo:<id>`.
+- The two sides do not mix: the role tokens get 401 on `/demo` routes and a visitor session gets
+  401 on every other route, because each set of routes is a separate Fastify scope with its own
+  authenticator. Demo uploads accept only the synthetic corpus, whatever `UPLOAD_ALLOWLIST` says.
+- A second worker processes the demo database. When it is empty at start-up, the server seeds it
+  with seven curated corpus documents through the normal ingestion path, so they are extracted
+  by the configured model like any upload.
+- `POST /admin/demo/reset` (production approver token) stops the demo worker, drops and
+  re-creates the demo schema, migrates it and seeds it again. Only a database opened as
+  `wipeable` can be wiped; the production connection never is.
+
+Tests: `apps/api/test/integration/http/demo.test.ts` (isolation in both directions, forged and
+expired sessions, the corpus-only upload rule, a visitor publishing without touching the
+production tables, reset authorization, no demo routes without a demo database).
 
 Request and response shapes are the Zod schemas in `packages/core/src/api.ts`. Every error is
 `{"error": {"code", "message", "details"?}}` with a stable code; validation errors list the
@@ -511,8 +553,14 @@ before they are sent, and every response is validated before a screen sees it.
   reapplied on the current version or discarded; nothing is overwritten.
 - Accepting a value the verifier could not confirm asks for a reason first. Values a reviewer
   enters (edits, resolutions) must also be plausible for the field, the verifier's range rule.
-- Tokens: the reviewer pastes the engineer and approver tokens; each request sends the token of
-  the role it needs. They are kept in memory and sessionStorage, never in localStorage or the URL.
+- Access: the overview page (`#/`) explains the product and offers two ways in. **Explore the
+  live demo** asks the API for a visitor session and switches the client to the `/demo` routes;
+  the session is renewed shortly before it expires and dropped if the server refuses it. **API
+  tokens** are the operator's engineer and approver tokens; each request sends the token of the
+  role it needs. Either is kept in memory and sessionStorage, never in localStorage or the URL.
+- Design: a small set of Tailwind theme tokens and component classes (`apps/web/src/styles.css`)
+  shared by every screen; responsive down to phone width, where the navigation moves under the
+  header and less important table columns are hidden.
 - The document list polls while a document is queued or running, doubling the delay from 1 s to
   30 s while nothing changes, and stops when everything has settled.
 
@@ -523,8 +571,9 @@ handling, and axe checks on the list, review and publish screens.
 ## Review UI limitations
 
 - axe runs in jsdom, which has no layout, so color contrast is not checked automatically; the
-  palette was checked by eye in a browser only.
-- There is no upload screen; documents are uploaded with `POST /documents` (curl or a script).
+  palette was checked by eye in a browser only. The UI has one light color scheme.
+- Every visitor shares the one demo workspace, so visitors see each other's reviews and
+  published versions until an approver resets it. There are no per-visitor workspaces.
 - The review screen shows the page of the selected field only, and it is plain text: there is no
   rendering of the PDF itself, its tables or its layout.
 - A reviewer holding only one role's token gets a 403 for the other role's actions; the UI does

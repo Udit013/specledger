@@ -12,7 +12,6 @@ CLAUDE.local.md
 **/coverage
 **/.turbo
 *.log
-# Not needed to build or run the API.
+# Not needed to build or run the API. The corpus PDFs and ground truth stay: the demo workspace
+# seeds itself from them.
 evaluation
-fixtures/corpus/pdf
-fixtures/corpus/truth

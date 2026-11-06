@@ -22,6 +22,9 @@ COPY --from=build /app/apps/api ./apps/api
 # Replay recordings (the failover provider) and the corpus manifest (UPLOAD_ALLOWLIST=corpus).
 COPY --from=build /app/fixtures/recordings ./fixtures/recordings
 COPY --from=build /app/fixtures/corpus/manifest.json ./fixtures/corpus/manifest.json
+# The demo workspace's documents: synthetic corpus PDFs, with the metadata their ground truth states.
+COPY --from=build /app/fixtures/corpus/pdf ./fixtures/corpus/pdf
+COPY --from=build /app/fixtures/corpus/truth ./fixtures/corpus/truth
 USER node
 EXPOSE 10000
 CMD ["node", "apps/api/dist/serve.js"]
