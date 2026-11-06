@@ -1,9 +1,14 @@
 import { File as NodeFile } from 'node:buffer';
 
-import { cleanup } from '@testing-library/react';
+import { cleanup, configure } from '@testing-library/react';
 import { afterAll, afterEach, beforeAll } from 'vitest';
 
 import { server } from './fake-api.js';
+
+// How long findBy* and waitFor wait for something to appear. The app first asks who is signed in
+// (GET /auth/me) and then loads the screen; on a slow shared CI runner the first test of a file
+// can take over the 1 s default. It changes how long a test waits, not what it checks.
+configure({ asyncUtilTimeout: 5_000 });
 
 // Tests never touch the network: any request without a handler fails the test.
 beforeAll(async () => {
