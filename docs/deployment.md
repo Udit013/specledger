@@ -10,8 +10,14 @@ The free deployment is three services:
 
 Free tiers have limits that shape the demo:
 
-- The Render service **sleeps after about 15 minutes without requests**. The next request wakes
-  it, which takes about a minute; queued documents are processed once it is awake.
+- The Render service **sleeps after about 15 minutes without requests**, and the next request
+  then waits about a minute. Two things keep visitors from waiting: a scheduled GitHub Actions
+  workflow (`.github/workflows/keep-warm.yml`) calls `/health` every 10 minutes, which keeps the
+  service awake within Render's free monthly hours, and the UI pings `/health` as soon as the page
+  opens. `/health` touches no database, so the Neon compute still pauses when idle (its resume
+  takes about a second). GitHub can start scheduled runs late, so an occasional cold start is
+  still possible; the UI then says the server is waking. To stop the pings, disable that
+  workflow in GitHub's Actions tab.
 - The Render instance has **512 MB of memory**; `INGEST_PARSE_MEMORY_MB=128` keeps PDF parsing
   well inside it.
 - The **Gemini free tier** has per-minute and per-day request limits. A document is one call

@@ -1,9 +1,10 @@
 import { screen, waitFor, within } from '@testing-library/react';
+import { http, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
 
 import { DEMO_STORAGE_KEY } from '../lib/demo.js';
 import { announcements, expectNoAxeViolations, renderApp } from '../../test/render.js';
-import { API, DEMO_TOKEN, fakeApi, PASSWORD, USERS } from '../../test/fake-api.js';
+import { API, DEMO_TOKEN, fakeApi, PASSWORD, server, USERS } from '../../test/fake-api.js';
 
 describe('the overview', () => {
   it('explains SpecLedger and how a document becomes a published register', async () => {
@@ -64,6 +65,36 @@ describe('the demo sandbox', () => {
     await user.click(screen.getByRole('button', { name: 'Leave demo' }));
     expect(window.location.hash).toBe('#/');
     expect(sessionStorage.getItem(DEMO_STORAGE_KEY)).toBeNull();
+  });
+
+  it('wakes the API on load and shows progress while the sandbox is prepared', async () => {
+    const state = fakeApi({ user: null });
+    let release: () => void = () => undefined;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    server.use(
+      http.post(`${API}/demo/session`, async () => {
+        await held;
+        return HttpResponse.json(
+          { token: DEMO_TOKEN, expiresAt: new Date(Date.now() + 3_600_000).toISOString() },
+          { status: 201 },
+        );
+      }),
+    );
+    const { user } = renderApp({ hash: '#/' });
+    await waitFor(() => {
+      expect(state.healthPings).toBe(1);
+    });
+    await user.click(screen.getByRole('button', { name: 'Try it yourself' }));
+    const notice = await screen.findByRole('status', { name: 'Preparing your sandbox' });
+    expect(notice.textContent).toMatch(/Preparing your private sandbox/);
+    expect(
+      screen.getByRole('button', { name: 'Preparing your sandbox…' }).getAttribute('aria-disabled'),
+    ).toBe('true');
+    release();
+    expect(await screen.findByText('Your private demo sandbox.')).toBeTruthy();
+    expect(screen.queryByRole('status', { name: 'Preparing your sandbox' })).toBeNull();
   });
 
   it('labels publishing in the sandbox as simulated', async () => {

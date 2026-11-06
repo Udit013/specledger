@@ -1,0 +1,23 @@
+name: keep the demo API warm
+
+# The API runs on Render's free plan, which puts the service to sleep after about 15 minutes
+# without requests; the next visitor then waits about a minute for it to wake. A request every
+# 10 minutes keeps it awake. It calls /health, which does not touch the database, so the Neon
+# compute can still pause between real requests. One always-on free service fits Render's
+# monthly free hours. Scheduled runs can start late when GitHub is busy.
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  ping:
+    name: ping the API
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - run: >-
+          curl --silent --show-error --fail --max-time 120 --retry 3 --retry-all-errors
+          --retry-delay 10 --output /dev/null https://specledger-api.onrender.com/health

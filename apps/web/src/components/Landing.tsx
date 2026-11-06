@@ -1,6 +1,7 @@
 import type { Mode } from '../context.js';
 import { hrefFor } from '../lib/router.js';
 import { Icon } from './Icons.js';
+import { Spinner } from './Status.js';
 import type { IconName } from './Icons.js';
 
 const REPOSITORY = 'https://github.com/Udit013/specledger';
@@ -120,6 +121,7 @@ export function Landing({
                 }}
                 className="btn btn-primary btn-lg"
               >
+                {starting ? <Spinner className="h-5 w-5" /> : null}
                 {starting ? 'Preparing your sandbox…' : 'Try it yourself'}
                 {starting ? null : <Icon name="arrow" className="h-5 w-5" />}
               </button>
@@ -143,11 +145,6 @@ export function Landing({
             </a>
             .
           </p>
-          {starting ? (
-            <p className="mt-2 text-sm text-slate-600">
-              The free server sleeps when idle, so the first request can take up to a minute.
-            </p>
-          ) : null}
           {startError === null ? null : (
             <div role="alert" className="notice notice-error mx-auto mt-4 max-w-xl text-left">
               {startError}

@@ -13,7 +13,7 @@ import { PublishDialog } from './components/PublishDialog.js';
 import { RegisterList, RegisterVersion } from './components/Register.js';
 import { ReviewScreen } from './components/ReviewScreen.js';
 import { SignIn } from './components/SignIn.js';
-import { Loading } from './components/Status.js';
+import { Loading, Spinner } from './components/Status.js';
 import { UploadForm } from './components/UploadForm.js';
 import { UsersAdmin } from './components/UsersAdmin.js';
 import { ServicesContext } from './context.js';
@@ -103,6 +103,13 @@ export function App({ baseUrl, storage, queryClient, poll = NO_POLL_OPTIONS, fet
     () => createApiClient({ baseUrl, onUnauthenticated: signedOut, ...send }),
     [baseUrl, send, signedOut],
   );
+
+  // Wake the API as soon as the page opens: on the free plan it sleeps when idle, and waking it
+  // takes up to a minute, so by the time a visitor chooses what to do it is already starting.
+  // /health touches no database. The answer does not matter.
+  useEffect(() => {
+    void (fetch ?? globalThis.fetch)(`${baseUrl}/health`).catch(() => undefined);
+  }, [baseUrl, fetch]);
 
   // Who is signed in, if anyone, when the app opens.
   useEffect(() => {
@@ -345,6 +352,7 @@ export function App({ baseUrl, storage, queryClient, poll = NO_POLL_OPTIONS, fet
                 }}
                 className="btn btn-primary self-start sm:self-auto"
               >
+                {starting ? <Spinner /> : null}
                 {starting ? 'Preparing your sandbox…' : 'Try it yourself'}
               </button>
             </div>
@@ -391,12 +399,44 @@ export function App({ baseUrl, storage, queryClient, poll = NO_POLL_OPTIONS, fet
               }}
             />
           ) : null}
+          {starting ? <StartingNotice /> : null}
           <div role="status" aria-live="polite" aria-label="Announcements" className="sr-only">
             {message}
           </div>
         </main>
       </ServicesContext.Provider>
     </QueryClientProvider>
+  );
+}
+
+// Shown while a demo sandbox is being prepared. Normally that takes about a second; when the
+// free server was asleep it takes up to a minute, so after a few seconds the card says why.
+function StartingNotice() {
+  const [slow, setSlow] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSlow(true);
+    }, 4_000);
+    return () => {
+      clearTimeout(timer);
+    };
+  }, []);
+  return (
+    <div
+      role="status"
+      aria-label="Preparing your sandbox"
+      className="fixed inset-x-4 bottom-4 z-30 mx-auto flex max-w-md items-start gap-3 rounded-2xl border border-slate-200 bg-white p-4 text-sm shadow-xl sm:bottom-6"
+    >
+      <Spinner className="mt-0.5 h-5 w-5 shrink-0 text-brand-700" />
+      <div>
+        <p className="font-semibold">Preparing your private sandbox…</p>
+        <p className="mt-0.5 text-slate-600">
+          {slow
+            ? 'The free server was asleep and is waking up. This can take up to a minute, once.'
+            : 'Copying the showcase into a workspace of your own.'}
+        </p>
+      </div>
+    </div>
   );
 }
 

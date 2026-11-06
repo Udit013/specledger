@@ -299,7 +299,8 @@ Known gaps at this stage:
 - **Authentication**: email and password accounts only (no single sign-on, multi-factor
   authentication or self-service password reset); details under
   [HTTP API limitations](#http-api-limitations).
-- **Deployment**: free tiers. The API sleeps when idle (about a minute to wake), memory is 512 MB,
+- **Deployment**: free tiers. The API would sleep when idle (about a minute to wake); a scheduled
+  ping every 10 minutes keeps it awake, but GitHub can run it late. Memory is 512 MB,
   and the Gemini free tier has daily limits. The public demo needs `DEMO_DATABASE_URL`, and nobody
   can sign in until the first admin is created ([docs/deployment.md](docs/deployment.md)).
 - **Scope**: two equipment classes (centrifugal pumps, electric motors) and text-layer PDFs only:

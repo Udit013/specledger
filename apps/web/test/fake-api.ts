@@ -174,6 +174,7 @@ export interface FakeState {
   uploads: { filename: string; fields: Record<string, string> }[];
   user: UserView | null;
   users: UserView[];
+  healthPings: number;
 }
 
 export const USERS: readonly UserView[] = [
@@ -202,6 +203,7 @@ export function fakeApi(options: FakeOptions = {}): FakeState {
         ? null
         : { ...USERS[0], roles: [...(options.user ?? ANY)] },
     users: USERS.map((u) => ({ ...u, roles: [...u.roles] })),
+    healthPings: 0,
   };
   const page = options.page ?? PAGE_1;
   const record = (entity: string, event: Omit<AuditEvent, 'id' | 'createdAt'>) => {
@@ -268,6 +270,11 @@ export function fakeApi(options: FakeOptions = {}): FakeState {
               status === 404 ? 'NOT_FOUND' : status === 503 ? 'DEMO_NOT_READY' : 'RATE_LIMITED',
               'Refused.',
             );
+      }),
+      // The app's wake-up ping on load. Counted separately, so request logs stay as they were.
+      http.get(`${API}/health`, () => {
+        state.healthPings += 1;
+        return HttpResponse.json({ status: 'ok' });
       }),
       http.get(`${API}/auth/me`, ({ request }) => {
         seen(request);
