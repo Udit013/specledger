@@ -9,7 +9,12 @@ describe('the overview', () => {
   it('explains SpecLedger and how a document becomes a published register', async () => {
     fakeApi({ user: null });
     const { container } = renderApp({ hash: '#/' });
-    expect(screen.getByRole('heading', { level: 2, name: /register you can trust/ })).toBeTruthy();
+    expect(
+      screen.getByRole('heading', { level: 2, name: /equipment data you can trust/ }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole('heading', { name: /lost between documents and systems/ }),
+    ).toBeTruthy();
     const steps = within(
       screen.getByRole('heading', { name: /six steps/ }).closest('section') as HTMLElement,
     ).getAllByRole('heading', { level: 3 });
@@ -19,7 +24,7 @@ describe('the overview', () => {
       'Verify',
       'Reconcile',
       'Review',
-      'Publish',
+      'Publish and hand off',
     ]);
     expect(screen.getByRole('button', { name: 'Try it yourself' })).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Browse the showcase' })).toBeTruthy();

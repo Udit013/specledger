@@ -4,12 +4,21 @@ Every specification, with its proof.
 
 [![ci](https://github.com/Udit013/specledger/actions/workflows/ci.yml/badge.svg)](https://github.com/Udit013/specledger/actions/workflows/ci.yml)
 
-SpecLedger turns vendor equipment datasheets into a verified equipment register. A language model
-proposes each value, but nothing it says is trusted: every value must carry a verbatim quote, and
+**The problem.** On a capital project (a process plant, a refinery, a mine), every pump, motor
+and vessel arrives with vendor documents: datasheets, brochures, revisions. The numbers in them
+feed design, procurement, construction and later maintenance, and today they are mostly re-keyed
+by hand. Values get copied wrongly, a revised datasheet changes a rating that lives on downstream,
+and months later nobody can say which page a number came from or who accepted it.
+
+**What SpecLedger does.** It turns those vendor documents into a verified equipment register that
+downstream teams and tools can rely on. A language model proposes each value, but nothing it says
+is trusted: every value must carry a verbatim quote, and
 deterministic code checks that the quote is on the cited page, that the number and unit are in it,
 that it sits under the field's own label, and that it is plausible. Values from several documents
 and revisions are reconciled by explicit rules, a person reviews them beside the highlighted
-source, and an approver publishes an immutable, audited register version.
+source, and an approver publishes an immutable, audited register version: downloadable as CSV or
+JSON, and shaped as asset-system upserts for a tool such as Autodesk Construction Cloud (an
+ACC-style contract tested against a mock; no real Autodesk system is connected).
 
 **Live demo:** [specledger.vercel.app](https://specledger.vercel.app). No account needed:
 **Browse the showcase** to read synthetic datasheets extracted by a real model (Gemini), or press
@@ -88,15 +97,16 @@ Phases 0 to 11 of the plan are in place:
   extracts, verifies, reconciles and persists a document's fields, conflicts and audit events in
   one transaction. An upload enqueues its job in the same transaction as the document.
 
-- HTTP API (Phase 8): a Fastify service with bearer-token roles (engineer, approver) declared on
-  every route, uploads, field review with optimistic concurrency, structured conflict
+- HTTP API (Phase 8): a Fastify service with roles declared on every route (since replaced by
+  user accounts, see [Accounts and roles](#accounts-and-roles)), uploads, field review with optimistic concurrency, structured conflict
   resolution that reconciliation (in the worker and at publish) takes as a human decision,
   register publishing with blockers and consecutive version numbers, CSV and JSON export, the
   audit log, job requeue, and health and readiness probes. See [HTTP API](#http-api).
 
 - Review UI (Phase 9): a React app in `apps/web` with the document list, a review screen showing
   each value beside its source page with the quote highlighted, keyboard review, the conflicts
-  panel with evidence and the rules' suggestion, the publish dialog and the audit history. See
+  panel with evidence and the rules' suggestion, the publish dialog and the audit history; later
+  the equipment register screen with downloads and an asset-system handoff preview. See
   [Review UI](#review-ui).
 - Exporters and the ACC-style adapter (Phase 10): deterministic CSV and JSON exports of a
   published version (the JSON carries a schema version and a content hash), and an asset-system
@@ -379,6 +389,9 @@ scripts) holding one of the route's roles; the audit log records the user (`user
 | `GET /conflicts`                                  | any                | Conflicts with their candidates (`status=open\|resolved`)              |
 | `POST /conflicts/:id/resolve`                     | reviewer           | Choose a candidate or enter a value, with a reason                     |
 | `POST /register/publish`                          | approver           | Publish the next register version, or 409 with blockers                |
+| `GET /register/versions`                          | any                | Published versions, newest first, with item counts                     |
+| `GET /register/versions/:n`                       | any                | One published version: its equipment and values                        |
+| `GET /register/versions/:n/handoff`               | any                | The asset upserts a sync would send (computed, never sent)             |
 | `GET /register/versions/:n/export`                | any                | `format=csv` or `format=json`                                          |
 | `GET /audit`                                      | any                | `entity=field:<id>`, `conflict:<id>` or `register_version:<id>`        |
 | `POST /admin/jobs/:id/requeue`                    | admin              | Move a dead job back to the queue                                      |
@@ -593,6 +606,10 @@ before they are sent, and every response is validated before a screen sees it.
   **Sign in** opens the workspace with the user's session cookie; navigation and actions follow
   the user's roles (upload for engineers, accept and reject for reviewers, publish for approvers,
   **Users** for admins), and the server enforces the same rules.
+- Register: the published equipment register, version by version, with each piece of
+  equipment's values, CSV and JSON downloads (fetched with the session's credentials), and an
+  asset-system handoff preview: the ACC-style upserts and idempotency keys a sync would send,
+  computed by the same functions as the tested client and labelled as not sent and not connected.
 - Design: a small set of Tailwind theme tokens and component classes (`apps/web/src/styles.css`)
   shared by every screen; responsive down to phone width, where the navigation moves under the
   header and less important table columns are hidden.

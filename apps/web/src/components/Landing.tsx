@@ -33,8 +33,8 @@ const STEPS: readonly { icon: IconName; title: string; text: string }[] = [
   },
   {
     icon: 'publish',
-    title: 'Publish',
-    text: 'An approver publishes an immutable, numbered register version, exported as CSV or JSON, with every change in the audit log.',
+    title: 'Publish and hand off',
+    text: 'An approver publishes an immutable, numbered equipment register: downloadable as CSV or JSON and shaped for an asset system, with every change in the audit log.',
   },
 ];
 
@@ -52,8 +52,29 @@ const TRY: readonly { title: string; text: string }[] = [
     text: 'Reject the datasheet’s rated head for P-106: the brochure disagrees, so a conflict opens for a person to decide instead of a silent fallback.',
   },
   {
-    title: 'Try to publish',
-    text: 'Publishing is refused, with the exact list of blockers, until every value is reviewed and every conflict resolved.',
+    title: 'Publish, then follow the handoff',
+    text: 'Publishing is refused, with the exact list of blockers, until every value is reviewed and every conflict resolved. Then open the version under Register: download it, and preview the requests an asset-system sync would send.',
+  },
+];
+
+const PROBLEMS: readonly { title: string; text: string; answer: string }[] = [
+  {
+    title: 'Re-keyed by hand',
+    text: 'Values are copied from PDFs into spreadsheets and asset systems, one field at a time, by whoever has the time.',
+    answer:
+      'a model extracts every field, and a person only confirms or corrects it beside the source.',
+  },
+  {
+    title: 'Superseded without notice',
+    text: 'A revised datasheet changes a rating; a brochure says something else. The old number lives on downstream.',
+    answer:
+      'revisions and sources are ranked by explicit rules, and real disagreements wait for a decision.',
+  },
+  {
+    title: 'Impossible to trace',
+    text: 'Months later, nobody can say which page a number came from, or who accepted it and why.',
+    answer:
+      'every value keeps its quote and page, every decision its author and reason, and published versions never change.',
   },
 ];
 
@@ -72,17 +93,17 @@ export function Landing({
     <div className="space-y-20 pb-8">
       <section aria-labelledby="home-heading" className="pt-6 sm:pt-12">
         <div className="mx-auto max-w-3xl text-center">
-          <p className="eyebrow">Equipment specifications, with the evidence attached</p>
+          <p className="eyebrow">Equipment data for capital projects, with the evidence attached</p>
           <h2
             id="home-heading"
             className="mt-3 text-4xl font-bold tracking-tight text-balance text-ink sm:text-5xl"
           >
-            Turn vendor documents into a register you can trust
+            Turn vendor datasheets into equipment data you can trust
           </h2>
           <p className="mx-auto mt-5 max-w-2xl text-lg text-pretty text-slate-600">
-            SpecLedger extracts equipment specifications from datasheets with an AI model, refuses
-            any value it cannot find on the page, surfaces disagreements between documents, and
-            keeps a person in charge of what gets published.
+            SpecLedger reads vendor PDFs with an AI model, refuses any value it cannot find on the
+            page, flags documents that disagree, and lets engineers publish a reviewed, versioned
+            equipment register that downstream teams and tools can rely on.
           </p>
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
             {mode === 'demo' ? (
@@ -133,6 +154,32 @@ export function Landing({
             </div>
           )}
         </div>
+      </section>
+
+      <section aria-labelledby="problem-heading">
+        <div className="mx-auto max-w-2xl text-center">
+          <p className="eyebrow">The problem</p>
+          <h2 id="problem-heading" className="mt-2 text-3xl font-semibold tracking-tight">
+            Equipment data is lost between documents and systems
+          </h2>
+          <p className="mt-3 text-sm leading-relaxed text-slate-600">
+            On a capital project such as a process plant or a mine, every pump, motor and vessel
+            arrives with vendor documents. The numbers in them feed design, procurement,
+            construction and, later, maintenance.
+          </p>
+        </div>
+        <ul className="mt-10 grid gap-4 md:grid-cols-3">
+          {PROBLEMS.map((problem) => (
+            <li key={problem.title} className="card p-6">
+              <h3 className="font-semibold">{problem.title}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-slate-600">{problem.text}</p>
+              <p className="mt-3 text-sm leading-relaxed">
+                <span className="font-semibold text-brand-800">SpecLedger: </span>
+                {problem.answer}
+              </p>
+            </li>
+          ))}
+        </ul>
       </section>
 
       <section aria-labelledby="how-heading">

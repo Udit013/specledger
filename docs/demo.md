@@ -54,15 +54,20 @@ What to point out:
   Choose a value, give a reason, and resolve. The decision records exactly which candidates you
   saw, so a later revision of the datasheet reopens it for review instead of overwriting it.
 
-## 5. Publish, export and audit (1 min)
+## 5. Publish and hand off (1 min 30 s)
 
 - Click **Publish register** (in a sandbox it says _simulated_: it runs the real checks and
-  creates a demo version only you can see). Until every field is reviewed and every conflict resolved, the
-  server refuses and lists exactly what blocks it. Once clear, it creates an immutable, numbered
-  version (concurrent publishes get consecutive numbers).
-- Export with `GET /register/versions/1/export?format=csv` or `format=json`. The CSV neutralises
-  spreadsheet formulas; the JSON carries a SHA-256 content hash anyone can check.
-- On any field or conflict, **History** shows every change: who (by role), what, when, why.
+  creates a demo version only you can see). Until every field is reviewed and every conflict
+  resolved, the server refuses and lists exactly what blocks it. Once clear, it creates an
+  immutable, numbered version (concurrent publishes get consecutive numbers).
+- Follow **Open it in the register**. This is the output downstream teams consume: each piece of
+  equipment with its confirmed values. **Download CSV** or **JSON**: the CSV neutralises
+  spreadsheet formulas, and the JSON carries a SHA-256 content hash anyone can check.
+- Under **Asset-system handoff preview**, expand a request: the ACC-style upsert a sync would
+  send, with its idempotency key, so a retried sync never writes a second revision. Nothing is
+  sent: no asset system is connected, and the contract is tested against a mock, not the real
+  Autodesk API ([adapter-contract.md](adapter-contract.md)).
+- On any field or conflict, **History** shows every change: who, what, when and why.
 
 ## 6. Concurrency, if there is time (30 s)
 

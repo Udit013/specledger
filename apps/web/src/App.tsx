@@ -255,7 +255,7 @@ export function App({ baseUrl, storage, queryClient, poll = NO_POLL_OPTIONS, fet
                       <a
                         href={hrefFor(item.route)}
                         aria-current={active ? 'page' : undefined}
-                        className={`block rounded-lg px-3 py-1.5 text-sm font-medium whitespace-nowrap focus-visible:outline-2 focus-visible:outline-brand-600 ${
+                        className={`block rounded-lg px-2.5 py-1.5 text-sm font-medium whitespace-nowrap sm:px-3 focus-visible:outline-2 focus-visible:outline-brand-600 ${
                           active
                             ? 'bg-brand-50 text-brand-800'
                             : 'text-slate-700 hover:bg-slate-100 hover:text-ink'
