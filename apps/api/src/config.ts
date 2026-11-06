@@ -74,6 +74,12 @@ const envSchema = z.object({
   REQUEST_TIMEOUT_MS: z.coerce.number().int().min(1_000).max(600_000).default(60_000),
   JSON_BODY_LIMIT_BYTES: z.coerce.number().int().min(1_024).max(10_485_760).default(1_048_576),
   UPLOAD_ALLOWLIST: z.enum(['none', 'corpus']).default('none'),
+  DEMO_DATABASE_URL: z.url({ protocol: /^postgres(ql)?$/ }).optional(),
+  DEMO_SESSION_SECRET: z
+    .string()
+    .regex(/^[A-Za-z0-9._~+/=-]{32,256}$/)
+    .optional(),
+  DEMO_SESSION_TTL_MINUTES: z.coerce.number().int().min(5).max(1_440).default(120),
 });
 
 export type ConfigKey = keyof typeof envSchema.shape;
@@ -106,6 +112,9 @@ const EXPECTED: Record<ConfigKey, string> = {
   REQUEST_TIMEOUT_MS: 'an integer between 1000 and 600000',
   JSON_BODY_LIMIT_BYTES: 'an integer between 1024 and 10485760',
   UPLOAD_ALLOWLIST: 'none, or corpus to accept only the synthetic corpus PDFs',
+  DEMO_DATABASE_URL: 'a postgres:// URL of a database other than DATABASE_URL, for the demo',
+  DEMO_SESSION_SECRET: 'a secret of 32 to 256 URL-safe characters (required with the demo)',
+  DEMO_SESSION_TTL_MINUTES: 'an integer between 5 and 1440',
 };
 
 export interface Config {
@@ -136,6 +145,14 @@ export interface Config {
   // 'corpus' accepts only uploads whose sha256 is in fixtures/corpus/manifest.json: a public demo
   // then never stores or sends to the model anything but the synthetic test documents.
   readonly uploadAllowlist: 'none' | 'corpus';
+  // The public demo workspace, or null when DEMO_DATABASE_URL is unset (no /demo routes).
+  readonly demo: {
+    // A different database from databaseUrl: visitors never touch production data.
+    readonly databaseUrl: string;
+    // Signs visitor sessions; never logged.
+    readonly sessionSecret: string;
+    readonly sessionTtlMs: number;
+  } | null;
 }
 
 export interface ConfigIssue {
@@ -185,6 +202,28 @@ export function parseConfig(env: Readonly<Record<string, string | undefined>>): 
       ],
     };
   }
+  if (parsed.success && parsed.data.DEMO_DATABASE_URL !== undefined) {
+    if (sameDatabase(parsed.data.DEMO_DATABASE_URL, parsed.data.DATABASE_URL)) {
+      return {
+        ok: false,
+        issues: [
+          { key: 'DEMO_DATABASE_URL', problem: 'invalid', expected: EXPECTED.DEMO_DATABASE_URL },
+        ],
+      };
+    }
+    if (parsed.data.DEMO_SESSION_SECRET === undefined) {
+      return {
+        ok: false,
+        issues: [
+          {
+            key: 'DEMO_SESSION_SECRET',
+            problem: 'missing',
+            expected: EXPECTED.DEMO_SESSION_SECRET,
+          },
+        ],
+      };
+    }
+  }
   if (parsed.success) {
     const values = parsed.data;
     return {
@@ -219,6 +258,14 @@ export function parseConfig(env: Readonly<Record<string, string | undefined>>): 
           bodyLimitBytes: values.JSON_BODY_LIMIT_BYTES,
         }),
         uploadAllowlist: values.UPLOAD_ALLOWLIST,
+        demo:
+          values.DEMO_DATABASE_URL === undefined || values.DEMO_SESSION_SECRET === undefined
+            ? null
+            : Object.freeze({
+                databaseUrl: values.DEMO_DATABASE_URL,
+                sessionSecret: values.DEMO_SESSION_SECRET,
+                sessionTtlMs: values.DEMO_SESSION_TTL_MINUTES * 60_000,
+              }),
       }),
     };
   }
@@ -230,6 +277,17 @@ export function parseConfig(env: Readonly<Record<string, string | undefined>>): 
     expected: EXPECTED[key],
   }));
   return { ok: false, issues };
+}
+
+// Whether two connection URLs name the same database on the same server, whatever their
+// credentials or options: the demo must never share the production database.
+function sameDatabase(a: string, b: string): boolean {
+  const key = (url: string) => {
+    const parsed = new URL(url);
+    const port = parsed.port === '' ? '5432' : parsed.port;
+    return `${parsed.hostname.toLowerCase()}:${port}${decodeURIComponent(parsed.pathname)}`;
+  };
+  return key(a) === key(b);
 }
 
 export function formatConfigIssues(issues: readonly ConfigIssue[]): string {

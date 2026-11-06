@@ -14,7 +14,8 @@ export interface TestDatabase {
   ): Promise<pg.QueryResult<Record<string, unknown>>>;
 }
 
-export function withTestDatabase(): TestDatabase {
+// `wipeable` opens it as the demo workspace's database is opened, so Database.wipe works on it.
+export function withTestDatabase(options: { readonly wipeable?: boolean } = {}): TestDatabase {
   const schema = `test_${randomUUID().replaceAll('-', '')}`;
   let admin: pg.Pool | undefined;
   let database: Database | undefined;
@@ -26,7 +27,12 @@ export function withTestDatabase(): TestDatabase {
     }
     admin = new pg.Pool({ connectionString, max: 2, options: `-c search_path="${schema}"` });
     await admin.query(`create schema "${schema}"`);
-    database = openDatabase({ connectionString, schema, maxConnections: 8 });
+    database = openDatabase({
+      connectionString,
+      schema,
+      maxConnections: 8,
+      wipeable: options.wipeable === true,
+    });
     await database.migrate();
   });
 

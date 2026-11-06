@@ -9,12 +9,13 @@ import Fastify from 'fastify';
 import type { FastifyError, FastifyInstance } from 'fastify';
 
 import { registerAuth } from './auth.js';
+import { registerDemoAdminRoutes, registerDemoRoutes } from './demo-routes.js';
 import type { RouteAuth } from './auth.js';
 import type { AppDeps } from './deps.js';
 import { ApiError } from './errors.js';
 import { registerRoutes } from './routes.js';
 
-export type { AppDeps, HttpOptions } from './deps.js';
+export type { AppDeps, DemoDeps, HttpOptions } from './deps.js';
 
 export interface RouteInfo {
   readonly method: string;
@@ -158,7 +159,23 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       headerPairs: 50,
     },
   });
-  registerAuth(app, deps.tokens);
-  registerRoutes(app, deps);
+  // Each set of routes lives in a scope of its own, with its own authenticator: the production
+  // routes accept only the role tokens, the demo routes only demo visitor sessions.
+  await app.register((scope, _options, done) => {
+    registerAuth(scope, deps.tokens);
+    registerRoutes(scope, deps);
+    if (deps.demo != null) registerDemoAdminRoutes(scope, deps.demo);
+    done();
+  });
+  const { demo } = deps;
+  if (demo != null) {
+    await app.register(
+      (scope, _options, done) => {
+        registerDemoRoutes(scope, deps, demo);
+        done();
+      },
+      { prefix: '/demo' },
+    );
+  }
   return app;
 }

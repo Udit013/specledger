@@ -53,6 +53,24 @@ export function connect(options: ConnectionOptions): Connection {
   return { pool, db: drizzle(pool, { schema }), schema: schemaName };
 }
 
+// Drops the connection's schema with everything in it and creates it empty. DROP ... CASCADE is
+// not a TRUNCATE or DELETE, so the immutability triggers do not apply: this is for a disposable
+// schema (the demo workspace, tests) and is only reachable through a wipeable Database.
+export async function wipeSchema(connection: Connection): Promise<void> {
+  const client = await connection.pool.connect();
+  try {
+    await client.query('select pg_advisory_lock($1)', [MIGRATION_LOCK_KEY]);
+    try {
+      await client.query(`drop schema if exists "${connection.schema}" cascade`);
+      await client.query(`create schema "${connection.schema}"`);
+    } finally {
+      await client.query('select pg_advisory_unlock($1)', [MIGRATION_LOCK_KEY]);
+    }
+  } finally {
+    client.release();
+  }
+}
+
 // Applies pending migrations into the connection's schema. Already-applied migrations are skipped,
 // so running it again is a no-op. A session-level advisory lock serializes concurrent runners
 // (several app instances starting at once); the migrator itself applies everything in one

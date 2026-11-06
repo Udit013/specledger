@@ -1,6 +1,8 @@
 // The HTTP API process. Start with `pnpm --filter @specledger/api start` (after a build). It
 // refuses to start without both role tokens, applies migrations, and on SIGTERM or SIGINT stops
-// accepting connections, lets in-flight requests finish, then closes the database pool.
+// accepting connections, lets in-flight requests finish, then closes the database pool. The demo
+// workspace (DEMO_DATABASE_URL) is served only by the combined process, serve.ts, which runs its
+// worker too.
 import { openDatabase } from '@specledger/db';
 
 import { formatConfigIssues, parseConfig } from './config.js';

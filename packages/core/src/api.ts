@@ -302,3 +302,15 @@ export const auditListSchema = z.strictObject({ events: z.array(auditEventSchema
 export const requeueResponseSchema = z.strictObject({ jobId: uuid, status: z.literal('queued') });
 export const healthSchema = z.strictObject({ status: z.literal('ok') });
 export const readySchema = z.strictObject({ status: z.literal('ready') });
+
+// ---- demo workspace ---------------------------------------------------------------------------
+
+// POST /demo/session: a signed visitor session for the /demo routes, valid until expiresAt.
+export const demoSessionSchema = z.strictObject({
+  token: z
+    .string()
+    .regex(/^demo\.[A-Za-z0-9._-]+$/)
+    .max(200),
+  expiresAt: isoTime,
+});
+export type DemoSessionBody = z.infer<typeof demoSessionSchema>;

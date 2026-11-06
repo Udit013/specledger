@@ -2,6 +2,7 @@ import type { Database } from '@specledger/db';
 import type { IngestLimits } from '@specledger/ingest';
 import type { FastifyBaseLogger } from 'fastify';
 
+import type { DemoSessions } from '../demo/session.js';
 import type { ApiTokens } from './auth.js';
 
 export interface HttpOptions {
@@ -28,4 +29,17 @@ export interface AppDeps {
   // When set, only uploads whose sha256 is in the set are accepted (UPLOAD_ALLOWLIST=corpus): a
   // public demo then never stores, queues or sends to the model anything but the synthetic corpus.
   readonly uploadAllowlist?: ReadonlySet<string> | null;
+  // The demo workspace, when configured (DEMO_DATABASE_URL): its own database and visitor
+  // sessions, mounted under /demo. Absent, there are no /demo routes at all.
+  readonly demo?: DemoDeps | null;
+}
+
+export interface DemoDeps {
+  // Never the production database.
+  readonly database: Database;
+  readonly sessions: DemoSessions;
+  // Always enforced in the demo, whatever uploadAllowlist above says.
+  readonly uploadAllowlist: ReadonlySet<string>;
+  // Wipes the demo database and seeds its curated documents again; resolves to how many it queued.
+  reset(): Promise<number>;
 }

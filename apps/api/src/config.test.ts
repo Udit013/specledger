@@ -61,6 +61,7 @@ describe('parseConfig', () => {
         },
         http: HTTP_DEFAULTS,
         uploadAllowlist: 'none',
+        demo: null,
       },
     });
   });
@@ -83,6 +84,7 @@ describe('parseConfig', () => {
         },
         http: HTTP_DEFAULTS,
         uploadAllowlist: 'none',
+        demo: null,
       },
     });
   });
@@ -139,6 +141,7 @@ describe('parseConfig', () => {
     if (result.ok)
       expect(Object.keys(result.config).sort()).toEqual([
         'databaseUrl',
+        'demo',
         'host',
         'http',
         'ingest',
@@ -299,6 +302,66 @@ describe('upload allowlist configuration', () => {
         i.problem,
       ]),
     ).toEqual([['UPLOAD_ALLOWLIST', 'invalid']]);
+  });
+});
+
+describe('demo workspace configuration', () => {
+  const DEMO_URL = 'postgres://demo:pw@db.internal:5432/specledger_demo';
+  const SECRET = 's'.repeat(48);
+
+  it('has no demo without DEMO_DATABASE_URL', () => {
+    const result = parseConfig({ ...VALID_ENV, DEMO_SESSION_SECRET: SECRET });
+    expect(result.ok && result.config.demo).toBeNull();
+  });
+
+  it('reads the demo database, secret and session lifetime', () => {
+    const result = parseConfig({
+      ...VALID_ENV,
+      DEMO_DATABASE_URL: DEMO_URL,
+      DEMO_SESSION_SECRET: SECRET,
+      DEMO_SESSION_TTL_MINUTES: '30',
+    });
+    expect(result.ok && result.config.demo).toEqual({
+      databaseUrl: DEMO_URL,
+      sessionSecret: SECRET,
+      sessionTtlMs: 30 * 60_000,
+    });
+    const defaults = parseConfig({
+      ...VALID_ENV,
+      DEMO_DATABASE_URL: DEMO_URL,
+      DEMO_SESSION_SECRET: SECRET,
+    });
+    expect(defaults.ok && defaults.config.demo?.sessionTtlMs).toBe(120 * 60_000);
+  });
+
+  it('requires a session secret with the demo, reporting it by name only', () => {
+    expect(expectIssues(parseConfig({ ...VALID_ENV, DEMO_DATABASE_URL: DEMO_URL }))).toEqual([
+      expect.objectContaining({ key: 'DEMO_SESSION_SECRET', problem: 'missing' }),
+    ]);
+    const short = expectIssues(
+      parseConfig({ ...VALID_ENV, DEMO_DATABASE_URL: DEMO_URL, DEMO_SESSION_SECRET: 'short' }),
+    );
+    expect(short.map((issue) => issue.key)).toEqual(['DEMO_SESSION_SECRET']);
+    expect(formatConfigIssues(short)).not.toContain('short');
+  });
+
+  it.each([
+    ['the same URL', 'postgres://app:pw@db.internal:5432/specledger'],
+    ['other credentials', 'postgres://demo:other@DB.internal/specledger?sslmode=require'],
+  ])('refuses the production database as the demo database (%s)', (_case, url) => {
+    expect(
+      expectIssues(
+        parseConfig({ ...VALID_ENV, DEMO_DATABASE_URL: url, DEMO_SESSION_SECRET: SECRET }),
+      ),
+    ).toEqual([expect.objectContaining({ key: 'DEMO_DATABASE_URL', problem: 'invalid' })]);
+  });
+
+  it.each(['4', '1441', 'two hours'])('refuses a session lifetime of %j', (ttl) => {
+    expect(
+      expectIssues(parseConfig({ ...VALID_ENV, DEMO_SESSION_TTL_MINUTES: ttl })).map(
+        (issue) => issue.key,
+      ),
+    ).toEqual(['DEMO_SESSION_TTL_MINUTES']);
   });
 });
 
