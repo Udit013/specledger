@@ -1,11 +1,10 @@
 # A five-minute walkthrough
 
-Open the site and press **Explore the live demo**: no sign-up and no token. You work in the demo
-workspace (its own database, seeded with the documents below; see
-[deployment.md](deployment.md)), acting as both engineer and approver. The documents are synthetic
-test datasheets; the values come from a real model (Gemini), so they can differ from run to run,
-and what the verifier decides is shown, not assumed. Every visitor shares the workspace, so
-someone may have reviewed or published before you.
+Open the site and press **Try it yourself**: no account and no token. You get a private sandbox,
+a copy of the public showcase that only you can see, deleted when your session ends; you act as
+engineer, reviewer and approver there. (To only look, **Browse the showcase** is read-only.) The
+documents are synthetic test datasheets; the values come from a real model (Gemini), extracted
+once for the showcase, so what the verifier decided is shown, not assumed.
 
 ## 1. The document list (30 s)
 
@@ -57,7 +56,8 @@ What to point out:
 
 ## 5. Publish, export and audit (1 min)
 
-- Click **Publish register**. Until every field is reviewed and every conflict resolved, the
+- Click **Publish register** (in a sandbox it says _simulated_: it runs the real checks and
+  creates a demo version only you can see). Until every field is reviewed and every conflict resolved, the
   server refuses and lists exactly what blocks it. Once clear, it creates an immutable, numbered
   version (concurrent publishes get consecutive numbers).
 - Export with `GET /register/versions/1/export?format=csv` or `format=json`. The CSV neutralises
@@ -70,12 +70,16 @@ Open the same document in two tabs. Accept a field in one, then edit it in the o
 gets "This field changed on the server", with the server's value and your change kept, to reapply
 or discard. Nothing is overwritten.
 
-## 7. The demo boundary, if asked (30 s)
+## 7. The boundaries, if asked (30 s)
 
-The visitor session is signed by the server and works only on `/demo/...` routes, which are bound
-to the demo database. The real role tokens are refused there, and the visitor session is refused
-everywhere else; `apps/api/test/integration/http/demo.test.ts` checks both directions, and that a
-visitor publishing leaves the production tables empty.
+- The visitor session is signed by the server and works only on `/demo/...` routes, against the
+  visitor's own sandbox schema. Workspace sessions are refused there, and the visitor session is
+  refused everywhere else. Sandboxes have no upload, requeue or admin routes, so a visitor cannot
+  cause a model call.
+- The real workspace needs an account: **Sign in**, and what you can do follows your roles
+  (engineer, reviewer, approver, admin). The session is an HttpOnly cookie no script can read.
+- `apps/api/test/integration/http/demo.test.ts` checks that one visitor's publish leaves another
+  visitor, the showcase and the workspace untouched.
 
 ## The engineering story behind it
 

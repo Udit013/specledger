@@ -11,11 +11,12 @@ that it sits under the field's own label, and that it is plausible. Values from 
 and revisions are reconciled by explicit rules, a person reviews them beside the highlighted
 source, and an approver publishes an immutable, audited register version.
 
-**Live demo:** [specledger.vercel.app](https://specledger.vercel.app). Press **Explore the live
-demo**: no sign-up and no token to paste. Visitors work in a separate demo workspace with its own
-database, seeded with synthetic datasheets and extracted by a real model (Gemini). The demo runs on
-free tiers (it may take a minute to wake up) and accepts only the synthetic test datasheets in
-[`fixtures/corpus/pdf`](fixtures/corpus/pdf).
+**Live demo:** [specledger.vercel.app](https://specledger.vercel.app). No account needed:
+**Browse the showcase** to read synthetic datasheets extracted by a real model (Gemini), or press
+**Try it yourself** for a private sandbox where you review, resolve conflicts and publish
+(simulated); nobody else sees it, and it is deleted when the session ends. Company workspaces
+sign in with their own accounts. The demo runs on free tiers (it may take a minute to wake up)
+and works only with the synthetic test datasheets in [`fixtures/corpus/pdf`](fixtures/corpus/pdf).
 
 ## At a glance
 
@@ -108,9 +109,10 @@ Phases 0 to 11 of the plan are in place:
 - Deployment readiness (selected Phase 12 items): one container running the API and the worker
   (`apps/api/src/serve.ts`, `Dockerfile`, built and started in CI), a Render blueprint and Vercel
   configuration with security headers, an upload allowlist for public demos, an upload screen, and
-  `smoke` and `demo:seed` scripts. A public demo workspace: signed visitor sessions on `/demo`
-  routes bound to a separate database, seeded on start and reset by an approver
-  ([Demo workspace](#demo-workspace)), and a redesigned UI with an overview page. Metrics, tracing, fault injection, a load check and a Playwright
+  a `smoke` script. User accounts with roles and server-side sessions
+  ([Accounts and roles](#accounts-and-roles)); a public demo of a read-only showcase and private
+  per-visitor sandboxes in a separate database ([Public demo](#public-demo)); and a redesigned
+  UI with an overview page. Metrics, tracing, fault injection, a load check and a Playwright
   test (the rest of Phase 12) are not done.
 
 ## Quick start
@@ -136,9 +138,13 @@ pnpm --filter @specledger/api build
 pnpm --filter @specledger/api start
 ```
 
-The API needs `API_ENGINEER_TOKEN` and `API_APPROVER_TOKEN` in `.env` (generate each with
-`openssl rand -hex 32`). It applies migrations at start-up, listens on `HOST:PORT`, and stops
-gracefully on SIGTERM or SIGINT. Uploaded documents are processed by the worker (below).
+The API applies migrations at start-up, listens on `HOST:PORT`, and stops gracefully on SIGTERM
+or SIGINT. Uploaded documents are processed by the worker (below). Create your first account
+(the password is asked for without being shown):
+
+```sh
+pnpm user create --email you@example.com --name "Your Name" --roles admin,approver,reviewer,engineer
+```
 
 To run everything as it is deployed (API and worker in one process, plus the review UI), point
 `DATABASE_URL` in `.env` at a database of its own (for example `createdb specledger_dev`; the
@@ -201,9 +207,9 @@ pnpm worker
 ```
 
 The review UI runs on the Vite dev server, which proxies `/api` to the API (`API_URL`, default
-`http://127.0.0.1:3000`), so the API needs no CORS entry locally. Open http://127.0.0.1:5173 and
-choose **API tokens** to paste the tokens from `.env`, or, with `DEMO_DATABASE_URL` set and the
-API started with `pnpm serve`, **Explore the live demo**:
+`http://127.0.0.1:3000`), so the browser talks to one origin, as in production. Open
+http://127.0.0.1:5173 and **Sign in**, or, with `DEMO_DATABASE_URL` set and the API started with
+`pnpm serve`, browse the showcase or **Try it yourself**:
 
 ```sh
 pnpm --filter @specledger/web dev
@@ -353,52 +359,79 @@ locked_by = workerId` (fencing), so a worker whose lease was taken over cannot t
 
 ## HTTP API
 
-Every request needs `Authorization: Bearer <token>` except `/health` and `/ready`. Tokens are
-compared as SHA-256 digests with a constant-time comparison; there are no user accounts, and the
-audit log records the role (`role:engineer`, `role:approver`). Each route declares the roles that
-may call it, and the app refuses to start if one does not.
+Every route declares who may call it, and the app refuses to start if one does not. The workspace
+routes need a signed-in user (the session cookie, or `Authorization: Bearer <session token>` for
+scripts) holding one of the route's roles; the audit log records the user (`user:<email>`).
 
-| Method and path                    | Roles    | Purpose                                                         |
-| ---------------------------------- | -------- | --------------------------------------------------------------- |
-| `GET /health`                      | public   | Liveness; does not touch the database                           |
-| `GET /ready`                       | public   | Readiness; 503 `NOT_READY` if the database does not answer      |
-| `POST /documents`                  | engineer | Multipart upload; 202 with the queued job, 200 if a duplicate   |
-| `GET /documents`                   | both     | Newest first, with processing status (`limit`, `offset`)        |
-| `GET /documents/:id`               | both     | One document with its processing status                         |
-| `GET /documents/:id/pages/:n`      | both     | The extracted text of one page                                  |
-| `GET /documents/:id/fields`        | both     | The fields of the document's latest extraction run              |
-| `PATCH /fields/:id`                | engineer | `accept`, `reject` or `edit` with `expectedVersion`             |
-| `GET /conflicts`                   | both     | Conflicts with their candidates (`status=open\|resolved`)       |
-| `POST /conflicts/:id/resolve`      | engineer | Choose a candidate or enter a value, with a reason              |
-| `POST /register/publish`           | approver | Publish the next register version, or 409 with blockers         |
-| `GET /register/versions/:n/export` | both     | `format=csv` or `format=json`                                   |
-| `GET /audit`                       | both     | `entity=field:<id>`, `conflict:<id>` or `register_version:<id>` |
-| `POST /admin/jobs/:id/requeue`     | approver | Move a dead job back to the queue                               |
-| `POST /admin/demo/reset`           | approver | Wipe the demo workspace and seed it again (when configured)     |
+| Method and path                                   | Roles              | Purpose                                                                |
+| ------------------------------------------------- | ------------------ | ---------------------------------------------------------------------- |
+| `GET /health`                                     | public             | Liveness; does not touch the database                                  |
+| `GET /ready`                                      | public             | Readiness; 503 `NOT_READY` if the database does not answer             |
+| `POST /auth/login`                                | public             | Email and password; sets the session cookie (5 per minute)             |
+| `POST /auth/logout`                               | any                | Ends the session                                                       |
+| `GET /auth/me`                                    | any                | The signed-in user and the session's expiry                            |
+| `POST /documents`                                 | engineer           | Multipart upload; 202 with the queued job, 200 if a duplicate          |
+| `GET /documents`                                  | any                | Newest first, with processing status (`limit`, `offset`)               |
+| `GET /documents/:id`                              | any                | One document with its processing status                                |
+| `GET /documents/:id/pages/:n`                     | any                | The extracted text of one page                                         |
+| `GET /documents/:id/fields`                       | any                | The fields of the document's latest extraction run                     |
+| `PATCH /fields/:id`                               | engineer, reviewer | `edit` (both), `accept` or `reject` (reviewer), with `expectedVersion` |
+| `GET /conflicts`                                  | any                | Conflicts with their candidates (`status=open\|resolved`)              |
+| `POST /conflicts/:id/resolve`                     | reviewer           | Choose a candidate or enter a value, with a reason                     |
+| `POST /register/publish`                          | approver           | Publish the next register version, or 409 with blockers                |
+| `GET /register/versions/:n/export`                | any                | `format=csv` or `format=json`                                          |
+| `GET /audit`                                      | any                | `entity=field:<id>`, `conflict:<id>` or `register_version:<id>`        |
+| `POST /admin/jobs/:id/requeue`                    | admin              | Move a dead job back to the queue                                      |
+| `GET/POST /admin/users`, `PATCH /admin/users/:id` | admin              | List, create, change roles, disable, set a password                    |
+| `POST /admin/demo/reset`                          | admin              | Wipe the demo showcase and seed it again (when configured)             |
 
-### Demo workspace
+### Accounts and roles
+
+- **Users** have an email, a name and one or more roles: **engineer** (upload, correct values),
+  **reviewer** (accept or reject values, resolve conflicts), **approver** (publish), **admin**
+  (users and operations). Roles are read on every request, so a change applies at once.
+- **Passwords** are stored only as scrypt hashes (Node's `crypto.scrypt`, no extra dependency).
+  An unknown email takes as long and gets the same answer as a wrong password.
+- **Sessions** are 32 random bytes; only their SHA-256 is stored, with an expiry
+  (`SESSION_TTL_HOURS`, default 12). Signing out, disabling a user or setting a new password ends
+  sessions at once.
+- **The browser** holds the session in an `HttpOnly`, `SameSite=Strict`, `Secure` cookie that no
+  script can read, on the UI's own origin (Vercel forwards `/api` to the API). Every
+  cookie-authenticated write must also carry `X-Requested-With: specledger`, which a cross-site
+  form cannot send.
+- **The first admin** is created with `pnpm user create` against the database; the password is
+  read without echo, never from the command line. After that, admins manage users in the UI.
+  The last active admin cannot be disabled or lose the role.
+
+### Public demo
 
 With `DEMO_DATABASE_URL` set (a database other than `DATABASE_URL`, which the API refuses to
 share), the combined server (`serve.ts`) also serves a public demo:
 
-- `POST /demo/session` (public, 10 per minute per client) returns a signed visitor session:
-  `demo.<id>.<expiry>.<HMAC-SHA256>` with `DEMO_SESSION_SECRET`, valid for
-  `DEMO_SESSION_TTL_MINUTES` (default 120). Nothing is stored per session.
-- Every route above is mounted again under `/demo`, bound to the demo database. A visitor session
-  acts as both roles there and is recorded in the audit log as `demo:<id>`.
-- The two sides do not mix: the role tokens get 401 on `/demo` routes and a visitor session gets
-  401 on every other route, because each set of routes is a separate Fastify scope with its own
-  authenticator. Demo uploads accept only the synthetic corpus, whatever `UPLOAD_ALLOWLIST` says.
-- A second worker processes the demo database. When it is empty at start-up, the server seeds it
-  with seven curated corpus documents through the normal ingestion path, so they are extracted
-  by the configured model like any upload.
-- `POST /admin/demo/reset` (production approver token) stops the demo worker, drops and
-  re-creates the demo schema, migrates it and seeds it again. Only a database opened as
-  `wipeable` can be wiped; the production connection never is.
+- **Showcase** (`/showcase/...`, no sign-in): the read-only routes on the demo database's public
+  schema. On start-up the server adds whichever of seven curated corpus documents are missing,
+  through the normal ingestion path, and its own worker extracts them with the configured model.
+  Seeding is idempotent: identical files are de-duplicated and jobs have unique keys, so a
+  restart never extracts a document twice.
+- **Sandboxes** (`/demo/...`): `POST /demo/session` (public, 10 per minute per client) returns a
+  signed visitor session (`demo.<id>.<expiry>.<HMAC-SHA256>` with `DEMO_SESSION_SECRET`, valid
+  for `DEMO_SESSION_TTL_MINUTES`) and copies the showcase into a schema of the visitor's own
+  (`sandbox_<id>_<expiry>`), in one consistent snapshot. The visitor reviews, resolves and
+  publishes there, recorded as `demo:<id>`; demo exports are named `DEMO-register-v<n>`. Only
+  sessions for that sandbox work on it.
+- **No cost or reach**: sandboxes have no upload, requeue or admin routes, so a visitor can never
+  cause a model call or touch the showcase, another visitor, or the workspace. Workspace sessions
+  are refused on `/demo` and demo sessions everywhere else, because each set of routes is a
+  separate Fastify scope with its own authenticator.
+- **Limits**: a session is refused with 503 `DEMO_NOT_READY` until the showcase is extracted,
+  and with 503 `DEMO_FULL` once `DEMO_MAX_SANDBOXES` exist. Expired sandboxes are dropped every
+  ten minutes. An admin can reset the showcase (wipe and seed again); only a database opened as
+  `wipeable` can be wiped, and only schemas named `sandbox_...` can be created or dropped.
 
-Tests: `apps/api/test/integration/http/demo.test.ts` (isolation in both directions, forged and
-expired sessions, the corpus-only upload rule, a visitor publishing without touching the
-production tables, reset authorization, no demo routes without a demo database).
+Tests: `apps/api/test/integration/http/demo.test.ts`, `accounts.test.ts` and `auth.test.ts`
+(isolation between visitors, the showcase and the workspace in every direction, forged and
+expired sessions, the CSRF header, disabled users, the last-admin rule, the generated
+authorization matrix for all four roles), and `packages/db/test/integration/sandbox.test.ts`.
 
 Request and response shapes are the Zod schemas in `packages/core/src/api.ts`. Every error is
 `{"error": {"code", "message", "details"?}}` with a stable code; validation errors list the
@@ -553,11 +586,13 @@ before they are sent, and every response is validated before a screen sees it.
   reapplied on the current version or discarded; nothing is overwritten.
 - Accepting a value the verifier could not confirm asks for a reason first. Values a reviewer
   enters (edits, resolutions) must also be plausible for the field, the verifier's range rule.
-- Access: the overview page (`#/`) explains the product and offers two ways in. **Explore the
-  live demo** asks the API for a visitor session and switches the client to the `/demo` routes;
-  the session is renewed shortly before it expires and dropped if the server refuses it. **API
-  tokens** are the operator's engineer and approver tokens; each request sends the token of the
-  role it needs. Either is kept in memory and sessionStorage, never in localStorage or the URL.
+- Access: the overview page (`#/`) explains the product and offers three ways in. **Browse the
+  showcase** reads `/showcase` without signing in, with every action hidden. **Try it yourself**
+  asks the API for a visitor session and switches the client to the visitor's sandbox under
+  `/demo`; the session lives in sessionStorage only and is dropped if the server refuses it.
+  **Sign in** opens the workspace with the user's session cookie; navigation and actions follow
+  the user's roles (upload for engineers, accept and reject for reviewers, publish for approvers,
+  **Users** for admins), and the server enforces the same rules.
 - Design: a small set of Tailwind theme tokens and component classes (`apps/web/src/styles.css`)
   shared by every screen; responsive down to phone width, where the navigation moves under the
   header and less important table columns are hidden.
@@ -572,19 +607,22 @@ handling, and axe checks on the list, review and publish screens.
 
 - axe runs in jsdom, which has no layout, so color contrast is not checked automatically; the
   palette was checked by eye in a browser only. The UI has one light color scheme.
-- Every visitor shares the one demo workspace, so visitors see each other's reviews and
-  published versions until an approver resets it. There are no per-visitor workspaces.
 - The review screen shows the page of the selected field only, and it is plain text: there is no
   rendering of the PDF itself, its tables or its layout.
-- A reviewer holding only one role's token gets a 403 for the other role's actions; the UI does
-  not hide those actions.
 - There is no browser end-to-end test yet (Playwright is Phase 12); keyboard flows are tested in
   jsdom with Testing Library, and were checked by hand in a browser against the API.
 
 ## HTTP API limitations
 
-- Two static tokens stand in for identity, as specified: anyone holding a token acts as its role,
-  the audit log cannot tell two engineers apart, and rotating a token means restarting the API.
+- Accounts are email and password only: no single sign-on, multi-factor authentication,
+  password reset by email, or self-service sign-up. A forgotten password is reset by an admin
+  (disable and re-create) or with `pnpm user set-password`.
+- A workspace session is revoked on sign-out, disable and password change, but an admin cannot
+  list or end another user's individual sessions. Demo sessions are stateless and end only on
+  expiry or when `DEMO_SESSION_SECRET` changes.
+- Demo sandboxes copy the whole showcase per visitor; with seven small documents that is quick,
+  but it would not scale to a large showcase. The sandbox limit is checked by one instance at a
+  time; several API instances could exceed it slightly.
 - Rate limits are per client IP and kept in process memory, so they reset on restart and are not
   shared between API instances. Behind a proxy, `TRUST_PROXY` must be set for the limit to see
   client addresses rather than the proxy's.

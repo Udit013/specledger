@@ -143,11 +143,10 @@ jobs:
         with:
           persist-credentials: false
       - run: docker build --tag specledger-api:ci .
-      # Replay only: CI never calls a model. Tokens are throwaway values made for this run.
-      - name: start the image and check it migrates, serves and refuses anonymous requests
+      # Replay only: CI never calls a model. The password and secret are throwaway values.
+      - name: start the image and check it migrates, serves and enforces sign-in and the demo
         run: |
-          engineer="$(openssl rand -hex 32)"
-          approver="$(openssl rand -hex 32)"
+          password="$(openssl rand -hex 16)"
           PGPASSWORD=specledger_ci_only psql -h 127.0.0.1 -U specledger -d specledger \
             -c 'create database specledger_demo'
           docker run --detach --name api --network host \
@@ -155,29 +154,43 @@ jobs:
             -e DATABASE_URL=postgres://specledger:specledger_ci_only@127.0.0.1:5432/specledger \
             -e DEMO_DATABASE_URL=postgres://specledger:specledger_ci_only@127.0.0.1:5432/specledger_demo \
             -e DEMO_SESSION_SECRET="$(openssl rand -hex 32)" \
-            -e API_ENGINEER_TOKEN="$engineer" -e API_APPROVER_TOKEN="$approver" \
             -e LLM_PROVIDER=replay -e UPLOAD_ALLOWLIST=corpus \
             specledger-api:ci
           for _ in $(seq 1 60); do
             curl --silent --fail http://127.0.0.1:3000/ready && break
             sleep 1
           done
-          test "$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:3000/health)" = 200
-          test "$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:3000/ready)" = 200
-          test "$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:3000/documents)" = 401
-          test "$(curl --silent --output /dev/null --write-out '%{http_code}' -H "Authorization: Bearer $engineer" http://127.0.0.1:3000/documents)" = 200
+          code() { curl --silent --output /dev/null --write-out '%{http_code}' "$@"; }
+          test "$(code http://127.0.0.1:3000/health)" = 200
+          test "$(code http://127.0.0.1:3000/ready)" = 200
+          test "$(code http://127.0.0.1:3000/documents)" = 401
           test "$(docker exec api id -u)" != 0
-          # The demo workspace: a visitor session works on /demo only, the role token does not,
-          # and the image carries the corpus the demo seeds itself from.
-          session="$(curl --silent --fail -X POST http://127.0.0.1:3000/demo/session | jq -r .token)"
-          test "$(curl --silent --output /dev/null --write-out '%{http_code}' -H "Authorization: Bearer $session" http://127.0.0.1:3000/documents)" = 401
-          test "$(curl --silent --output /dev/null --write-out '%{http_code}' -H "Authorization: Bearer $engineer" http://127.0.0.1:3000/demo/documents)" = 401
+          # The first user is made with the CLI in the image; the password goes in on stdin.
+          printf '%s\n' "$password" | docker exec -i api node apps/api/dist/scripts/user.js \
+            create --email ci@example.com --name CI --roles engineer,reviewer
+          test "$(code -c jar -H 'content-type: application/json' \
+            -d "{\"email\":\"ci@example.com\",\"password\":\"$password\"}" \
+            http://127.0.0.1:3000/auth/login)" = 200
+          grep -q '#HttpOnly_.*specledger_session' jar
+          test "$(code -b jar http://127.0.0.1:3000/documents)" = 200
+          test "$(code -b jar -X POST -H 'content-type: application/json' -d '{}' \
+            http://127.0.0.1:3000/register/publish)" = 403
+          test "$(code -H 'content-type: application/json' \
+            -d '{"email":"ci@example.com","password":"wrong password"}' \
+            http://127.0.0.1:3000/auth/login)" = 401
+          # The demo: the showcase seeds itself from the corpus in the image and anyone may read
+          # it; a workspace session is refused on the demo routes. A visitor sandbox waits until
+          # the showcase is extracted, which replay cannot do for every document.
           for _ in $(seq 1 60); do
-            seeded="$(curl --silent --fail -H "Authorization: Bearer $session" http://127.0.0.1:3000/demo/documents | jq '.documents | length')"
+            seeded="$(curl --silent --fail http://127.0.0.1:3000/showcase/documents | jq '.documents | length')"
             [ "$seeded" = 7 ] && break
             sleep 1
           done
           test "$seeded" = 7
-          test "$(curl --silent -H "Authorization: Bearer $engineer" http://127.0.0.1:3000/documents | jq '.documents | length')" = 0
+          test "$(code -b jar http://127.0.0.1:3000/demo/documents)" = 401
+          test "$(code -X POST http://127.0.0.1:3000/showcase/register/publish)" = 404
+          status="$(code -X POST http://127.0.0.1:3000/demo/session)"
+          [ "$status" = 201 ] || [ "$status" = 503 ]
+          test "$(curl --silent -b jar http://127.0.0.1:3000/documents | jq '.documents | length')" = 0
       - if: always()
         run: docker logs api 2>&1 | tail -50 || true
