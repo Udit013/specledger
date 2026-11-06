@@ -9,12 +9,15 @@ import { ErrorNotice } from './Status.js';
 // Publishing is the server's decision: the dialog asks, then shows exactly what the server said,
 // either the new version or the blockers it listed.
 export function PublishDialog({ onClose }: { readonly onClose: () => void }) {
-  const { client, announce } = useServices();
+  const { client, announce, mode } = useServices();
+  const simulated = mode === 'demo';
   const queryClient = useQueryClient();
   const publish = useMutation({
     mutationFn: () => client.publish(),
     onSuccess: async (result) => {
-      announce(`Published register version ${String(result.version.number)}.`);
+      announce(
+        `Published ${simulated ? 'demo ' : ''}register version ${String(result.version.number)}${simulated ? ' (simulated)' : ''}.`,
+      );
       await queryClient.invalidateQueries();
     },
     onError: (error) => {
@@ -29,7 +32,16 @@ export function PublishDialog({ onClose }: { readonly onClose: () => void }) {
   const blocked = error instanceof ApiClientError && error.code === 'PUBLISH_BLOCKED';
 
   return (
-    <Dialog title="Publish register" onClose={onClose}>
+    <Dialog
+      title={simulated ? 'Publish register (simulated)' : 'Publish register'}
+      onClose={onClose}
+    >
+      {simulated ? (
+        <p className="notice notice-info mb-3">
+          This is a simulated publish in your private demo sandbox. It runs the real checks and
+          creates a demo register version that only you can see; it is not a real register.
+        </p>
+      ) : null}
       <p className="mb-3 text-sm">
         Publishing creates the next immutable register version from the reviewed values. The server
         refuses while anything is still processing, pending review or in conflict.
@@ -52,8 +64,8 @@ export function PublishDialog({ onClose }: { readonly onClose: () => void }) {
       </div>
       {publish.isSuccess ? (
         <p className="text-sm font-medium">
-          Published register version {publish.data.version.number} with {publish.data.itemCount}{' '}
-          {publish.data.itemCount === 1 ? 'item' : 'items'}.
+          Published {simulated ? 'demo ' : ''}register version {publish.data.version.number} with{' '}
+          {publish.data.itemCount} {publish.data.itemCount === 1 ? 'item' : 'items'}.
         </p>
       ) : null}
       {blocked ? (

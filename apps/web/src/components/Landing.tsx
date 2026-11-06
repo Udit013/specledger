@@ -1,3 +1,4 @@
+import type { Mode } from '../context.js';
 import { hrefFor } from '../lib/router.js';
 import { Icon } from './Icons.js';
 import type { IconName } from './Icons.js';
@@ -56,20 +57,16 @@ const TRY: readonly { title: string; text: string }[] = [
   },
 ];
 
-export type Access = 'none' | 'demo' | 'tokens';
-
 export function Landing({
-  access,
+  mode,
   starting,
   startError,
-  onStartDemo,
-  onUseTokens,
+  onTryDemo,
 }: {
-  readonly access: Access;
+  readonly mode: Mode;
   readonly starting: boolean;
   readonly startError: string | null;
-  readonly onStartDemo: () => void;
-  readonly onUseTokens: () => void;
+  readonly onTryDemo: () => void;
 }) {
   return (
     <div className="space-y-20 pb-8">
@@ -88,9 +85,9 @@ export function Landing({
             keeps a person in charge of what gets published.
           </p>
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            {access === 'demo' ? (
+            {mode === 'demo' ? (
               <a href={hrefFor({ name: 'documents' })} className="btn btn-primary btn-lg">
-                Continue to the demo
+                Continue in your sandbox
                 <Icon name="arrow" className="h-5 w-5" />
               </a>
             ) : (
@@ -98,27 +95,32 @@ export function Landing({
                 type="button"
                 aria-disabled={starting}
                 onClick={() => {
-                  if (!starting) onStartDemo();
+                  if (!starting) onTryDemo();
                 }}
                 className="btn btn-primary btn-lg"
               >
-                {starting ? 'Starting the demo…' : 'Explore the live demo'}
+                {starting ? 'Preparing your sandbox…' : 'Try it yourself'}
                 {starting ? null : <Icon name="arrow" className="h-5 w-5" />}
               </button>
             )}
-            {access === 'tokens' ? (
+            {mode === 'account' ? (
               <a href={hrefFor({ name: 'documents' })} className="btn btn-secondary btn-lg">
                 Open your workspace
               </a>
             ) : (
-              <button type="button" onClick={onUseTokens} className="btn btn-secondary btn-lg">
-                Sign in with API tokens
-              </button>
+              <a href={hrefFor({ name: 'documents' })} className="btn btn-secondary btn-lg">
+                Browse the showcase
+              </a>
             )}
           </div>
           <p className="mt-4 text-sm text-slate-600">
-            No sign-up. The demo is a separate workspace with synthetic documents; nothing you do
-            there touches real data.
+            No account needed. <strong className="font-semibold">Try it yourself</strong> gives you
+            a private sandbox to review, resolve conflicts and publish; nobody else sees it and it
+            is deleted when your session ends. Have a workspace account?{' '}
+            <a href={hrefFor({ name: 'sign_in' })} className="link">
+              Sign in
+            </a>
+            .
           </p>
           {starting ? (
             <p className="mt-2 text-sm text-slate-600">
@@ -212,8 +214,8 @@ export function Landing({
           </h2>
           <p className="mt-3 text-sm text-slate-600">
             The demo workspace starts with seven synthetic pump and motor datasheets, extracted by a
-            real model (Gemini), so values can differ from run to run. Every visitor shares the one
-            demo workspace, which the operator resets from time to time.
+            real model (Gemini), so values can differ from run to run. Your sandbox is a private
+            copy; what you do there touches no one else.
           </p>
         </div>
         <ol className="mt-10 grid gap-4 md:grid-cols-2">

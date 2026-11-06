@@ -6,15 +6,18 @@ import { expect } from 'vitest';
 
 import { App } from '../src/App.js';
 import type { PollOptions } from '../src/lib/backoff.js';
-import { saveTokens } from '../src/lib/tokens.js';
-import type { Tokens } from '../src/lib/tokens.js';
-import { API, TOKENS } from './fake-api.js';
+import { DEMO_STORAGE_KEY } from '../src/lib/demo.js';
+import { API, DEMO_TOKEN } from './fake-api.js';
 
-export function renderApp(
-  options: { tokens?: Tokens | null; hash?: string; poll?: PollOptions } = {},
-) {
-  const tokens = options.tokens === undefined ? TOKENS : options.tokens;
-  if (tokens !== null) saveTokens(sessionStorage, tokens);
+// Renders the app. Who is signed in is the fake API's state (fakeApi({ user })); `demo` opens it
+// in a demo sandbox session, as after "Try it yourself".
+export function renderApp(options: { hash?: string; poll?: PollOptions; demo?: boolean } = {}) {
+  if (options.demo === true) {
+    sessionStorage.setItem(
+      DEMO_STORAGE_KEY,
+      JSON.stringify({ token: DEMO_TOKEN, expiresAt: '2099-01-01T00:00:00.000Z' }),
+    );
+  }
   window.location.hash = options.hash ?? '#/documents';
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },

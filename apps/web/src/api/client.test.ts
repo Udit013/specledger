@@ -1,11 +1,10 @@
 import { http, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
 
-import { API, DOC_ID, FIELD_IDS, fakeApi, server, TOKENS } from '../../test/fake-api.js';
+import { API, DOC_ID, FIELD_IDS, fakeApi, server } from '../../test/fake-api.js';
 import { ApiClientError, createApiClient } from './client.js';
 
-const client = (tokens: { engineer: string | null; approver: string | null } = TOKENS) =>
-  createApiClient({ baseUrl: API, tokens: () => tokens });
+const client = () => createApiClient({ baseUrl: API });
 
 const failure = async (work: Promise<unknown>) => {
   try {
@@ -34,36 +33,49 @@ describe('createApiClient', () => {
     expect(error.kind).toBe('invalid_response');
   });
 
-  it('sends the engineer token for reviews and the approver token for publishing', async () => {
-    const seen: (string | null)[] = [];
-    fakeApi({ onRequest: (request) => seen.push(request.headers.get('authorization')) });
+  it('relies on the session cookie: no Authorization header, the anti-forgery header always', async () => {
+    const seen: [string | null, string | null][] = [];
+    fakeApi({
+      onRequest: (request) =>
+        seen.push([request.headers.get('authorization'), request.headers.get('x-requested-with')]),
+    });
     await client().reviewField(FIELD_IDS.head, { action: 'accept', expectedVersion: 1 });
-    await failure(client().publish());
-    expect(seen).toEqual([`Bearer ${TOKENS.engineer}`, `Bearer ${TOKENS.approver}`]);
+    await client().listDocuments();
+    expect(seen).toEqual([
+      [null, 'specledger'],
+      [null, 'specledger'],
+    ]);
   });
 
-  it('falls back to the other token when the preferred role has none', async () => {
+  it('sends the demo bearer token in a sandbox', async () => {
     const seen: (string | null)[] = [];
     fakeApi({ onRequest: (request) => seen.push(request.headers.get('authorization')) });
-    await failure(client({ engineer: TOKENS.engineer, approver: null }).publish());
-    expect(seen).toEqual([`Bearer ${TOKENS.engineer}`]);
-  });
-
-  it('sends no Authorization header without any token', async () => {
-    const seen: (string | null)[] = [];
-    fakeApi({ onRequest: (request) => seen.push(request.headers.get('authorization')) });
-    await failure(client({ engineer: null, approver: null }).listDocuments());
-    expect(seen).toEqual([null]);
+    await createApiClient({
+      baseUrl: `${API}/demo`,
+      bearer: () => Promise.resolve('demo.token'),
+    })
+      .listDocuments()
+      .catch(() => undefined);
+    expect(seen).toEqual(['Bearer demo.token']);
   });
 
   it.each([
-    [{ engineer: null, approver: null }, 401, 'unauthenticated', /token/i],
-    [{ engineer: TOKENS.engineer, approver: null }, 403, 'forbidden', /role/i],
-  ])('explains a %s refusal', async (tokens, status, kind, message) => {
-    fakeApi();
-    const error = await failure(client(tokens).publish());
+    [null, 401, 'unauthenticated', /sign in/i],
+    [['engineer'] as const, 403, 'forbidden', /role/i],
+  ])('explains a refusal for %j', async (user, status, kind, message) => {
+    fakeApi({ user });
+    let ended = false;
+    const error = await failure(
+      createApiClient({
+        baseUrl: API,
+        onUnauthenticated: () => {
+          ended = true;
+        },
+      }).publish(),
+    );
     expect([error.status, error.kind]).toEqual([status, kind]);
     expect(error.message).toMatch(message);
+    expect(ended).toBe(status === 401);
   });
 
   it('carries the server state of a 409 version conflict', async () => {
@@ -82,12 +94,15 @@ describe('createApiClient', () => {
     expect((await failure(client().listDocuments())).kind).toBe('network');
   });
 
-  it('never puts a token in the URL', async () => {
+  it('never puts a credential in the URL', async () => {
     const urls: string[] = [];
     fakeApi({ onRequest: (request) => urls.push(request.url) });
-    await client().listDocuments();
+    const demo = createApiClient({
+      baseUrl: `${API}/demo`,
+      bearer: () => Promise.resolve('demo.secret-token'),
+    });
+    await demo.listDocuments().catch(() => undefined);
     await client().getPage(DOC_ID, 1);
-    expect(urls.join(' ')).not.toContain(TOKENS.engineer);
-    expect(urls.join(' ')).not.toContain(TOKENS.approver);
+    expect(urls.join(' ')).not.toContain('secret-token');
   });
 });

@@ -1,12 +1,14 @@
 import { z } from 'zod';
 
-// Hash routes: the screen and the ids it shows, nothing else. Tokens never go in the URL.
+// Hash routes: the screen and the ids it shows, nothing else. Credentials never go in the URL.
 export type Route =
   | { readonly name: 'home' }
   | { readonly name: 'documents' }
   | { readonly name: 'review'; readonly documentId: string }
   | { readonly name: 'conflicts' }
   | { readonly name: 'upload' }
+  | { readonly name: 'sign_in' }
+  | { readonly name: 'users' }
   | {
       readonly name: 'audit';
       readonly kind: 'field' | 'conflict' | 'register_version';
@@ -28,6 +30,8 @@ export function parseRoute(hash: string): Route {
   }
   if (first === 'conflicts' && second === undefined) return { name: 'conflicts' };
   if (first === 'upload' && second === undefined) return { name: 'upload' };
+  if (first === 'sign-in' && second === undefined) return { name: 'sign_in' };
+  if (first === 'users' && second === undefined) return { name: 'users' };
   const kind = auditKind.safeParse(second);
   if (first === 'audit' && kind.success && uuid.safeParse(third).success) {
     return { name: 'audit', kind: kind.data, id: third ?? '' };
@@ -47,6 +51,10 @@ export function hrefFor(route: Exclude<Route, { name: 'not_found' }>): string {
       return '#/conflicts';
     case 'upload':
       return '#/upload';
+    case 'sign_in':
+      return '#/sign-in';
+    case 'users':
+      return '#/users';
     case 'audit':
       return `#/audit/${route.kind}/${route.id}`;
   }

@@ -38,7 +38,10 @@ const describeChange = (body: ReviewFieldBody) =>
       : 'Reject';
 
 export function ReviewScreen({ documentId }: { readonly documentId: string }) {
-  const { client, announce } = useServices();
+  const { client, announce, can, mode: access } = useServices();
+  // Editing a value needs an engineer or a reviewer; accepting or rejecting one, a reviewer.
+  const canEdit = can('engineer') || can('reviewer');
+  const canDecide = can('reviewer');
   const queryClient = useQueryClient();
 
   const document = useQuery({
@@ -122,6 +125,7 @@ export function ReviewScreen({ documentId }: { readonly documentId: string }) {
   const act = useCallback(
     (action: 'accept' | 'reject' | 'edit') => {
       if (selected === undefined) return;
+      if (action === 'edit' ? !canEdit : !canDecide) return;
       setStale(null);
       if (action === 'edit') {
         setMode({ kind: 'edit' });
@@ -131,7 +135,7 @@ export function ReviewScreen({ documentId }: { readonly documentId: string }) {
         submit({ action, expectedVersion: selected.version });
       }
     },
-    [selected, submit],
+    [selected, submit, canEdit, canDecide],
   );
 
   useEffect(() => {
@@ -251,28 +255,41 @@ export function ReviewScreen({ documentId }: { readonly documentId: string }) {
             </ol>
 
             <div className="card mt-4 space-y-4 p-4 lg:sticky lg:bottom-4">
+              {canEdit ? null : (
+                <p className="text-sm text-slate-600">
+                  {access === 'showcase'
+                    ? 'This is the read-only showcase. Try it yourself to review values in a private sandbox.'
+                    : 'Your role can view these values but not review them.'}
+                </p>
+              )}
               <div className="flex flex-wrap gap-2">
-                <ActionButton
-                  label="Accept"
-                  shortcut="a"
-                  onClick={() => {
-                    act('accept');
-                  }}
-                />
-                <ActionButton
-                  label="Edit"
-                  shortcut="e"
-                  onClick={() => {
-                    act('edit');
-                  }}
-                />
-                <ActionButton
-                  label="Reject"
-                  shortcut="r"
-                  onClick={() => {
-                    act('reject');
-                  }}
-                />
+                {canDecide ? (
+                  <ActionButton
+                    label="Accept"
+                    shortcut="a"
+                    onClick={() => {
+                      act('accept');
+                    }}
+                  />
+                ) : null}
+                {canEdit ? (
+                  <ActionButton
+                    label="Edit"
+                    shortcut="e"
+                    onClick={() => {
+                      act('edit');
+                    }}
+                  />
+                ) : null}
+                {canDecide ? (
+                  <ActionButton
+                    label="Reject"
+                    shortcut="r"
+                    onClick={() => {
+                      act('reject');
+                    }}
+                  />
+                ) : null}
                 <a
                   href={hrefFor({ name: 'audit', kind: 'field', id: selected.id })}
                   className="link self-center text-sm"

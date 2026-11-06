@@ -12,6 +12,8 @@ describe('parseRoute', () => {
     [`#/documents/${ID}`, { name: 'review', documentId: ID }],
     ['#/conflicts', { name: 'conflicts' }],
     ['#/upload', { name: 'upload' }],
+    ['#/sign-in', { name: 'sign_in' }],
+    ['#/users', { name: 'users' }],
     [`#/audit/field/${ID}`, { name: 'audit', kind: 'field', id: ID }],
     [`#/audit/conflict/${ID}`, { name: 'audit', kind: 'conflict', id: ID }],
   ])('reads %j', (hash, route) => {
@@ -34,6 +36,8 @@ describe('hrefFor', () => {
       { name: 'review', documentId: ID },
       { name: 'conflicts' },
       { name: 'upload' },
+      { name: 'sign_in' },
+      { name: 'users' },
       { name: 'audit', kind: 'conflict', id: ID },
     ] as const) {
       expect(parseRoute(hrefFor(route))).toEqual(route);

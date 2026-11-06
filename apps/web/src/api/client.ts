@@ -1,4 +1,10 @@
 import {
+  createUserBodySchema,
+  loginBodySchema,
+  meSchema,
+  updateUserBodySchema,
+  userListSchema,
+  userViewSchema,
   apiErrorSchema,
   auditListSchema,
   conflictListSchema,
@@ -16,6 +22,10 @@ import {
 } from '@specledger/core';
 import { publishBlockerSchema } from '@specledger/core';
 import type {
+  CreateUserBody,
+  MeBody,
+  UpdateUserBody,
+  UserView,
   AuditEvent,
   ConflictView,
   DocumentSummary,
@@ -25,8 +35,6 @@ import type {
   ReviewFieldBody,
 } from '@specledger/core';
 import { z } from 'zod';
-
-import type { Tokens } from '../lib/tokens.js';
 
 // What the upload screen collects, before it is checked against the shared upload schema.
 export interface UploadRequest {
@@ -83,22 +91,21 @@ export class ApiClientError extends Error {
 // The most documents the list asks for (the API's maximum page size).
 export const DOCUMENT_PAGE_SIZE = 100;
 
-type Role = 'engineer' | 'approver';
-
 export interface ApiClientOptions {
   readonly baseUrl: string;
-  // Read before every request; the demo workspace starts or renews its session here.
-  readonly tokens: () => Tokens | Promise<Tokens>;
+  // The demo sandbox's bearer token, read (and started or renewed) before every request. Without
+  // it, requests carry the browser's session cookie, if any: the token never touches script.
+  readonly bearer?: () => Promise<string>;
   readonly fetch?: typeof fetch;
-  // In the demo workspace, errors speak of the visitor session instead of role tokens, and a
-  // session the server refused is dropped so that the next request starts a new one.
-  readonly demo?: { readonly onUnauthenticated: () => void };
+  // Errors speak of the demo session in a sandbox. A refused credential is reported, so that the
+  // app can drop the demo session or the signed-in user.
+  readonly demo?: boolean;
+  readonly onUnauthenticated?: () => void;
 }
 
 const MESSAGES: Readonly<Record<string, string>> = {
-  UNAUTHENTICATED: 'Your API token is missing or was not accepted. Enter a valid token.',
-  FORBIDDEN:
-    'Your token’s role is not allowed to do this. Uploads, reviews and resolutions need the engineer token; publishing needs the approver token.',
+  UNAUTHENTICATED: 'Your session has ended. Sign in again.',
+  FORBIDDEN: 'Your role does not allow this.',
   RATE_LIMITED: 'Too many requests. Wait a moment and try again.',
   INTERNAL: 'The server hit an unexpected error. Try again.',
   NOT_READY: 'The server is not ready. Try again shortly.',
@@ -119,35 +126,35 @@ function kindFor(status: number): ApiErrorKind {
 }
 
 // A typed client over the shared Zod schemas: request bodies are checked before they are sent and
-// every response is validated before the UI sees it. Each call names the role it needs; the token
-// for that role is sent if present, otherwise the other one, so the server answers 403 rather than
-// the client guessing.
+// every response is validated before the UI sees it. Every request carries the anti-forgery
+// header the API requires of cookie-authenticated writes; the server decides what a role may do.
 export function createApiClient(options: ApiClientOptions) {
   const send = options.fetch ?? ((input, init) => fetch(input, init));
 
   async function request<S extends z.ZodType>(
     schema: S,
     path: string,
-    init: { method?: string; body?: unknown; form?: FormData; role?: Role } = {},
+    // signIn: a 401 is a wrong password, not an ended session; the server's message is shown.
+    init: { method?: string; body?: unknown; form?: FormData; signIn?: boolean } = {},
   ): Promise<z.output<S>> {
-    let tokens: Tokens;
-    try {
-      tokens = await options.tokens();
-    } catch (error: unknown) {
-      throw new ApiClientError(
-        'network',
-        error instanceof Error ? error.message : 'The server could not be reached.',
-        null,
-        null,
-        null,
-      );
+    let token: string | null = null;
+    if (options.bearer !== undefined) {
+      try {
+        token = await options.bearer();
+      } catch (error: unknown) {
+        throw new ApiClientError(
+          'network',
+          error instanceof Error ? error.message : 'The server could not be reached.',
+          null,
+          null,
+          null,
+        );
+      }
     }
-    const role = init.role ?? 'engineer';
-    const token =
-      role === 'approver'
-        ? (tokens.approver ?? tokens.engineer)
-        : (tokens.engineer ?? tokens.approver);
-    const headers: Record<string, string> = { accept: 'application/json' };
+    const headers: Record<string, string> = {
+      accept: 'application/json',
+      'x-requested-with': 'specledger',
+    };
     if (token !== null) headers.authorization = `Bearer ${token}`;
     // A form sets its own multipart content type, with the boundary.
     if (init.body !== undefined) headers['content-type'] = 'application/json';
@@ -157,6 +164,7 @@ export function createApiClient(options: ApiClientOptions) {
       response = await send(`${options.baseUrl}${path}`, {
         method: init.method ?? 'GET',
         headers,
+        credentials: 'same-origin',
         ...(init.form !== undefined
           ? { body: init.form }
           : init.body === undefined
@@ -176,9 +184,10 @@ export function createApiClient(options: ApiClientOptions) {
     if (!response.ok) {
       const parsed = apiErrorSchema.safeParse(json);
       const code = parsed.success ? parsed.data.error.code : 'UNKNOWN';
-      if (response.status === 401) options.demo?.onUnauthenticated();
+      if (response.status === 401 && init.signIn !== true) options.onUnauthenticated?.();
       const message =
-        (options.demo === undefined ? undefined : DEMO_MESSAGES[code]) ??
+        (init.signIn === true && parsed.success ? parsed.data.error.message : undefined) ??
+        (options.demo === true ? DEMO_MESSAGES[code] : undefined) ??
         MESSAGES[code] ??
         (parsed.success ? parsed.data.error.message : 'The request failed unexpectedly.');
       throw new ApiClientError(
@@ -227,7 +236,6 @@ export function createApiClient(options: ApiClientOptions) {
       return request(uploadResponseSchema, '/documents', {
         method: 'POST',
         form,
-        role: 'engineer',
       });
     },
     getDocument(documentId: string): Promise<DocumentSummary> {
@@ -243,7 +251,6 @@ export function createApiClient(options: ApiClientOptions) {
       return request(fieldSchema, `/fields/${id(fieldId)}`, {
         method: 'PATCH',
         body: reviewFieldBodySchema.parse(body),
-        role: 'engineer',
       });
     },
     async listConflicts(status: 'open' | 'resolved' = 'open'): Promise<ConflictView[]> {
@@ -253,13 +260,41 @@ export function createApiClient(options: ApiClientOptions) {
       return request(conflictSchema, `/conflicts/${id(conflictId)}/resolve`, {
         method: 'POST',
         body: resolveConflictBodySchema.parse(body),
-        role: 'engineer',
       });
     },
     publish() {
       return request(publishResponseSchema, '/register/publish', {
         method: 'POST',
-        role: 'approver',
+      });
+    },
+    // ---- accounts --------------------------------------------------------------------------------
+    // A 204 has no body; these two parse an empty object instead.
+    me(): Promise<MeBody> {
+      return request(meSchema, '/auth/me');
+    },
+    login(email: string, password: string): Promise<MeBody> {
+      return request(meSchema, '/auth/login', {
+        method: 'POST',
+        signIn: true,
+        body: loginBodySchema.parse({ email, password }),
+      });
+    },
+    async logout(): Promise<void> {
+      await request(z.unknown(), '/auth/logout', { method: 'POST' });
+    },
+    async listUsers(): Promise<UserView[]> {
+      return (await request(userListSchema, '/admin/users')).users;
+    },
+    createUser(body: CreateUserBody): Promise<UserView> {
+      return request(userViewSchema, '/admin/users', {
+        method: 'POST',
+        body: createUserBodySchema.parse(body),
+      });
+    },
+    updateUser(id: string, body: UpdateUserBody): Promise<UserView> {
+      return request(userViewSchema, `/admin/users/${encodeURIComponent(id)}`, {
+        method: 'PATCH',
+        body: updateUserBodySchema.parse(body),
       });
     },
     async audit(

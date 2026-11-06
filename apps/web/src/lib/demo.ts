@@ -1,10 +1,11 @@
 import { demoSessionSchema } from '@specledger/core';
 import { z } from 'zod';
 
-// The demo workspace's visitor session. Starting the demo asks the server for a short-lived signed
-// session (POST /demo/session); nobody pastes or sees a token. It lives in sessionStorage (cleared
-// when the tab closes) and memory, never in localStorage, cookies or the URL, and it is renewed
-// shortly before it expires. It works only on the /demo routes, which use their own database.
+// The demo sandbox's visitor session. Trying the demo asks the server for a short-lived signed
+// session (POST /demo/session), which also gives the visitor a private copy of the showcase;
+// nobody pastes or sees a token. It lives in sessionStorage (cleared when the tab closes) and
+// memory, never in localStorage, cookies or the URL. It works only on the /demo routes. When it
+// expires, the sandbox goes with it, and the next request starts a fresh one.
 export const DEMO_STORAGE_KEY = 'specledger.demo';
 
 // A session this close to its expiry is renewed before the next request.
@@ -13,7 +14,8 @@ const RENEW_BEFORE_MS = 60_000;
 const storedSchema = z.strictObject({ token: z.string().min(1), expiresAt: z.iso.datetime() });
 type Stored = z.infer<typeof storedSchema>;
 
-export type DemoStartError = 'unavailable' | 'unreachable' | 'busy' | 'failed';
+export type DemoStartError =
+  'unavailable' | 'unreachable' | 'busy' | 'preparing' | 'full' | 'failed';
 
 export class DemoSessionError extends Error {
   readonly reason: DemoStartError;
@@ -24,6 +26,9 @@ export class DemoSessionError extends Error {
         unreachable:
           'The server could not be reached. The free server sleeps when idle and can take about a minute to wake up; try again shortly.',
         busy: 'Too many demo sessions were started from here. Wait a minute and try again.',
+        preparing:
+          'The demo is still being prepared: its documents are being extracted. Try again in a minute.',
+        full: 'The demo is busy right now. Try again in a few minutes.',
         failed: 'The demo could not be started. Try again.',
       }[reason],
     );
@@ -84,8 +89,14 @@ export function createDemoAccess(options: DemoAccessOptions) {
     }
     if (response.status === 404) throw new DemoSessionError('unavailable');
     if (response.status === 429) throw new DemoSessionError('busy');
+    const body: unknown = await response.json().catch(() => null);
+    if (response.status === 503) {
+      const code = (body as { error?: { code?: unknown } } | null)?.error?.code;
+      if (code === 'DEMO_NOT_READY') throw new DemoSessionError('preparing');
+      if (code === 'DEMO_FULL') throw new DemoSessionError('full');
+    }
     if (response.status >= 500) throw new DemoSessionError('unreachable');
-    const parsed = demoSessionSchema.safeParse(await response.json().catch(() => null));
+    const parsed = demoSessionSchema.safeParse(body);
     if (!response.ok || !parsed.success) throw new DemoSessionError('failed');
     store(parsed.data);
     return parsed.data.token;

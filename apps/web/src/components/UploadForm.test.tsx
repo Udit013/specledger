@@ -1,7 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
-import { fakeApi, TOKENS } from '../../test/fake-api.js';
+import { fakeApi } from '../../test/fake-api.js';
 import { announcements, expectNoAxeViolations, renderApp } from '../../test/render.js';
 
 const pdf = (name: string) => new File(['%PDF-1.7 synthetic'], name, { type: 'application/pdf' });
@@ -73,15 +73,12 @@ describe('upload screen', () => {
     expect(state.uploads).toEqual([]);
   });
 
-  it('needs the engineer token', async () => {
-    fakeApi();
-    const { user } = renderApp({
-      hash: '#/upload',
-      tokens: { engineer: null, approver: TOKENS.approver },
-    });
-    await fill(user);
-    await user.click(screen.getByRole('button', { name: 'Upload' }));
-    expect((await screen.findByRole('alert')).textContent).toMatch(/engineer token/);
+  it('is only for signed-in engineers', async () => {
+    fakeApi({ user: ['approver'] });
+    renderApp({ hash: '#/upload' });
+    expect(await screen.findByRole('heading', { name: 'Upload a document' })).toBeTruthy();
+    expect(screen.queryByLabelText('PDF file')).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Upload' })).toBeNull();
   });
 
   it('has no accessibility violations', async () => {

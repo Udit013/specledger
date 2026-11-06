@@ -60,7 +60,8 @@ function suggestionText(conflict: ConflictView): string {
 }
 
 function ConflictCard({ conflict }: { readonly conflict: ConflictView }) {
-  const { client, announce } = useServices();
+  const { client, announce, can, mode } = useServices();
+  const canResolve = can('reviewer');
   const queryClient = useQueryClient();
   const headingId = useId();
   const name = `${conflict.equipmentTag} ${conflict.fieldName}`;
@@ -114,8 +115,10 @@ function ConflictCard({ conflict }: { readonly conflict: ConflictView }) {
       </h3>
       <p className="mt-1 mb-4 text-sm text-slate-600">{suggestionText(conflict)}</p>
       <form onSubmit={submit} noValidate className="space-y-4">
-        <fieldset className="space-y-2">
-          <legend className="mb-1 text-sm font-medium text-slate-800">Choose the value</legend>
+        <fieldset className="space-y-2" disabled={!canResolve}>
+          <legend className="mb-1 text-sm font-medium text-slate-800">
+            {canResolve ? 'Choose the value' : 'The candidates'}
+          </legend>
           {conflict.candidates.map((candidate) => {
             const id = `${group}-${candidate.fieldId}`;
             const verification = VERIFICATION_LABELS[candidate.verificationStatus];
@@ -197,17 +200,26 @@ function ConflictCard({ conflict }: { readonly conflict: ConflictView }) {
             ) : null}
           </div>
         </fieldset>
-        <label className="field">
-          Reason
-          <textarea
-            value={reason}
-            rows={2}
-            onChange={(e) => {
-              setReason(e.target.value);
-            }}
-            className="input"
-          />
-        </label>
+        {canResolve ? null : (
+          <p className="text-sm text-slate-600">
+            {mode === 'showcase'
+              ? 'This is the read-only showcase. Try it yourself to resolve conflicts in a private sandbox.'
+              : 'Resolving a conflict needs the reviewer role.'}
+          </p>
+        )}
+        {canResolve ? (
+          <label className="field">
+            Reason
+            <textarea
+              value={reason}
+              rows={2}
+              onChange={(e) => {
+                setReason(e.target.value);
+              }}
+              className="input"
+            />
+          </label>
+        ) : null}
         {problem === null ? null : (
           <p role="alert" className="notice notice-error">
             {problem}
@@ -217,9 +229,11 @@ function ConflictCard({ conflict }: { readonly conflict: ConflictView }) {
           <ErrorNotice title="The conflict was not resolved." error={resolve.error} />
         ) : null}
         <div className="flex items-center gap-3">
-          <button type="submit" aria-disabled={resolve.isPending} className="btn btn-primary">
-            Resolve conflict
-          </button>
+          {canResolve ? (
+            <button type="submit" aria-disabled={resolve.isPending} className="btn btn-primary">
+              Resolve conflict
+            </button>
+          ) : null}
           <a
             href={hrefFor({ name: 'audit', kind: 'conflict', id: conflict.id })}
             className="link text-sm"

@@ -73,6 +73,7 @@ describe('demo access', () => {
     [404, 'unavailable'],
     [429, 'busy'],
     [503, 'unreachable'],
+    [502, 'unreachable'],
     [400, 'failed'],
   ] as const)('explains a %i from the server', async (status, reason) => {
     const demo = createDemoAccess({
@@ -82,6 +83,21 @@ describe('demo access', () => {
     });
     await expect(demo.token()).rejects.toMatchObject({ reason });
     expect(inDemo(sessionStorage)).toBe(false);
+  });
+
+  it.each([
+    ['DEMO_NOT_READY', 'preparing'],
+    ['DEMO_FULL', 'full'],
+  ] as const)('explains a 503 %s', async (code, reason) => {
+    const demo = createDemoAccess({
+      baseUrl: BASE,
+      storage: sessionStorage,
+      fetch: () =>
+        Promise.resolve(
+          new Response(JSON.stringify({ error: { code, message: 'x' } }), { status: 503 }),
+        ),
+    });
+    await expect(demo.token()).rejects.toMatchObject({ reason });
   });
 
   it('explains an unreachable server', async () => {

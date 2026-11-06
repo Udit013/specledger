@@ -1,3 +1,4 @@
+import type { MeBody, UserRole } from '@specledger/core';
 import { QueryClientProvider } from '@tanstack/react-query';
 import type { QueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -5,23 +6,21 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { createApiClient } from './api/client.js';
 import { AuditView } from './components/AuditView.js';
 import { ConflictsPanel } from './components/ConflictsPanel.js';
-import { Dialog } from './components/Dialog.js';
 import { DocumentList } from './components/DocumentList.js';
 import { Logo } from './components/Icons.js';
 import { Landing } from './components/Landing.js';
-import type { Access } from './components/Landing.js';
 import { PublishDialog } from './components/PublishDialog.js';
 import { ReviewScreen } from './components/ReviewScreen.js';
-import { TokenForm } from './components/TokenForm.js';
+import { SignIn } from './components/SignIn.js';
+import { Loading } from './components/Status.js';
 import { UploadForm } from './components/UploadForm.js';
+import { UsersAdmin } from './components/UsersAdmin.js';
 import { ServicesContext } from './context.js';
-import type { AppServices } from './context.js';
+import type { AppServices, Mode } from './context.js';
 import type { PollOptions } from './lib/backoff.js';
 import { createDemoAccess, inDemo } from './lib/demo.js';
 import { hrefFor, parseRoute } from './lib/router.js';
 import type { Route } from './lib/router.js';
-import { clearTokens, createTokenHolder, loadTokens, NO_TOKENS, saveTokens } from './lib/tokens.js';
-import type { Tokens } from './lib/tokens.js';
 
 export interface AppProps {
   readonly baseUrl: string;
@@ -46,6 +45,9 @@ function useRoute(): Route {
 }
 
 const NO_POLL_OPTIONS: PollOptions = {};
+// A demo visitor acts as every role but admin, in their own sandbox only.
+const VISITOR_ROLES: readonly UserRole[] = ['engineer', 'reviewer', 'approver'];
+const NO_ROLES: readonly UserRole[] = [];
 
 // Dialogs opened from the header belong to the screen they were opened on.
 function useCloseOnRouteChange(route: Route, close: () => void) {
@@ -56,79 +58,108 @@ function useCloseOnRouteChange(route: Route, close: () => void) {
   }
 }
 
-const hasAny = (tokens: Tokens) => tokens.engineer !== null || tokens.approver !== null;
-
-const NAV = [
-  { route: { name: 'home' }, label: 'Overview' },
-  { route: { name: 'documents' }, label: 'Documents' },
-  { route: { name: 'conflicts' }, label: 'Conflicts' },
-  { route: { name: 'upload' }, label: 'Upload' },
-] as const;
-
 // The screen a route belongs to in the navigation: a document's review is under Documents.
 const section = (route: Route): Route['name'] =>
   route.name === 'review' || route.name === 'audit' ? 'documents' : route.name;
 
-// Three ways to use the app: not yet (the overview only), the demo workspace (a visitor session
-// the server issues; no tokens to paste, its own database), or the operator's role tokens on the
-// real workspace. The demo is entered from the overview and left from the header.
+const go = (route: Exclude<Route, { name: 'not_found' }>) => {
+  window.location.hash = hrefFor(route);
+};
+
+// Three ways to use the app. Anyone can browse the read-only showcase. "Try it yourself" starts
+// a private demo sandbox, no account needed. Signing in opens the real workspace, where what a
+// person can do follows their roles. The server enforces all of it; the UI only hides what it
+// would refuse.
 export function App({ baseUrl, storage, queryClient, poll = NO_POLL_OPTIONS, fetch }: AppProps) {
   const route = useRoute();
-  const [tokens, setTokens] = useState<Tokens>(() => loadTokens(storage));
-  // Updated together with the state, in the handlers below.
-  const [held] = useState(() => createTokenHolder(tokens));
-  const [demo] = useState(() =>
-    createDemoAccess({ baseUrl, storage, ...(fetch === undefined ? {} : { fetch }) }),
-  );
-  const [access, setAccess] = useState<Access>(() =>
-    inDemo(storage) ? 'demo' : hasAny(tokens) ? 'tokens' : 'none',
-  );
+  const send = useMemo(() => (fetch === undefined ? {} : { fetch }), [fetch]);
+  const [demo] = useState(() => createDemoAccess({ baseUrl, storage, ...send }));
+  const [inSandbox, setInSandbox] = useState(() => inDemo(storage));
+  const [account, setAccount] = useState<MeBody | null>(null);
+  const [checking, setChecking] = useState(true);
   const [starting, setStarting] = useState(false);
   const [startError, setStartError] = useState<string | null>(null);
+  const [signingIn, setSigningIn] = useState(false);
+  const [signInError, setSignInError] = useState<unknown>(null);
   const [message, setMessage] = useState('');
-  const [dialog, setDialog] = useState<'publish' | 'tokens' | null>(null);
+  const [publishing, setPublishing] = useState(false);
   useCloseOnRouteChange(route, () => {
-    setDialog(null);
+    setPublishing(false);
   });
 
   const announce = useCallback((text: string) => {
     setMessage(text);
   }, []);
+  const signedOut = useCallback(() => {
+    setAccount(null);
+  }, []);
+  // The workspace client: the session cookie travels by itself, on the same origin.
+  const workspace = useMemo(
+    () => createApiClient({ baseUrl, onUnauthenticated: signedOut, ...send }),
+    [baseUrl, send, signedOut],
+  );
+
+  // Who is signed in, if anyone, when the app opens.
+  useEffect(() => {
+    let current = true;
+    workspace
+      .me()
+      .then(
+        (me) => {
+          if (current) setAccount(me);
+        },
+        () => {
+          if (current) setAccount(null);
+        },
+      )
+      .finally(() => {
+        if (current) setChecking(false);
+      });
+    return () => {
+      current = false;
+    };
+  }, [workspace]);
+
+  const mode: Mode = inSandbox ? 'demo' : account !== null ? 'account' : 'showcase';
+  const roles: readonly UserRole[] =
+    mode === 'demo'
+      ? VISITOR_ROLES
+      : mode === 'account'
+        ? (account?.user.roles ?? NO_ROLES)
+        : NO_ROLES;
+
   const services = useMemo<AppServices>(() => {
-    const send = fetch === undefined ? {} : { fetch };
     const client =
-      access === 'demo'
+      mode === 'demo'
         ? createApiClient({
             baseUrl: `${baseUrl}/demo`,
-            tokens: async () => {
-              const token = await demo.token();
-              return { engineer: token, approver: token };
-            },
-            demo: {
-              onUnauthenticated: () => {
-                demo.forget();
-              },
+            bearer: () => demo.token(),
+            demo: true,
+            onUnauthenticated: () => {
+              demo.forget();
             },
             ...send,
           })
-        : createApiClient({ baseUrl, tokens: held.get, ...send });
-    return { client, poll, announce };
-  }, [access, baseUrl, demo, fetch, held, poll, announce]);
+        : mode === 'account'
+          ? workspace
+          : createApiClient({ baseUrl: `${baseUrl}/showcase`, ...send });
+    return { client, poll, mode, can: (role) => roles.includes(role), announce };
+  }, [mode, roles, baseUrl, demo, send, workspace, poll, announce]);
 
-  const switchTo = (next: Access) => {
-    setAccess(next);
-    setDialog(null);
+  const switchMode = () => {
+    setPublishing(false);
     queryClient.clear();
   };
-  const startDemo = () => {
+  const tryDemo = () => {
     setStarting(true);
     setStartError(null);
     demo.token().then(
       () => {
         setStarting(false);
-        switchTo('demo');
-        announce('The demo workspace is ready.');
-        window.location.hash = hrefFor({ name: 'documents' });
+        setInSandbox(true);
+        switchMode();
+        announce('Your demo sandbox is ready.');
+        go({ name: 'documents' });
       },
       (error: unknown) => {
         setStarting(false);
@@ -138,28 +169,56 @@ export function App({ baseUrl, storage, queryClient, poll = NO_POLL_OPTIONS, fet
   };
   const leaveDemo = () => {
     demo.forget();
-    switchTo(hasAny(tokens) ? 'tokens' : 'none');
-    announce('You left the demo workspace.');
-    window.location.hash = hrefFor({ name: 'home' });
+    setInSandbox(false);
+    switchMode();
+    announce('You left the demo sandbox.');
+    go({ name: 'home' });
   };
-  const updateTokens = (next: Tokens) => {
-    saveTokens(storage, next);
-    held.set(next);
-    setTokens(next);
-    demo.forget();
-    switchTo(hasAny(next) ? 'tokens' : 'none');
+  const signIn = (email: string, password: string) => {
+    setSigningIn(true);
+    setSignInError(null);
+    workspace.login(email, password).then(
+      (me) => {
+        setSigningIn(false);
+        demo.forget();
+        setInSandbox(false);
+        setAccount(me);
+        switchMode();
+        announce(`Signed in as ${me.user.displayName}.`);
+        go({ name: 'documents' });
+      },
+      (error: unknown) => {
+        setSigningIn(false);
+        setSignInError(error);
+      },
+    );
   };
-  const forgetTokens = () => {
-    clearTokens(storage);
-    held.set(NO_TOKENS);
-    setTokens(NO_TOKENS);
-    switchTo(access === 'demo' ? 'demo' : 'none');
-  };
-  const openTokens = () => {
-    setDialog('tokens');
+  const signOut = () => {
+    void workspace
+      .logout()
+      .catch(() => undefined)
+      .finally(() => {
+        setAccount(null);
+        switchMode();
+        announce('You signed out.');
+        go({ name: 'home' });
+      });
   };
 
   const current = section(route);
+  const nav: { route: Exclude<Route, { name: 'not_found' }>; label: string }[] = [
+    { route: { name: 'home' }, label: 'Overview' },
+    { route: { name: 'documents' }, label: 'Documents' },
+    { route: { name: 'conflicts' }, label: 'Conflicts' },
+    ...(mode === 'account' && roles.includes('engineer')
+      ? [{ route: { name: 'upload' } as const, label: 'Upload' }]
+      : []),
+    ...(mode === 'account' && roles.includes('admin')
+      ? [{ route: { name: 'users' } as const, label: 'Users' }]
+      : []),
+  ];
+  const workspaceRoute = route.name !== 'home' && route.name !== 'sign_in';
+
   return (
     <QueryClientProvider client={queryClient}>
       <ServicesContext.Provider value={services}>
@@ -183,7 +242,7 @@ export function App({ baseUrl, storage, queryClient, poll = NO_POLL_OPTIONS, fet
               className="order-3 -mx-1 w-full overflow-x-auto [scrollbar-width:none] md:order-none md:w-auto"
             >
               <ul className="flex gap-1 px-1">
-                {NAV.map((item) => {
+                {nav.map((item) => {
                   const active = current === item.route.name;
                   return (
                     <li key={item.label}>
@@ -204,32 +263,40 @@ export function App({ baseUrl, storage, queryClient, poll = NO_POLL_OPTIONS, fet
               </ul>
             </nav>
             <div className="ml-auto flex items-center gap-2">
-              {access === 'demo' ? (
+              {mode === 'demo' ? (
                 <span
-                  title="You are in the demo workspace"
+                  title="You are in your private demo sandbox"
                   className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold whitespace-nowrap text-emerald-800 ring-1 ring-emerald-600/30 ring-inset"
                 >
                   <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-emerald-600" />
                   <span>
-                    Demo<span className="hidden sm:inline"> workspace</span>
+                    Demo<span className="hidden sm:inline"> sandbox</span>
                   </span>
                 </span>
               ) : null}
-              {access === 'none' ? null : (
+              {mode === 'account' && account !== null ? (
+                <span
+                  className="hidden text-sm text-slate-700 lg:inline"
+                  title={account.user.email}
+                >
+                  {account.user.displayName}
+                </span>
+              ) : null}
+              {roles.includes('approver') ? (
                 <button
                   type="button"
                   onClick={() => {
-                    setDialog('publish');
+                    setPublishing(true);
                   }}
-                  aria-label="Publish register"
+                  aria-label={mode === 'demo' ? 'Publish register (simulated)' : 'Publish register'}
                   className="btn btn-primary max-sm:px-3 max-sm:py-1.5"
                 >
                   <span>
                     Publish<span className="hidden sm:inline"> register</span>
                   </span>
                 </button>
-              )}
-              {access === 'demo' ? (
+              ) : null}
+              {mode === 'demo' ? (
                 <button
                   type="button"
                   onClick={leaveDemo}
@@ -237,55 +304,86 @@ export function App({ baseUrl, storage, queryClient, poll = NO_POLL_OPTIONS, fet
                 >
                   Leave demo
                 </button>
-              ) : (
+              ) : mode === 'account' ? (
                 <button
                   type="button"
-                  onClick={openTokens}
+                  onClick={signOut}
                   className="btn btn-secondary max-sm:px-3 max-sm:py-1.5"
                 >
-                  API tokens
+                  Sign out
                 </button>
+              ) : (
+                <a
+                  href={hrefFor({ name: 'sign_in' })}
+                  className="btn btn-secondary max-sm:px-3 max-sm:py-1.5"
+                >
+                  Sign in
+                </a>
               )}
             </div>
           </div>
         </header>
         <main id="main" className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+          {workspaceRoute && mode === 'showcase' && !checking ? (
+            <div className="notice notice-info mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <p>
+                <strong className="font-semibold">Read-only showcase.</strong> Real documents
+                extracted by a model. To review, resolve conflicts and publish, try it in a private
+                sandbox; no account needed.
+              </p>
+              <button
+                type="button"
+                aria-disabled={starting}
+                onClick={() => {
+                  if (!starting) tryDemo();
+                }}
+                className="btn btn-primary self-start sm:self-auto"
+              >
+                {starting ? 'Preparing your sandbox…' : 'Try it yourself'}
+              </button>
+            </div>
+          ) : null}
+          {workspaceRoute && mode === 'showcase' && startError !== null ? (
+            <div role="alert" className="notice notice-error mb-6">
+              {startError}
+            </div>
+          ) : null}
+          {workspaceRoute && mode === 'demo' ? (
+            <p className="notice notice-info mb-6">
+              <strong className="font-semibold">Your private demo sandbox.</strong> Your changes are
+              visible only to you and are deleted when the session ends. Publishing here is
+              simulated: it creates a demo register version, not a real one.
+            </p>
+          ) : null}
           {route.name === 'home' ? (
-            <Landing
-              access={access}
-              starting={starting}
-              startError={startError}
-              onStartDemo={startDemo}
-              onUseTokens={openTokens}
-            />
-          ) : access === 'none' ? (
-            <AccessPanel
-              tokens={tokens}
-              starting={starting}
-              startError={startError}
-              onStartDemo={startDemo}
-              onSave={updateTokens}
-              onForget={forgetTokens}
-            />
+            <Landing mode={mode} starting={starting} startError={startError} onTryDemo={tryDemo} />
+          ) : route.name === 'sign_in' ? (
+            account !== null ? (
+              <section aria-labelledby="signed-in-heading" className="card mx-auto max-w-md p-8">
+                <h2 id="signed-in-heading" className="page-title">
+                  Signed in
+                </h2>
+                <p className="mt-2 text-sm text-slate-600">
+                  You are signed in as {account.user.displayName} ({account.user.email}).
+                </p>
+                <a href={hrefFor({ name: 'documents' })} className="btn btn-primary mt-5">
+                  Open the documents
+                </a>
+              </section>
+            ) : (
+              <SignIn onSignIn={signIn} busy={signingIn} error={signInError} />
+            )
+          ) : checking && !inSandbox ? (
+            <Loading label="Loading" />
           ) : (
-            <Screen route={route} />
+            <Screen route={route} mode={mode} roles={roles} />
           )}
-          {dialog === 'publish' ? (
+          {publishing ? (
             <PublishDialog
               onClose={() => {
-                setDialog(null);
+                setPublishing(false);
               }}
             />
-          ) : null}
-          {dialog === 'tokens' ? (
-            <Dialog
-              title="API tokens"
-              onClose={() => {
-                setDialog(null);
-              }}
-            >
-              <TokenForm tokens={tokens} onSave={updateTokens} onForget={forgetTokens} />
-            </Dialog>
           ) : null}
           <div role="status" aria-live="polite" aria-label="Announcements" className="sr-only">
             {message}
@@ -296,63 +394,29 @@ export function App({ baseUrl, storage, queryClient, poll = NO_POLL_OPTIONS, fet
   );
 }
 
-// Shown on a workspace screen before the visitor has chosen how to explore.
-function AccessPanel({
-  tokens,
-  starting,
-  startError,
-  onStartDemo,
-  onSave,
-  onForget,
-}: {
-  readonly tokens: Tokens;
-  readonly starting: boolean;
-  readonly startError: string | null;
-  readonly onStartDemo: () => void;
-  readonly onSave: (tokens: Tokens) => void;
-  readonly onForget: () => void;
-}) {
+function Restricted({ title, text }: { readonly title: string; readonly text: string }) {
   return (
-    <section aria-labelledby="access-heading" className="mx-auto max-w-3xl">
-      <h2 id="access-heading" className="page-title">
-        Choose how to explore
+    <section aria-labelledby="restricted-heading" className="card mx-auto max-w-lg p-8 text-center">
+      <h2 id="restricted-heading" className="page-title">
+        {title}
       </h2>
-      <p className="page-lead">
-        Try SpecLedger in the demo workspace, or use the API tokens your operator gave you.
-      </p>
-      <div className="mt-6 grid gap-4 md:grid-cols-2">
-        <div className="card flex flex-col p-6">
-          <h3 className="text-lg font-semibold">Demo workspace</h3>
-          <p className="mt-2 flex-1 text-sm text-slate-600">
-            A separate workspace with synthetic datasheets. Review, resolve and publish as both
-            roles; nothing reaches real data.
-          </p>
-          <button
-            type="button"
-            aria-disabled={starting}
-            onClick={() => {
-              if (!starting) onStartDemo();
-            }}
-            className="btn btn-primary mt-5 self-start"
-          >
-            {starting ? 'Starting the demo…' : 'Explore the live demo'}
-          </button>
-          {startError === null ? null : (
-            <div role="alert" className="notice notice-error mt-3">
-              {startError}
-            </div>
-          )}
-        </div>
-        <div className="card p-6">
-          <h3 className="mb-3 text-lg font-semibold">API tokens</h3>
-          <TokenForm tokens={tokens} onSave={onSave} onForget={onForget} />
-        </div>
-      </div>
+      <p className="mt-2 text-sm text-slate-600">{text}</p>
+      <a href={hrefFor({ name: 'sign_in' })} className="btn btn-primary mt-5">
+        Sign in
+      </a>
     </section>
   );
 }
 
-function Screen({ route }: { readonly route: Exclude<Route, { name: 'home' }> }) {
+function Screen({
+  route,
+  mode,
+  roles,
+}: {
+  readonly route: Exclude<Route, { name: 'home' | 'sign_in' }>;
+  readonly mode: Mode;
+  readonly roles: readonly UserRole[];
+}) {
   switch (route.name) {
     case 'documents':
       return <DocumentList />;
@@ -361,7 +425,20 @@ function Screen({ route }: { readonly route: Exclude<Route, { name: 'home' }> })
     case 'conflicts':
       return <ConflictsPanel />;
     case 'upload':
-      return <UploadForm />;
+      return mode === 'account' && roles.includes('engineer') ? (
+        <UploadForm />
+      ) : (
+        <Restricted
+          title="Upload a document"
+          text="Uploading documents is for signed-in engineers of a workspace. The demo comes with its documents already extracted."
+        />
+      );
+    case 'users':
+      return mode === 'account' && roles.includes('admin') ? (
+        <UsersAdmin />
+      ) : (
+        <Restricted title="Users" text="Managing users is for signed-in administrators." />
+      );
     case 'audit':
       return <AuditView key={`${route.kind}:${route.id}`} kind={route.kind} id={route.id} />;
     case 'not_found':

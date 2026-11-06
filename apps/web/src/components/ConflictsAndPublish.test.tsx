@@ -3,15 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import { http, HttpResponse } from 'msw';
 
-import {
-  API,
-  CONFLICT_ID,
-  DOC_ID,
-  fakeApi,
-  FIELD_IDS,
-  server,
-  TOKENS,
-} from '../../test/fake-api.js';
+import { API, CONFLICT_ID, DOC_ID, fakeApi, FIELD_IDS, server } from '../../test/fake-api.js';
 import { announcements, expectNoAxeViolations, renderApp, tabTo } from '../../test/render.js';
 
 describe('conflicts panel', () => {
@@ -181,14 +173,12 @@ describe('publish dialog', () => {
     expect(await within(dialog).findByRole('alert')).toBeTruthy();
   });
 
-  it('explains when the token cannot publish', async () => {
-    fakeApi();
-    const { user } = renderApp({ tokens: { engineer: TOKENS.engineer, approver: null } });
-    await screen.findByRole('link', { name: 'Review p-106-datasheet.pdf' });
-    await user.click(screen.getByRole('button', { name: 'Publish register' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Publish register' });
-    await user.click(within(dialog).getByRole('button', { name: 'Publish now' }));
-    expect((await within(dialog).findByRole('alert')).textContent).toMatch(/approver/i);
+  it('offers publishing only to approvers, and resolving only to reviewers', async () => {
+    fakeApi({ user: ['engineer'] });
+    renderApp({ hash: '#/conflicts' });
+    expect(await screen.findByText(/needs the reviewer role/)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Resolve conflict' })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Publish register/ })).toBeNull();
   });
 
   it('has no accessibility violations with blockers shown', async () => {

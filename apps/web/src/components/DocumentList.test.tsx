@@ -96,23 +96,15 @@ describe('document list', () => {
     expect(calls).toBe(settled);
   });
 
-  it('asks for tokens when none are stored, and keeps them out of the URL', async () => {
-    fakeApi();
-    const { user } = renderApp({ tokens: null });
-    await user.type(
-      await screen.findByLabelText('Engineer token'),
-      'engineer-token-0123456789abcdef',
-    );
-    await user.click(screen.getByRole('button', { name: 'Save tokens' }));
+  it('shows the read-only showcase to anyone who is not signed in', async () => {
+    const seen: string[] = [];
+    fakeApi({ user: null, onRequest: (request) => seen.push(new URL(request.url).pathname) });
+    renderApp();
     expect(await screen.findByRole('link', { name: 'Review p-106-datasheet.pdf' })).toBeTruthy();
-    expect(window.location.href).not.toContain('engineer-token');
-    expect(localStorage.length).toBe(0);
-  });
-
-  it('explains a rejected token', async () => {
-    fakeApi();
-    renderApp({ tokens: { engineer: 'wrong-token-wrong-token-wrong-token', approver: null } });
-    expect((await screen.findByRole('alert')).textContent).toMatch(/token/i);
+    expect(screen.getByText('Read-only showcase.')).toBeTruthy();
+    expect(seen).toContain('/showcase/documents');
+    expect(screen.queryByRole('button', { name: /Publish register/ })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Upload' })).toBeNull();
   });
 
   it('has no accessibility violations', async () => {
