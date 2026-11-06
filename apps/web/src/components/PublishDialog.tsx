@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { ApiClientError } from '../api/client.js';
 import { useServices } from '../context.js';
 import { BLOCKER_LABELS } from '../lib/labels.js';
+import { hrefFor } from '../lib/router.js';
 import { Dialog } from './Dialog.js';
 import { ErrorNotice } from './Status.js';
 
@@ -65,7 +66,13 @@ export function PublishDialog({ onClose }: { readonly onClose: () => void }) {
       {publish.isSuccess ? (
         <p className="text-sm font-medium">
           Published {simulated ? 'demo ' : ''}register version {publish.data.version.number} with{' '}
-          {publish.data.itemCount} {publish.data.itemCount === 1 ? 'item' : 'items'}.
+          {publish.data.itemCount} {publish.data.itemCount === 1 ? 'item' : 'items'}.{' '}
+          <a
+            href={hrefFor({ name: 'register_version', number: publish.data.version.number })}
+            className="link"
+          >
+            Open it in the register
+          </a>
         </p>
       ) : null}
       {blocked ? (

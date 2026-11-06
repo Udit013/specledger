@@ -7,6 +7,8 @@ export type Route =
   | { readonly name: 'review'; readonly documentId: string }
   | { readonly name: 'conflicts' }
   | { readonly name: 'upload' }
+  | { readonly name: 'register' }
+  | { readonly name: 'register_version'; readonly number: number }
   | { readonly name: 'sign_in' }
   | { readonly name: 'users' }
   | {
@@ -30,6 +32,10 @@ export function parseRoute(hash: string): Route {
   }
   if (first === 'conflicts' && second === undefined) return { name: 'conflicts' };
   if (first === 'upload' && second === undefined) return { name: 'upload' };
+  if (first === 'register' && second === undefined) return { name: 'register' };
+  if (first === 'register' && third === undefined && /^[1-9][0-9]{0,8}$/.test(second ?? '')) {
+    return { name: 'register_version', number: Number(second) };
+  }
   if (first === 'sign-in' && second === undefined) return { name: 'sign_in' };
   if (first === 'users' && second === undefined) return { name: 'users' };
   const kind = auditKind.safeParse(second);
@@ -51,6 +57,10 @@ export function hrefFor(route: Exclude<Route, { name: 'not_found' }>): string {
       return '#/conflicts';
     case 'upload':
       return '#/upload';
+    case 'register':
+      return '#/register';
+    case 'register_version':
+      return `#/register/${String(route.number)}`;
     case 'sign_in':
       return '#/sign-in';
     case 'users':

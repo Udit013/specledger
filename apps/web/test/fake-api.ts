@@ -238,6 +238,19 @@ export function fakeApi(options: FakeOptions = {}): FakeState {
       ? null
       : error(403, 'FORBIDDEN', 'Your role may not do this.');
   };
+  // The register as the fake publishes it: one item, P-106, with the reviewed values.
+  const versionOf = (n: number) => ({
+    id: `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`,
+    number: n,
+    approvedBy: 'user:ada@example.com',
+    publishedAt: TIME,
+  });
+  const values = () =>
+    Object.fromEntries(
+      state.fields
+        .filter((f) => f.reviewStatus !== 'rejected')
+        .map((f) => [f.name, { value: f.value, unit: f.unit }]),
+    );
   const signedIn = () => (state.user === null ? null : { user: state.user, expiresAt: LATER });
 
   {
@@ -516,17 +529,69 @@ export function fakeApi(options: FakeOptions = {}): FakeState {
         }
         state.published += 1;
         return HttpResponse.json(
-          {
-            version: {
-              id: '00000000-0000-4000-8000-0000000000b1',
-              number: state.published,
-              approvedBy: 'role:approver',
-              publishedAt: TIME,
-            },
-            itemCount: 1,
-          },
+          { version: versionOf(state.published), itemCount: 1 },
           { status: 201 },
         );
+      }),
+      http.get(`${base}/register/versions`, ({ request }) => {
+        seen(request);
+        const versions = Array.from({ length: state.published }, (_, i) => ({
+          ...versionOf(state.published - i),
+          itemCount: 1,
+        }));
+        return refuse(request, ANY) ?? HttpResponse.json({ versions });
+      }),
+      http.get(`${base}/register/versions/:n`, ({ request, params }) => {
+        seen(request);
+        const n = Number(params.n);
+        if (!(n >= 1 && n <= state.published)) {
+          return (
+            refuse(request, ANY) ?? error(404, 'NOT_FOUND', 'There is no such register version.')
+          );
+        }
+        return (
+          refuse(request, ANY) ??
+          HttpResponse.json({ version: versionOf(n), items: [{ tag: 'P-106', values: values() }] })
+        );
+      }),
+      http.get(`${base}/register/versions/:n/handoff`, ({ request, params }) => {
+        seen(request);
+        const n = Number(params.n);
+        const attributes = Object.entries(values())
+          .sort(([a], [b]) => a.localeCompare(b))
+          .map(([name, v]) => ({ name, value: v.value, unit: v.unit }));
+        return (
+          refuse(request, ANY) ??
+          HttpResponse.json({
+            contract: 'acc-style-asset-upsert',
+            connected: false,
+            requests: [
+              {
+                method: 'POST',
+                path: '/assets/upsert',
+                idempotencyKey: `specledger:register:v${String(n)}:P-106`,
+                payload: {
+                  externalId: 'specledger:P-106',
+                  name: 'P-106',
+                  attributes,
+                  source: { system: 'specledger', registerVersion: n, publishedAt: TIME },
+                },
+              },
+            ],
+          })
+        );
+      }),
+      http.get(`${base}/register/versions/:n/export`, ({ request, params }) => {
+        seen(request);
+        const format = new URL(request.url).searchParams.get('format') ?? 'csv';
+        const denied = refuse(request, ANY);
+        if (denied !== null) return denied;
+        return new HttpResponse('tag,field,value,unit\r\n', {
+          headers: {
+            'content-type': format === 'json' ? 'application/json' : 'text/csv',
+            'content-disposition': `attachment; filename="register-v${String(params.n)}.${format}"`,
+          },
+        });
       }),
       http.get(`${base}/audit`, ({ request }) => {
         seen(request);

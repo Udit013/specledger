@@ -10,6 +10,7 @@ import { DocumentList } from './components/DocumentList.js';
 import { Logo } from './components/Icons.js';
 import { Landing } from './components/Landing.js';
 import { PublishDialog } from './components/PublishDialog.js';
+import { RegisterList, RegisterVersion } from './components/Register.js';
 import { ReviewScreen } from './components/ReviewScreen.js';
 import { SignIn } from './components/SignIn.js';
 import { Loading } from './components/Status.js';
@@ -60,7 +61,11 @@ function useCloseOnRouteChange(route: Route, close: () => void) {
 
 // The screen a route belongs to in the navigation: a document's review is under Documents.
 const section = (route: Route): Route['name'] =>
-  route.name === 'review' || route.name === 'audit' ? 'documents' : route.name;
+  route.name === 'review' || route.name === 'audit'
+    ? 'documents'
+    : route.name === 'register_version'
+      ? 'register'
+      : route.name;
 
 const go = (route: Exclude<Route, { name: 'not_found' }>) => {
   window.location.hash = hrefFor(route);
@@ -210,6 +215,7 @@ export function App({ baseUrl, storage, queryClient, poll = NO_POLL_OPTIONS, fet
     { route: { name: 'home' }, label: 'Overview' },
     { route: { name: 'documents' }, label: 'Documents' },
     { route: { name: 'conflicts' }, label: 'Conflicts' },
+    { route: { name: 'register' }, label: 'Register' },
     ...(mode === 'account' && roles.includes('engineer')
       ? [{ route: { name: 'upload' } as const, label: 'Upload' }]
       : []),
@@ -424,6 +430,10 @@ function Screen({
       return <ReviewScreen key={route.documentId} documentId={route.documentId} />;
     case 'conflicts':
       return <ConflictsPanel />;
+    case 'register':
+      return <RegisterList />;
+    case 'register_version':
+      return <RegisterVersion key={route.number} number={route.number} />;
     case 'upload':
       return mode === 'account' && roles.includes('engineer') ? (
         <UploadForm />

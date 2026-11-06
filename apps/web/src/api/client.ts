@@ -21,7 +21,15 @@ import {
   uploadResponseSchema,
 } from '@specledger/core';
 import { publishBlockerSchema } from '@specledger/core';
+import {
+  handoffPreviewSchema,
+  registerVersionDetailSchema,
+  registerVersionListSchema,
+} from '@specledger/core';
 import type {
+  HandoffPreview,
+  RegisterVersionDetail,
+  RegisterVersionSummary,
   CreateUserBody,
   MeBody,
   UpdateUserBody,
@@ -135,7 +143,14 @@ export function createApiClient(options: ApiClientOptions) {
     schema: S,
     path: string,
     // signIn: a 401 is a wrong password, not an ended session; the server's message is shown.
-    init: { method?: string; body?: unknown; form?: FormData; signIn?: boolean } = {},
+    // raw: an ok response is returned unread (file downloads); errors are handled as usual.
+    init: {
+      method?: string;
+      body?: unknown;
+      form?: FormData;
+      signIn?: boolean;
+      raw?: boolean;
+    } = {},
   ): Promise<z.output<S>> {
     let token: string | null = null;
     if (options.bearer !== undefined) {
@@ -175,6 +190,7 @@ export function createApiClient(options: ApiClientOptions) {
       throw new ApiClientError('network', 'The server could not be reached.', null, null, null);
     }
 
+    if (init.raw === true && response.ok) return response as z.output<S>;
     let json: unknown;
     try {
       json = await response.json();
@@ -296,6 +312,31 @@ export function createApiClient(options: ApiClientOptions) {
         method: 'PATCH',
         body: updateUserBodySchema.parse(body),
       });
+    },
+    // ---- register --------------------------------------------------------------------------------
+    async listRegisterVersions(): Promise<RegisterVersionSummary[]> {
+      return (await request(registerVersionListSchema, '/register/versions')).versions;
+    },
+    getRegisterVersion(n: number): Promise<RegisterVersionDetail> {
+      return request(registerVersionDetailSchema, `/register/versions/${String(n)}`);
+    },
+    getHandoff(n: number): Promise<HandoffPreview> {
+      return request(handoffPreviewSchema, `/register/versions/${String(n)}/handoff`);
+    },
+    // The export file with the name the server gives it, fetched with this client's credentials.
+    async exportVersion(
+      n: number,
+      format: 'csv' | 'json',
+    ): Promise<{ readonly filename: string; readonly blob: Blob }> {
+      const response = await request(
+        z.custom<Response>(),
+        `/register/versions/${String(n)}/export?format=${format}`,
+        { raw: true },
+      );
+      const disposition = response.headers.get('content-disposition') ?? '';
+      const filename =
+        /filename="([^"]+)"/.exec(disposition)?.[1] ?? `register-v${String(n)}.${format}`;
+      return { filename, blob: await response.blob() };
     },
     resetDemo(): Promise<unknown> {
       return request(
